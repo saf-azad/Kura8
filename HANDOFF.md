@@ -4,7 +4,7 @@ Rolling state for the Ratio Phase 0 build. Read in full at session start; rewrit
 
 ## Status
 
-The MVP is implemented: strict TypeScript/Vite, pure core with 100% line coverage, all three guide generators, move/size snapping, both SVG wheels, Canvas2DRenderer and separate overlay, text/rect/image editing, identical content pack, localStorage recovery and paired export. Browser checks verified square/thirds entry, text movement and wrapping resize, image loading and locked-aspect resize, deletion, reload recovery, and an actual 1080 × 1080 PNG download with no guide or selection marks. Chrome blocked the second automatic download, so the JSON browser delivery check and the complete 15-path browser matrix remain before claiming study readiness. All 37 tests and npm run build pass. Browser automation disconnected before the production matrix check could run. The private Sites demo is live at https://ratio-phase-zero.alazadsafwat.chatgpt.site (deployment succeeded); this is a functional MVP, not yet a completed study-readiness audit.
+Phase 0 build complete; ready for study. All 37 tests pass with 100% core line coverage and the production build succeeds. The Chromium audit against vite preview passes all 15 ratio/guide wheel paths, square centre entry, paired PNG/JSON downloads, all five export dimensions, overlay-free PNGs and exported JSON reload through document validation. Both conditions pass rectangle move/resize/delete, text editing/wrapping/movement, locked-aspect image resizing, real file-picker upload with raster normalisation, autosave recovery and identical content-pack checks, with no browser console errors. Screenshots confirm visible snapping feedback and blank mode without guides. Chrome must allow automatic multiple downloads to receive both export files. The existing private demo remains at https://ratio-phase-zero.alazadsafwat.chatgpt.site; application source is unchanged in this audit session. Remaining work is Safwat's study protocol, content approval and pilot, not editor features.
 
 ## Decision log
 
@@ -29,6 +29,8 @@ Append-only. New entries supersede named old entries; do not edit history. Forma
 - **D-017** 2026-09-14 astra — Image imports are normalised to raster data URLs with a maximum 1600 px longest side. Validation accepts six-digit hex colours and base64 PNG/JPEG/WebP/GIF data URLs emitted by the app. Why: bounded browser storage, predictable rendering, no remote image fetch at export. This is import normalisation, not an image-adjustment UI.
 - **D-018** 2026-09-14 astra — Private Sites hosting uses the prescribed vanilla Vite static build; no Sites React scaffold or WebMCP/AI-facing actions are added. Why: Safwat's explicit stack and no-AI scope take precedence over generic hosting skill recommendations.
 
+- **D-019** 2026-09-15 astra — Keep a repeatable production-browser audit in scripts/browser_audit.py. Use a fresh temporary Chromium profile with automatic multiple downloads allowed, without changing the user's browser preferences. Why: paired downloads require browser permission, and the 15-path audit must be reproducible. No application or core contract change was needed.
+
 ## Next steps
 
 - [x] Scaffold Vite vanilla-ts, Vitest, strict tsconfig, scripts and folder layout.
@@ -42,18 +44,23 @@ Append-only. New entries supersede named old entries; do not edit history. Forma
 - [x] SVG ratio wheel and guide wheel; centre keeps square and still goes through guide choice.
 - [x] Offscreen PNG and validated JSON exports, named by id and mode.
 - [x] Study mode/session handling and identical fixed content pack.
-- [ ] Finish the definition-of-done browser audit: all 15 wheel paths, blank-condition interaction, image file picker, other ratio PNG dimensions, paired download after browser permission. If all pass, set Status to Phase 0 build complete; ready for study.
-- [ ] Safwat: define participant count, blinded raters, scale and success margin; run the pilot.
+- [x] Finish the definition-of-done browser audit: all 15 wheel paths, both-condition interactions, image file picker, all ratio PNG dimensions and paired downloads with Chrome permission enabled.
+- [ ] Safwat: approve the fixed content pack and define participants per condition, blinded raters, rating scale and success margin.
+- [ ] Run the pilot with those criteria; enable multiple downloads in each study browser and collect both PNG and JSON per participant.
 
 ## Open questions for Safwat
 
 - Study protocol: participants per condition, raters, scale and margin for the thesis holding.
-- Whether D-010 (centre still chooses a guide) is acceptable. Square default is now explicit in the supplied handbook.
 - Whether study needs undo. It remains out of scope. Run a pilot of two or three people without it and decide from behaviour.
 - Approve the concrete fictional exhibition content pack before recruiting participants; it is identical in both modes.
 
 ## Deferred
 
 - Undo and all Phase 1 editor features remain out of scope.
-- Study-readiness label is withheld until the full browser audit and paired-download permission check pass.
 - Browser storage quota failure is caught so editing/export remain usable, but the app does not yet expose failed autosave visibly (no toasts per handbook). Check quota behaviour in the pilot with several large images.
+
+## Browser audit
+
+Run `npm run build`, start `npm run preview -- --port 4173`, then `python3 scripts/browser_audit.py`. Requires Python Playwright, its Chromium browser and Pillow; these are audit tools, not application dependencies. An optional first argument selects another base URL. The script creates a fresh browser profile and writes screenshots and paired exports under ignored `private/browser-audit/`. The 2026-09-15 run passed the complete matrix and both-condition interaction checks. Export sizes verified: square 1080 × 1080, portrait 1080 × 1350, landscape 1920 × 1080, story 1080 × 1920, banner 1500 × 500.
+
+For the pilot, allow automatic multiple downloads for the site before collecting results; the application intentionally exports two separate files per the study contract. The audit explicitly enables that browser permission and verifies both actual download events and saved files.
