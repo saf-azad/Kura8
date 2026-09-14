@@ -6,7 +6,9 @@ import { studySession } from './app/study';
 import { pack } from './app/study/pack';
 import { loadDocument, saveDocument } from './app/store';
 import { showWheel } from './app/wheel';
-import { Canvas2DRenderer, measureText, FONT } from './app/canvas/renderer';
+import { Canvas2DRenderer, measureText } from './app/canvas/renderer';
+import { fonts, fontStack, DEFAULT_FONT } from './core/fonts';
+import { DEFAULT_SHAPE, type ShapeId } from './core/shapes';
 import { drawOverlay } from './app/canvas/overlay';
 import { installInteraction } from './app/canvas/interaction';
 import { toolbar, button, icons } from './app/tools';
@@ -43,7 +45,7 @@ function openEditor(doc: RatioDoc): void {
   const select = (nodeId?: string) => { selectedId = nodeId; hits = []; refresh(); };
   const add = (node: DocNode) => { doc.nodes.push(node); select(node.id); };
   const addText = (text: string, fontSize = 56, weight: 400 | 700 = 400, edit = false) => {
-    const n: TextNode = { id: crypto.randomUUID(), type: 'text', rect: { x: (size.w - 600) / 2, y: 0, w: 600, h: 20 }, text, fontSize, weight, align: 'left', color: '#111111' };
+    const n: TextNode = { id: crypto.randomUUID(), type: 'text', rect: { x: (size.w - 600) / 2, y: 0, w: 600, h: 20 }, text, fontSize, weight, align: 'left', color: '#111111', font: DEFAULT_FONT };
     n.rect.h = measureText(measure, n); n.rect.y = (size.h - n.rect.h) / 2; add(n); if (edit) editText(n);
   };
   const decode = async (src: string) => createImageBitmap(await (await fetch(src)).blob());
@@ -57,7 +59,7 @@ function openEditor(doc: RatioDoc): void {
   const file = host.querySelector<HTMLInputElement>('.file-picker')!;
   const tools = toolbar(host.querySelector<HTMLElement>('.tools')!, {
     selected, update: refresh, addText: () => addText('Text', 56, 400, true),
-    addRect: () => add({ id: crypto.randomUUID(), type: 'rect', rect: { x: (size.w - 300) / 2, y: (size.h - 200) / 2, w: 300, h: 200 }, fill: '#111111' }),
+    addShape: (shape: ShapeId = DEFAULT_SHAPE) => add({ id: crypto.randomUUID(), type: 'rect', shape, rect: { x: (size.w - 300) / 2, y: (size.h - 200) / 2, w: 300, h: 200 }, fill: '#111111' }),
     addImage: () => file.click(), delete: remove,
     export: () => { exporting = true; refresh(); void exportDocument(doc, mode, images).finally(() => { exporting = false; refresh(); }); },
   });
@@ -80,7 +82,7 @@ function openEditor(doc: RatioDoc): void {
     select(node.id); editor = document.createElement('textarea'); const input = editor;
     input.className = 'text-editor'; input.setAttribute('aria-label', 'Edit text'); input.value = node.text;
     const position = () => {
-      input.style.cssText = `left:${node.rect.x * scale}px;top:${node.rect.y * scale}px;width:${node.rect.w * scale}px;height:${Math.max(node.rect.h * scale, node.fontSize * scale * 1.2 + 4)}px;font:${node.weight} ${node.fontSize * scale}px ${FONT};line-height:1.2;text-align:${node.align};color:${node.color}`;
+      input.style.cssText = `left:${node.rect.x * scale}px;top:${node.rect.y * scale}px;width:${node.rect.w * scale}px;height:${Math.max(node.rect.h * scale, node.fontSize * scale * 1.2 + 4)}px;font:${node.weight} ${node.fontSize * scale}px ${fontStack(node.font)};line-height:1.2;text-align:${node.align};color:${node.color}`;
     };
     position(); stack.append(input); input.focus(); input.select();
     input.oninput = () => { node.text = input.value; refresh(); position(); };
@@ -100,6 +102,9 @@ function openEditor(doc: RatioDoc): void {
     scale = Math.max(.01, Math.min(w / size.w, h / size.h)); stack.style.width = `${size.w * scale}px`; stack.style.height = `${size.h * scale}px`; refresh();
   };
   new ResizeObserver(fit).observe(work); fit();
+  // Text is measured with the bundled families, so load them all before the first real measure and before export.
+  loading++;
+  void Promise.allSettled(fonts.flatMap(f => [400, 700].map(w => document.fonts.load(`${w} 20px "${f.name}"`)))).finally(() => { loading--; refresh(); });
   for (const node of doc.nodes) if (node.type === 'image') {
     loading++; void decode(node.src).then(bitmap => images.set(node.id, bitmap)).finally(() => { loading--; refresh(); });
   }

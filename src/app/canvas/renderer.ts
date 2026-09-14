@@ -1,9 +1,10 @@
 import type { RatioDoc, TextNode } from '../../core/document';
 import { canvasSize } from '../../core/ratios';
+import { fontStack } from '../../core/fonts';
+import { shapeOutline } from '../../core/shapes';
 export interface Renderer { render(doc: RatioDoc, opts: { scale: number; images: Map<string, ImageBitmap> }): void; }
-export const FONT = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
 export function textLines(ctx: CanvasRenderingContext2D, node: TextNode): string[] {
-  ctx.font = `${node.weight} ${node.fontSize}px ${FONT}`;
+  ctx.font = `${node.weight} ${node.fontSize}px ${fontStack(node.font)}`;
   const result: string[] = [];
   for (const paragraph of node.text.split('\n')) {
     let line = '';
@@ -31,7 +32,14 @@ export class Canvas2DRenderer implements Renderer {
     ctx.setTransform(scale, 0, 0, scale, 0, 0); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, size.w, size.h);
     for (const node of doc.nodes) {
       const { x, y, w, h } = node.rect;
-      if (node.type === 'rect') { ctx.fillStyle = node.fill; ctx.fillRect(x, y, w, h); }
+      if (node.type === 'rect') {
+        ctx.fillStyle = node.fill;
+        const outline = shapeOutline(node.shape, node.rect);
+        ctx.beginPath();
+        if (outline) { outline.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)); ctx.closePath(); }
+        else ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
       else if (node.type === 'image') { const image = images.get(node.id); if (image) ctx.drawImage(image, x, y, w, h); }
       else {
         const lines = textLines(ctx, node); ctx.fillStyle = node.color; ctx.textBaseline = 'top'; ctx.textAlign = node.align;

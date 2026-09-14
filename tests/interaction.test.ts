@@ -14,7 +14,7 @@ it('preserves image aspect and minimum size for both dominant axes', () => {
   }
 });
 it('restricts text handles to east/west and images to corners', () => {
-  expect(handles({ id: 't', type: 'text', rect, text: '', fontSize: 30, weight: 400, align: 'left', color: '#000000' }).map(h => h.handle)).toEqual(['w', 'e']);
+  expect(handles({ id: 't', type: 'text', rect, text: '', fontSize: 30, weight: 400, align: 'left', color: '#000000', font: 'space-grotesk' }).map(h => h.handle)).toEqual(['w', 'e']);
   expect(handles({ id: 'i', type: 'image', rect, src: '', naturalSize: rect }).map(h => h.handle)).toEqual(['nw', 'ne', 'sw', 'se']);
-  expect(handles({ id: 'r', type: 'rect', rect, fill: '#000000' })).toHaveLength(8);
+  expect(handles({ id: 'r', type: 'rect', rect, fill: '#000000', shape: 'ellipse' })).toHaveLength(8);
 });

@@ -29,14 +29,15 @@ The complete in-scope list:
 
 - Radial wheel entry: centre skips ratio choice to square; outer ring has five ratios. Second wheel always follows in guide mode and offers three guides (D-010).
 - Rule of thirds, golden ratio and simple divisions (halves and quarters), identical choices for every ratio.
-- Text, rectangle and image nodes.
+- Text, shape and image nodes. Shapes come from the bundled shape library (rectangle, ellipse, triangle, diamond, hexagon, star); the node type stays `rect` and every shape fills its rect (D-019).
+- Text picks from the bundled seven-typeface library, default Space Grotesk (D-019).
 - Move and resize, snapping for position and size to guide anchors and canvas edges. No other targets.
 - Guide overlay visible on canvas, absent from export.
 - PNG export at the fixed pixel width for each ratio.
 - Blank control mode hides both wheels and guides, disables ALL snapping, and uses square. Export document JSON alongside PNG.
 - Autosave to `localStorage` for reload recovery, as a test-validity concession.
 
-Out of scope even if trivial: layers panel, undo/redo, alignment tools, typography beyond size/weight/alignment, colour wheel/palettes, image adjustments, rotation, user zoom/pan, file open/save, pen/path tools, booleans, colour grading, export profiles, PDF, ratio change after objects exist, mobile layout, collaboration, accounts, telemetry beyond study export.
+Out of scope even if trivial: layers panel, undo/redo, alignment tools, typography beyond family/size/weight/alignment, colour wheel/palettes, image adjustments, rotation, user zoom/pan, file open/save, pen/path tools, booleans, colour grading, export profiles, PDF, ratio change after objects exist, mobile layout, collaboration, accounts, telemetry beyond study export.
 
 Ratio is fixed at creation. Changing it later is a reflow problem; the wheel creates a new document.
 
@@ -48,7 +49,7 @@ D-002 governs the stack. Supersede it explicitly before changing it.
 - No UI framework. Vanilla DOM/SVG chrome, HTML canvas 2D document.
 - `src/core/` has zero DOM access and zero runtime dependencies. Every function depends only on inputs; fully unit tested.
 - Renderer behind `Renderer` interface for a later CanvasKit/Skia swap. No CanvasKit in Phase 0.
-- One system sans stack. Browser text rendering accepted through Phase 1; HarfBuzz is a later decision.
+- Bundled font library in `public/fonts/` declared with `@font-face`, registry in `src/core/fonts.ts`; system sans is the fallback stack only. Browser text rendering accepted through Phase 1; HarfBuzz is a later decision.
 
 ## Repository layout
 
@@ -61,6 +62,8 @@ src/
     geometry.ts
     document.ts
     ratios.ts
+    fonts.ts
+    shapes.ts
     guides/
       types.ts
       thirds.ts
@@ -80,6 +83,8 @@ src/
       pack.ts
     store.ts
   main.ts
+public/
+  fonts/               bundled typefaces and their licence files
 tests/                 mirrors core, plus useful app tests
 ```
 
@@ -105,9 +110,9 @@ export type NodeType = 'text' | 'rect' | 'image';
 export type NodeBase = { id: string; type: NodeType; rect: Rect };
 export type TextNode = NodeBase & {
   type: 'text'; text: string; fontSize: number; weight: 400 | 700;
-  align: 'left' | 'center' | 'right'; color: string;
+  align: 'left' | 'center' | 'right'; color: string; font: FontId;
 };
-export type RectNode = NodeBase & { type: 'rect'; fill: string };
+export type RectNode = NodeBase & { type: 'rect'; fill: string; shape: ShapeId };
 export type ImageNode = NodeBase & { type: 'image'; src: string; naturalSize: Size };
 export type DocNode = TextNode | RectNode | ImageNode;
 export type RatioDoc = {
@@ -118,7 +123,7 @@ export type RatioDoc = {
 
 `src` is a data URL in Phase 0. `createdAt` is ISO. Array order is draw order. Guide null only in blank mode. Store guide reference only; regenerate anchors from guide and canvas size, never serialise them.
 
-Text width is wrap width; height is last measured wrapped text height, written back by the app. Core never measures text. Text has e/w resize handles and move only; height is never a snap subject. Images have corner handles with locked aspect. Rectangles have all eight handles.
+Text width is wrap width; height is last measured wrapped text height, written back by the app. Core never measures text. `font` is a `FontId` from `src/core/fonts.ts`; the app loads every family before measuring or exporting. `shape` is a `ShapeId` from `src/core/shapes.ts`; `shapeOutline(shape, rect)` returns polygon vertices filling the rect, or null for the ellipse, so bounding boxes, handles, hit testing and snapping are shape-independent. Text has e/w resize handles and move only; height is never a snap subject. Images have corner handles with locked aspect. Rectangles have all eight handles.
 
 ### Guides
 
@@ -188,7 +193,7 @@ Images keyed by node ID. Canvas2DRenderer draws nodes only, with a white documen
 
 ## Interface
 
-White ground, black one-pixel outlines, one system sans font. No gradients, shadows, coloured chrome (except chosen colour swatch). Small floating icon toolbar: text, rectangle, image, colour, font size, weight, align, delete, export. Monochrome SVG wheel. No onboarding, design-explaining tooltips, empty-state copy or toasts. Cursor changes and anchor flashes are the feedback vocabulary.
+White ground, black one-pixel outlines, chrome in the system sans; document text in the bundled font library. No gradients, shadows, coloured chrome (except chosen colour swatch). Small floating icon toolbar: text, shape (opens a flat panel of the shape library), image, colour, typeface, font size, weight, align, delete, export. Monochrome SVG wheel. No onboarding, design-explaining tooltips, empty-state copy or toasts. Cursor changes and anchor flashes are the feedback vocabulary.
 
 ## Thesis test
 

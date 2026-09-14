@@ -4,7 +4,7 @@ Rolling state for the Ratio Phase 0 build. Read in full at session start; rewrit
 
 ## Status
 
-The MVP is implemented: strict TypeScript/Vite, pure core with 100% line coverage, all three guide generators, move/size snapping, both SVG wheels, Canvas2DRenderer and separate overlay, text/rect/image editing, identical content pack, localStorage recovery and paired export. Browser checks verified square/thirds entry, text movement and wrapping resize, image loading and locked-aspect resize, deletion, reload recovery, and an actual 1080 × 1080 PNG download with no guide or selection marks. Chrome blocked the second automatic download, so the JSON browser delivery check and the complete 15-path browser matrix remain before claiming study readiness. All 37 tests and npm run build pass. Browser automation disconnected before the production matrix check could run. The private Sites demo is live at https://ratio-phase-zero.alazadsafwat.chatgpt.site (deployment succeeded); this is a functional MVP, not yet a completed study-readiness audit.
+The MVP is implemented: strict TypeScript/Vite, pure core with 100% line coverage, all three guide generators, move/size snapping, both SVG wheels, Canvas2DRenderer and separate overlay, text/shape/image editing, identical content pack, localStorage recovery and paired export. This session added, on Safwat's instruction, a bundled seven-typeface font library (text nodes carry `font`, toolbar has a typeface select, default Space Grotesk) and a six-shape shape library (rect nodes carry `shape`, toolbar rectangle button opens a shape panel). Verified in headless Chromium against the production build: all seven families load, every shape renders and round-trips through autosave, a Kylora headline renders in Kylora, export delivers both `<id>-blank.png` at 1080 × 1080 and `<id>-blank.json`, zero console errors. All 42 tests and npm run build pass. Documents autosaved before this session lack `font`/`shape`, fail validation and are discarded on load; no study data existed. The complete 15-path browser matrix and the guide-mode paired download check remain before claiming study readiness. The private Sites demo at https://ratio-phase-zero.alazadsafwat.chatgpt.site predates this session and needs redeploying.
 
 ## Decision log
 
@@ -28,6 +28,10 @@ Append-only. New entries supersede named old entries; do not edit history. Forma
 - **D-016** 2026-09-14 astra — Text editing opens an inline textarea on add, double-click, or Enter on selection; Escape or Cmd/Ctrl+Enter closes it. Browser-measured height is written back before save/export. Why: text must be editable without adding a properties panel.
 - **D-017** 2026-09-14 astra — Image imports are normalised to raster data URLs with a maximum 1600 px longest side. Validation accepts six-digit hex colours and base64 PNG/JPEG/WebP/GIF data URLs emitted by the app. Why: bounded browser storage, predictable rendering, no remote image fetch at export. This is import normalisation, not an image-adjustment UI.
 - **D-018** 2026-09-14 astra — Private Sites hosting uses the prescribed vanilla Vite static build; no Sites React scaffold or WebMCP/AI-facing actions are added. Why: Safwat's explicit stack and no-AI scope take precedence over generic hosting skill recommendations.
+- **D-019** 2026-09-14 safwat — Load a font library and a shape library into Phase 0. Why: explicit session request; supersedes the D-001/AGENTS restriction to one system sans and rectangles only.
+- **D-020** 2026-09-14 fable — Fonts are Safwat's seven personal typefaces (Space Grotesk, Acthirey, Bandito, Bitsand, Hugos, Kylora, Malam Poek) bundled under `public/fonts/` with their licence files, declared via `@font-face`, registered in pure `src/core/fonts.ts`. Default for all new text, including the content pack, is Space Grotesk. Why: Space Grotesk is OFL, body-capable and the only family with a real weight range besides Bandito; a fixed default keeps both study arms identical. Five bundled files are personal-use demo versions; the renderer synthesises bold for single-weight families.
+- **D-021** 2026-09-14 fable — Shapes extend the existing `rect` node with a `shape` field rather than adding a node type: rectangle, ellipse, triangle, diamond, hexagon, star. Every shape fills its rect exactly (pure `shapeOutline` in `src/core/shapes.ts`), so handles, hit testing and snapping stay bounding-box based and unchanged. Why: smallest contract change; no snapping semantics touched, which protects the study attribution.
+- **D-022** 2026-09-14 fable — `font` and `shape` are required fields; no migration of pre-existing autosaves. Why: no participant data existed and a lenient validator would weaken the JSON export contract.
 
 ## Next steps
 
@@ -42,7 +46,9 @@ Append-only. New entries supersede named old entries; do not edit history. Forma
 - [x] SVG ratio wheel and guide wheel; centre keeps square and still goes through guide choice.
 - [x] Offscreen PNG and validated JSON exports, named by id and mode.
 - [x] Study mode/session handling and identical fixed content pack.
-- [ ] Finish the definition-of-done browser audit: all 15 wheel paths, blank-condition interaction, image file picker, other ratio PNG dimensions, paired download after browser permission. If all pass, set Status to Phase 0 build complete; ready for study.
+- [x] Font library (seven bundled families, typeface select) and shape library (six shapes, shape panel) with core tests.
+- [ ] Redeploy the Sites demo from the current build so the hosted version carries fonts and shapes.
+- [ ] Finish the definition-of-done browser audit: all 15 wheel paths, blank-condition interaction, image file picker, other ratio PNG dimensions, guide-mode paired download. If all pass, set Status to Phase 0 build complete; ready for study.
 - [ ] Safwat: define participant count, blinded raters, scale and success margin; run the pilot.
 
 ## Open questions for Safwat
@@ -51,8 +57,13 @@ Append-only. New entries supersede named old entries; do not edit history. Forma
 - Whether D-010 (centre still chooses a guide) is acceptable. Square default is now explicit in the supplied handbook.
 - Whether study needs undo. It remains out of scope. Run a pilot of two or three people without it and decide from behaviour.
 - Approve the concrete fictional exhibition content pack before recruiting participants; it is identical in both modes.
+- Font licences: Acthirey, Bandito, Bitsand, Hugos and Kylora are demo files licensed for personal, non-commercial use. Fine for the study prototype; anything commercial needs paid licences or a cut to Space Grotesk and Malam Poek.
+- Whether the typeface and shape choice should be available in both study arms (currently yes, identical) or held back so layout stays the only variable.
 
 ## Deferred
+
+- Per-shape stroke/outline styles, corner radius and line shapes stay out; the shape library is fills only.
+- Font weight stays the 400/700 toggle; the variable axes of Space Grotesk and Bandito are not exposed.
 
 - Undo and all Phase 1 editor features remain out of scope.
 - Study-readiness label is withheld until the full browser audit and paired-download permission check pass.
