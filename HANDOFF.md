@@ -28,6 +28,7 @@ Append-only. New entries supersede named old entries; do not edit history. Forma
 - **D-016** 2026-09-14 astra — Text editing opens an inline textarea on add, double-click, or Enter on selection; Escape or Cmd/Ctrl+Enter closes it. Browser-measured height is written back before save/export. Why: text must be editable without adding a properties panel.
 - **D-017** 2026-09-14 astra — Image imports are normalised to raster data URLs with a maximum 1600 px longest side. Validation accepts six-digit hex colours and base64 PNG/JPEG/WebP/GIF data URLs emitted by the app. Why: bounded browser storage, predictable rendering, no remote image fetch at export. This is import normalisation, not an image-adjustment UI.
 - **D-018** 2026-09-14 astra — Private Sites hosting uses the prescribed vanilla Vite static build; no Sites React scaffold or WebMCP/AI-facing actions are added. Why: Safwat's explicit stack and no-AI scope take precedence over generic hosting skill recommendations.
+- **D-019** 2026-09-14 safwat — Proposed a future "human interaction token": count/log substantial user edits per document as a provenance signal of real human design effort, distinct from trivial pointer noise or untouched default placement. Why deferred: not scoped, and telemetry beyond study export is explicitly excluded from Phase 0 (Mission; Phase 0 scope). Idea only, no implementation; captured so it isn't lost before Phase 1 planning.
 
 ## Next steps
 
@@ -51,9 +52,11 @@ Append-only. New entries supersede named old entries; do not edit history. Forma
 - Whether D-010 (centre still chooses a guide) is acceptable. Square default is now explicit in the supplied handbook.
 - Whether study needs undo. It remains out of scope. Run a pilot of two or three people without it and decide from behaviour.
 - Approve the concrete fictional exhibition content pack before recruiting participants; it is identical in both modes.
+- Human interaction token (D-019): define what counts as a "substantial edit" and whether the count needs tamper-evidence to mean anything as an authenticity signal, before Phase 1 scoping starts.
 
 ## Deferred
 
 - Undo and all Phase 1 editor features remain out of scope.
 - Study-readiness label is withheld until the full browser audit and paired-download permission check pass.
 - Browser storage quota failure is caught so editing/export remain usable, but the app does not yet expose failed autosave visibly (no toasts per handbook). Check quota behaviour in the pilot with several large images.
+- Human interaction token (D-019): per-document count or log of substantial edits (moves/resizes past a threshold, content/style changes — not selection, hover, or untouched pack placement) as a graphic-design-authenticity signal. No data model, threshold, storage, or display surface defined yet.
