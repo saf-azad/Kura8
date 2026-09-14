@@ -1,0 +1,59 @@
+# HANDOFF
+
+Rolling state for the Ratio Phase 0 build. Read in full at session start; rewrite Status and append to the rest at session end. Rules are in AGENTS.md → Handoff protocol.
+
+## Status
+
+The MVP is implemented: strict TypeScript/Vite, pure core with 100% line coverage, all three guide generators, move/size snapping, both SVG wheels, Canvas2DRenderer and separate overlay, text/rect/image editing, identical content pack, localStorage recovery and paired export. Browser checks verified square/thirds entry, text movement and wrapping resize, image loading and locked-aspect resize, deletion, reload recovery, and an actual 1080 × 1080 PNG download. Chrome blocked the second automatic download, so the JSON browser delivery check and the complete 15-path browser matrix remain before claiming study readiness. All 37 tests and npm run build pass. Browser automation disconnected before the production matrix check could run. The private Sites demo is configured at https://ratio-phase-zero.major-toad-6383.chatgpt.site; this is a functional MVP, not yet a completed study-readiness audit.
+
+## Decision log
+
+Append-only. New entries supersede named old entries; do not edit history. Format: id, date, who, decision, why.
+
+- **D-001** 2026-09-14 safwat — Phase 0 is the guide-and-snap wedge plus a study harness, nothing else. Why: prove the thesis before building the editor (project brief, first principles).
+- **D-002** 2026-09-14 fable — Stack is TypeScript + Vite + Vitest, vanilla DOM/SVG for chrome, HTML canvas 2D for the document, behind a Renderer interface. Why: Phase 0 is a layout test; CanvasKit adds a 7 MB WASM dependency and path/boolean ops nobody uses until Phase 2. The interface keeps the swap cheap.
+- **D-003** 2026-09-14 fable — All geometry lives in a 1000-unit-wide unit space; pixels appear only at export and on screen. Why: brief requires resolution-independent documents; one fixed width keeps thresholds and tests simple.
+- **D-004** 2026-09-14 fable — Guide generators emit no canvas-edge lines; the snapping engine adds edges itself. Why: keeps generators purely about proportion and stops every generator duplicating the same four lines.
+- **D-005** 2026-09-14 fable — Size snapping candidates are spans between lines (edges included) and region dimensions; on a tie with a position candidate, position wins. Why: gives the guide control over dimensions as the brief demands; the tie rule is the simplest deterministic choice and can be tuned after the study.
+- **D-006** 2026-09-14 fable — No object-to-object snapping and no pixel grid in Phase 0, even though the brief's full priority order includes both. Why: the study must attribute any layout improvement to guide anchors alone.
+- **D-007** 2026-09-14 fable — Autosave to localStorage and a fixed content pack are in Phase 0. Why: test validity, not features. A tester losing work to a reload, or typing skill varying between participants, would contaminate the comparison.
+- **D-008** 2026-09-14 fable — Ratio presets: square 1:1, portrait 4:5, landscape 16:9, story 9:16, banner 3:1. Export widths 1080, 1080, 1920, 1080, 1500 px. Why: common social sizes; banner is a guess and is the easiest to change.
+- **D-009** 2026-09-14 fable — Guide region sets are as specified in AGENTS.md → Guides (cells for thirds and golden, four golden rectangles, quadrants and centre bands for divisions). Points are drawn but never snapped to. Why: regions are what make size snapping proportional rather than a side effect of line spans; points add no position information lines don't already carry.
+- **D-010** 2026-09-14 fable — In guide mode the wheel centre skips only the ratio choice; the guide wheel still follows, so a guide-mode document always has a guide. The brief's centre goes straight to a blank canvas is deferred to Phase 1. Why: a no-guide path inside the guide condition would confound the study.
+- **D-011** 2026-09-14 fable — Every new node is placed centred at a fixed default size, identically in both conditions. Why: the study needs a neutral start that cannot be read as a layout suggestion; identical placement in both arms cancels it out.
+- **D-012** 2026-09-14 safwat — Execute beyond the first scaffold item and make a working MVP demo now. Why: explicit session request.
+- **D-013** 2026-09-14 astra — Wheel uses equal radial sectors, 262/85 outer/inner radii in a 600-unit SVG; resize handles are 7 screen px with a 10 px hit radius. Keep specified 8 px snapping threshold. Why: restrained geometry and usable desktop hit targets.
+- **D-014** 2026-09-14 astra — Add guides/grid.ts for shared line/intersection/cell generation; document APIs are createDocument, validateDocument, serialiseDocument and parseDocument. Why: shared deterministic generation without runtime dependencies; explicit document vocabulary.
+- **D-015** 2026-09-14 astra — Fixed pack is SPACE BETWEEN, a short fictional architecture exhibition paragraph, and Mauro Lima's staircase photograph from https://unsplash.com/photos/b5YlVPjRH3A embedded as JPEG. Headline 72/700, paragraph 28/400; generic text 56/400. Why: fixed study content with distinct headline/body roles and no supplied layout. Subject is fictional, not an event listing.
+- **D-016** 2026-09-14 astra — Text editing opens an inline textarea on add, double-click, or Enter on selection; Escape or Cmd/Ctrl+Enter closes it. Browser-measured height is written back before save/export. Why: text must be editable without adding a properties panel.
+- **D-017** 2026-09-14 astra — Image imports are normalised to raster data URLs with a maximum 1600 px longest side. Validation accepts six-digit hex colours and base64 PNG/JPEG/WebP/GIF data URLs emitted by the app. Why: bounded browser storage, predictable rendering, no remote image fetch at export. This is import normalisation, not an image-adjustment UI.
+- **D-018** 2026-09-14 astra — Private Sites hosting uses the prescribed vanilla Vite static build; no Sites React scaffold or WebMCP/AI-facing actions are added. Why: Safwat's explicit stack and no-AI scope take precedence over generic hosting skill recommendations.
+
+## Next steps
+
+- [x] Scaffold Vite vanilla-ts, Vitest, strict tsconfig, scripts and folder layout.
+- [x] geometry.ts, ratios.ts, document.ts with create/validate/round-trip tests.
+- [x] Three guide generators and registry; every anchor pinned by id on square/story/banner, including dropped regions.
+- [x] Move snapping: all edges/centre/canvas edges, threshold boundary, independent axes, ties and no-snap.
+- [x] Resize snapping: position/span/region sizes, dedupe/ties, lockAspect/dominantAxis and text handles; core 100% line coverage.
+- [x] Renderer and store: viewport fit and condition-separated autosave.
+- [x] Interaction and overlay: select/move/resize, per-type handles, min-size clamp, anchor drawing and hit feedback.
+- [x] Toolbar: text/rect/image, colour, font size/weight/align, delete, export.
+- [x] SVG ratio wheel and guide wheel; centre keeps square and still goes through guide choice.
+- [x] Offscreen PNG and validated JSON exports, named by id and mode.
+- [x] Study mode/session handling and identical fixed content pack.
+- [ ] Finish the definition-of-done browser audit: all 15 wheel paths, blank-condition interaction, image file picker, other ratio PNG dimensions, paired download after browser permission. If all pass, set Status to Phase 0 build complete; ready for study.
+- [ ] Safwat: define participant count, blinded raters, scale and success margin; run the pilot.
+
+## Open questions for Safwat
+
+- Study protocol: participants per condition, raters, scale and margin for the thesis holding.
+- Whether D-010 (centre still chooses a guide) is acceptable. Square default is now explicit in the supplied handbook.
+- Whether study needs undo. It remains out of scope. Run a pilot of two or three people without it and decide from behaviour.
+- Approve the concrete fictional exhibition content pack before recruiting participants; it is identical in both modes.
+
+## Deferred
+
+- Undo and all Phase 1 editor features remain out of scope.
+- Study-readiness label is withheld until the full browser audit and paired-download permission check pass.
+- Browser storage quota failure is caught so editing/export remain usable, but the app does not yet expose failed autosave visibly (no toasts per handbook). Check quota behaviour in the pilot with several large images.
