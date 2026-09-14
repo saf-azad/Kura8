@@ -19,7 +19,7 @@ Resolve scope, design and feature questions in this order:
 1. **Structure, never answers.** No layout, suggestion or preset arrangement of content. A guide dictates proportion only.
 2. **Guides are not templates.** If two people cannot produce different designs with a guide, remove whatever made it a template.
 3. **The guide system is the product.** Guides are anchor generators; everything snaps for position AND size. Engineering concentrates in `src/core/`.
-4. **Variation comes from geometry, not AI.** No AI generation, suggestion, nudging or smart anything, anywhere, ever. No LLM dependency.
+4. **Variation comes from geometry, not AI.** No AI generation, suggestion, nudging or smart anything, anywhere, ever. No LLM dependency. One exception by Safwat's decision (D-019): an on-device segmentation model cuts the background out of a selected image. It processes pixels of one image and never touches position, size or content choice.
 5. **The interface stays out of the way.** Flat, monochrome, no onboarding or explanatory chrome. No tooltips explaining design or empty-state suggestions.
 6. **Phase 0 only.** If absent from scope, do not build it. Record temptations under Deferred in `HANDOFF.md`.
 
@@ -35,8 +35,9 @@ The complete in-scope list:
 - PNG export at the fixed pixel width for each ratio.
 - Blank control mode hides both wheels and guides, disables ALL snapping, and uses square. Export document JSON alongside PNG.
 - Autosave to `localStorage` for reload recovery, as a test-validity concession.
+- Background remover for the selected image node, running entirely on the participant's machine (D-019, D-020). Identical in both arms; one-way; no schema change.
 
-Out of scope even if trivial: layers panel, undo/redo, alignment tools, typography beyond size/weight/alignment, colour wheel/palettes, image adjustments, rotation, user zoom/pan, file open/save, pen/path tools, booleans, colour grading, export profiles, PDF, ratio change after objects exist, mobile layout, collaboration, accounts, telemetry beyond study export.
+Out of scope even if trivial: layers panel, undo/redo, alignment tools, typography beyond size/weight/alignment, colour wheel/palettes, image adjustments beyond background removal, rotation, user zoom/pan, file open/save, pen/path tools, booleans, colour grading, export profiles, PDF, ratio change after objects exist, mobile layout, collaboration, accounts, telemetry beyond study export.
 
 Ratio is fixed at creation. Changing it later is a reflow problem; the wheel creates a new document.
 
@@ -47,6 +48,7 @@ D-002 governs the stack. Supersede it explicitly before changing it.
 - Strict TypeScript, Vite, Vitest, npm.
 - No UI framework. Vanilla DOM/SVG chrome, HTML canvas 2D document.
 - `src/core/` has zero DOM access and zero runtime dependencies. Every function depends only on inputs; fully unit tested.
+- The app layer's only runtime dependencies are `@imgly/background-removal` and its peer `onnxruntime-web`, imported lazily by `src/app/tools/background.ts` alone (D-020). Model and runtime files come from IMG.LY's CDN at first use; nothing is served from a Ratio server.
 - Renderer behind `Renderer` interface for a later CanvasKit/Skia swap. No CanvasKit in Phase 0.
 - One system sans stack. Browser text rendering accepted through Phase 1; HarfBuzz is a later decision.
 
@@ -75,6 +77,8 @@ src/
       interaction.ts
       overlay.ts
     tools/
+      index.ts
+      background.ts
     export/
     study/
       pack.ts
@@ -188,7 +192,7 @@ Images keyed by node ID. Canvas2DRenderer draws nodes only, with a white documen
 
 ## Interface
 
-White ground, black one-pixel outlines, one system sans font. No gradients, shadows, coloured chrome (except chosen colour swatch). Small floating icon toolbar: text, rectangle, image, colour, font size, weight, align, delete, export. Monochrome SVG wheel. No onboarding, design-explaining tooltips, empty-state copy or toasts. Cursor changes and anchor flashes are the feedback vocabulary.
+White ground, black one-pixel outlines, one system sans font. No gradients, shadows, coloured chrome (except chosen colour swatch). Small floating icon toolbar: text, rectangle, image, colour, font size, weight, align, remove background, delete, export. Monochrome SVG wheel. No onboarding, design-explaining tooltips, empty-state copy or toasts. Cursor changes and anchor flashes are the feedback vocabulary.
 
 ## Thesis test
 

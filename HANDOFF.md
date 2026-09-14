@@ -4,7 +4,7 @@ Rolling state for the Ratio Phase 0 build. Read in full at session start; rewrit
 
 ## Status
 
-The MVP is implemented: strict TypeScript/Vite, pure core with 100% line coverage, all three guide generators, move/size snapping, both SVG wheels, Canvas2DRenderer and separate overlay, text/rect/image editing, identical content pack, localStorage recovery and paired export. Browser checks verified square/thirds entry, text movement and wrapping resize, image loading and locked-aspect resize, deletion, reload recovery, and an actual 1080 × 1080 PNG download with no guide or selection marks. Chrome blocked the second automatic download, so the JSON browser delivery check and the complete 15-path browser matrix remain before claiming study readiness. All 37 tests and npm run build pass. Browser automation disconnected before the production matrix check could run. The private Sites demo is live at https://ratio-phase-zero.alazadsafwat.chatgpt.site (deployment succeeded); this is a functional MVP, not yet a completed study-readiness audit.
+The MVP is implemented: strict TypeScript/Vite, pure core with 100% line coverage, all three guide generators, move/size snapping, both SVG wheels, Canvas2DRenderer and separate overlay, text/rect/image editing, identical content pack, localStorage recovery and paired export. Browser checks verified square/thirds entry, text movement and wrapping resize, image loading and locked-aspect resize, deletion, reload recovery, and an actual 1080 × 1080 PNG download with no guide or selection marks. Chrome blocked the second automatic download, so the JSON browser delivery check and the complete 15-path browser matrix remain before claiming study readiness. A background remover for image nodes is in the toolbar (D-019, D-020): it runs the ISNet segmentation model on the participant's machine through ONNX Runtime Web (WebGPU, single-thread WASM fallback) via `@imgly/background-removal`, and replaces the selected image's data URL with a same-size PNG cut-out. Headless checks of the production build in both arms with a synthetic subject photo passed: first run 24–26 s including the ~80 MB model download, alpha 0 at all four background corners, alpha 255 on the subject, rect and naturalSize unchanged, autosave saved, export disabled and progress cursor shown while busy, no app console errors. Applied to the pack staircase photograph the model finds no salient subject and returns a near-transparent image; that is the image, not a fault, and it is an open question below. All 39 tests and `npm run build` pass; dist is 1.9 MB after dropping the unused ORT wasm copy. The private Sites demo at https://ratio-phase-zero.alazadsafwat.chatgpt.site predates the remover. This is a functional MVP, not yet a completed study-readiness audit.
 
 ## Decision log
 
@@ -28,6 +28,8 @@ Append-only. New entries supersede named old entries; do not edit history. Forma
 - **D-016** 2026-09-14 astra — Text editing opens an inline textarea on add, double-click, or Enter on selection; Escape or Cmd/Ctrl+Enter closes it. Browser-measured height is written back before save/export. Why: text must be editable without adding a properties panel.
 - **D-017** 2026-09-14 astra — Image imports are normalised to raster data URLs with a maximum 1600 px longest side. Validation accepts six-digit hex colours and base64 PNG/JPEG/WebP/GIF data URLs emitted by the app. Why: bounded browser storage, predictable rendering, no remote image fetch at export. This is import normalisation, not an image-adjustment UI.
 - **D-018** 2026-09-14 astra — Private Sites hosting uses the prescribed vanilla Vite static build; no Sites React scaffold or WebMCP/AI-facing actions are added. Why: Safwat's explicit stack and no-AI scope take precedence over generic hosting skill recommendations.
+- **D-019** 2026-09-15 safwat — Add a background remover tool for image nodes, using a neural segmentation model that runs on the end user's machine. Why: explicit session request. This expands Phase 0 scope and carves one exception out of rule 4 (no AI): the model processes pixels of one image and never touches position, size, or content choice. Present identically in both study arms.
+- **D-020** 2026-09-15 fable — Implementation: `@imgly/background-removal` 1.7.0 with `onnxruntime-web` 1.21 as peer; model `isnet_fp16` (~80 MB); device `gpu` (WebGPU when available, WASM otherwise); model and runtime files fetched from IMG.LY's static CDN on first use and cached by the browser, so no image leaves the machine. Library loaded lazily and preloaded once when an image node is first selected. Module `src/app/tools/background.ts`; toolbar button enabled only for a selected image. Feedback is the progress cursor, a one-pixel download line inside the button, and a dashed outline plus title on failure. Operation is one-way; delete and re-add restores the pack image. Output is a PNG data URL at the source pixel size; `naturalSize` is refreshed from the result. A Vite plugin drops the unused 24 MB ORT wasm copy from dist. Why: smallest working path with a purpose-built salient-object model; feedback stays within the cursor/flash vocabulary; no document schema change.
 
 ## Next steps
 
@@ -43,6 +45,8 @@ Append-only. New entries supersede named old entries; do not edit history. Forma
 - [x] Offscreen PNG and validated JSON exports, named by id and mode.
 - [x] Study mode/session handling and identical fixed content pack.
 - [ ] Finish the definition-of-done browser audit: all 15 wheel paths, blank-condition interaction, image file picker, other ratio PNG dimensions, paired download after browser permission. If all pass, set Status to Phase 0 build complete; ready for study.
+- [ ] Run the background remover once in the live Sites build with a real photograph (person or product) and note first-run time on a study-typical connection; redeploy Sites so the demo includes the tool.
+- [ ] Safwat: rule on the AGPL-3.0 licence of `@imgly/background-removal` (question below). If unacceptable, swap the model behind `src/app/tools/background.ts` to `onnxruntime-web` with Apache-2.0 U²-Net or MIT BiRefNet weights; the toolbar and document code do not change.
 - [ ] Safwat: define participant count, blinded raters, scale and success margin; run the pilot.
 
 ## Open questions for Safwat
@@ -51,9 +55,15 @@ Append-only. New entries supersede named old entries; do not edit history. Forma
 - Whether D-010 (centre still chooses a guide) is acceptable. Square default is now explicit in the supplied handbook.
 - Whether study needs undo. It remains out of scope. Run a pilot of two or three people without it and decide from behaviour.
 - Approve the concrete fictional exhibition content pack before recruiting participants; it is identical in both modes.
+- `@imgly/background-removal` is AGPL-3.0 (commercial licence available from IMG.LY; the ISNet weights themselves are MIT). Acceptable for the study prototype, or swap to a permissively licensed model before any public release?
+- The pack staircase photograph has no separable subject, so the remover turns it into a near-transparent ghost. Keep the tool in the study as is, remove it from the study build, or change the pack image to one with a subject? It is identical in both arms either way.
+- Should a bad cut-out be recoverable? Restoring the original needs the original data URL stored in the document (schema change) or undo, which remains out of scope.
 
 ## Deferred
 
 - Undo and all Phase 1 editor features remain out of scope.
 - Study-readiness label is withheld until the full browser audit and paired-download permission check pass.
-- Browser storage quota failure is caught so editing/export remain usable, but the app does not yet expose failed autosave visibly (no toasts per handbook). Check quota behaviour in the pilot with several large images.
+- Browser storage quota failure is caught so editing/export remain usable, but the app does not yet expose failed autosave visibly (no toasts per handbook). Check quota behaviour in the pilot with several large images. Cut-outs are PNG and larger than the JPEG they replace (203 KB for the 900 × 1200 test image), which brings quota closer.
+- Self-hosting the model and runtime files (imgly `publicPath`) would remove the CDN dependency at roughly 100 MB of static assets. Not needed for the study.
+- Cross-origin isolation headers (COOP/COEP) would enable multithreaded WASM inference where WebGPU is unavailable; the CDN assets would then need CORP headers. Not needed while WebGPU machines are the norm.
+- Keeping the original image for a toggle back is a document schema change; deferred with undo.
