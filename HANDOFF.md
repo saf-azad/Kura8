@@ -32,6 +32,7 @@ Append-only. New entries supersede named old entries; do not edit history. Forma
 - **D-020** 2026-09-14 fable — Fonts are Safwat's seven personal typefaces (Space Grotesk, Acthirey, Bandito, Bitsand, Hugos, Kylora, Malam Poek) bundled under `public/fonts/` with their licence files, declared via `@font-face`, registered in pure `src/core/fonts.ts`. Default for all new text, including the content pack, is Space Grotesk. Why: Space Grotesk is OFL, body-capable and the only family with a real weight range besides Bandito; a fixed default keeps both study arms identical. Five bundled files are personal-use demo versions; the renderer synthesises bold for single-weight families.
 - **D-021** 2026-09-14 fable — Shapes extend the existing `rect` node with a `shape` field rather than adding a node type: rectangle, ellipse, triangle, diamond, hexagon, star. Every shape fills its rect exactly (pure `shapeOutline` in `src/core/shapes.ts`), so handles, hit testing and snapping stay bounding-box based and unchanged. Why: smallest contract change; no snapping semantics touched, which protects the study attribution.
 - **D-022** 2026-09-14 fable — `font` and `shape` are required fields; no migration of pre-existing autosaves. Why: no participant data existed and a lenient validator would weaken the JSON export contract.
+- **D-023** 2026-09-14 safwat — Proposed a future "human interaction token": count/log substantial user edits per document as a provenance signal of real human design effort, distinct from trivial pointer noise or untouched default placement. Why deferred: not scoped, and telemetry beyond study export is explicitly excluded from Phase 0 (Mission; Phase 0 scope). Idea only, no implementation; captured so it isn't lost before Phase 1 planning.
 
 ## Next steps
 
@@ -59,6 +60,7 @@ Append-only. New entries supersede named old entries; do not edit history. Forma
 - Approve the concrete fictional exhibition content pack before recruiting participants; it is identical in both modes.
 - Font licences: Acthirey, Bandito, Bitsand, Hugos and Kylora are demo files licensed for personal, non-commercial use. Fine for the study prototype; anything commercial needs paid licences or a cut to Space Grotesk and Malam Poek.
 - Whether the typeface and shape choice should be available in both study arms (currently yes, identical) or held back so layout stays the only variable.
+- Human interaction token (D-023): define what counts as a "substantial edit" and whether the count needs tamper-evidence to mean anything as an authenticity signal, before Phase 1 scoping starts.
 
 ## Deferred
 
@@ -68,3 +70,4 @@ Append-only. New entries supersede named old entries; do not edit history. Forma
 - Undo and all Phase 1 editor features remain out of scope.
 - Study-readiness label is withheld until the full browser audit and paired-download permission check pass.
 - Browser storage quota failure is caught so editing/export remain usable, but the app does not yet expose failed autosave visibly (no toasts per handbook). Check quota behaviour in the pilot with several large images.
+- Human interaction token (D-023): per-document count or log of substantial edits (moves/resizes past a threshold, content/style changes — not selection, hover, or untouched pack placement) as a graphic-design-authenticity signal. No data model, threshold, storage, or display surface defined yet.
