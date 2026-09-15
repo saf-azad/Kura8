@@ -38,6 +38,10 @@ export function alphaFromScores(scores: ArrayLike<number>, sigmoid: boolean): Ui
   for (let i = 0; i < n; i++) out[i] = Math.round((range > 1e-6 ? (p[i] - min) / range : p[i]) * 255);
   return out;
 }
+/** Multiply each pixel's existing alpha by the mask (0..255 per pixel), so removal only ever adds transparency. */
+export function applyMask(rgba: Uint8ClampedArray, mask: ArrayLike<number>): void {
+  for (let i = 0, n = rgba.length / 4; i < n; i++) rgba[i * 4 + 3] = Math.round(rgba[i * 4 + 3] * mask[i] / 255);
+}
 export function blobToDataUrl(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -152,9 +156,10 @@ export async function removeBackground(src: string, listen?: ProgressListener): 
     for (let i = 0; i < pixels; i++) { grey.data[i * 4] = grey.data[i * 4 + 1] = grey.data[i * 4 + 2] = alpha[i]; grey.data[i * 4 + 3] = 255; }
     mask.putImageData(grey, 0, 0);
     const [, scaled] = canvas(width, height); scaled.imageSmoothingQuality = 'high'; scaled.drawImage(maskCanvas, 0, 0, width, height);
-    const cover = scaled.getImageData(0, 0, width, height).data;
+    const cover = scaled.getImageData(0, 0, width, height).data, coverage = new Uint8ClampedArray(width * height);
+    for (let i = 0; i < coverage.length; i++) coverage[i] = cover[i * 4];
     const [outCanvas, out] = canvas(width, height); out.drawImage(bitmap, 0, 0); const image = out.getImageData(0, 0, width, height);
-    for (let i = 0; i < width * height; i++) image.data[i * 4 + 3] = cover[i * 4];
+    applyMask(image.data, coverage);
     out.putImageData(image, 0, 0);
     const blob = await new Promise<Blob>((resolve, reject) => outCanvas.toBlob(b => b ? resolve(b) : reject(new Error('PNG encode failed')), 'image/png'));
     return blobToDataUrl(blob);
