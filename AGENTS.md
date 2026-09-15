@@ -19,7 +19,7 @@ Resolve scope, design and feature questions in this order:
 1. **Structure, never answers.** No layout, suggestion or preset arrangement of content. A guide dictates proportion only.
 2. **Guides are not templates.** If two people cannot produce different designs with a guide, remove whatever made it a template.
 3. **The guide system is the product.** Guides are anchor generators; everything snaps for position AND size. Engineering concentrates in `src/core/`.
-4. **Variation comes from geometry, not AI.** No AI generation, suggestion, nudging or smart anything, anywhere, ever. No LLM dependency.
+4. **Variation comes from geometry, not AI.** No AI generation, suggestion, nudging or smart anything, anywhere, ever. No LLM dependency. One exception by Safwat's decision (D-019): an on-device segmentation model cuts the background out of a selected image. It processes pixels of one image and never touches position, size or content choice.
 5. **The interface stays out of the way.** Flat, monochrome, no onboarding or explanatory chrome. No tooltips explaining design or empty-state suggestions.
 6. **Phase 0 only.** If absent from scope, do not build it. Record temptations under Deferred in `HANDOFF.md`.
 
@@ -29,15 +29,16 @@ The complete in-scope list:
 
 - Radial wheel entry: centre skips ratio choice to square; outer ring has five ratios. Second wheel always follows in guide mode and offers three guides (D-010).
 - Rule of thirds, golden ratio and simple divisions (halves and quarters), identical choices for every ratio.
-- Text, shape and image nodes. Shape library: rectangle, ellipse, triangle, diamond, star and arrow (D-020).
+- Text, shape and image nodes. Shape library: rectangle, ellipse, triangle, diamond, star and arrow (D-025).
 - Move and resize, snapping for position and size to guide anchors and canvas edges. No other targets.
-- Object colour picker and six-digit hex input; object locks; platform-aware shortcuts; Shift drag/corner-resize constraints (D-020, D-021).
+- Object colour picker and six-digit hex input; object locks; platform-aware shortcuts; Shift drag/corner-resize constraints (D-025, D-026).
 - Guide overlay visible on canvas, absent from export.
 - PNG export at the fixed pixel width for each ratio.
 - Blank control mode hides both wheels and guides, disables ALL snapping, and uses square. Export document JSON alongside PNG.
 - Autosave to `localStorage` for reload recovery, as a test-validity concession.
+- Background remover for the selected image node, running entirely on the participant's machine (D-019, D-020). Identical in both arms; one-way; no schema change.
 
-Out of scope even if trivial: layers panel, undo/redo, alignment tools, typography beyond size/weight/alignment, colour wheel/palettes, image adjustments, rotation, user zoom/pan, file open/save, pen/path tools, booleans, colour grading, export profiles, PDF, ratio change after objects exist, mobile layout, collaboration, accounts, telemetry beyond study export.
+Out of scope even if trivial: layers panel, undo/redo, alignment tools, typography beyond size/weight/alignment, colour wheel/palettes, image adjustments beyond background removal, rotation, user zoom/pan, file open/save, pen/path tools, booleans, colour grading, export profiles, PDF, ratio change after objects exist, mobile layout, collaboration, accounts, telemetry beyond study export.
 
 Ratio is fixed at creation. Changing it later is a reflow problem; the wheel creates a new document.
 
@@ -48,6 +49,7 @@ D-002 governs the stack. Supersede it explicitly before changing it.
 - Strict TypeScript, Vite, Vitest, npm.
 - No UI framework. Vanilla DOM/SVG chrome, HTML canvas 2D document.
 - `src/core/` has zero DOM access and zero runtime dependencies. Every function depends only on inputs; fully unit tested.
+- The app layer's only runtime dependency is `onnxruntime-web` (MIT), imported lazily by `src/app/tools/background.ts` alone (D-022). Model weights (ISNet, Apache-2.0; float16 derived in Node from the pinned checkpoint, D-023) and the ORT wasm are served from the app's own origin as 16 MB parts written to `public/` by `scripts/prepare-model.mjs`, which runs before `npm run dev` and `npm run build`. No request leaves the deployment at run time. Every dependency and every weight file must stay under a permissive licence (D-021).
 - Renderer behind `Renderer` interface for a later CanvasKit/Skia swap. No CanvasKit in Phase 0.
 - One system sans stack. Browser text rendering accepted through Phase 1; HarfBuzz is a later decision.
 
@@ -76,11 +78,17 @@ src/
       interaction.ts
       overlay.ts
     tools/
+      index.ts
+      background.ts
     export/
     study/
       pack.ts
     store.ts
   main.ts
+scripts/
+  prepare-model.mjs    runtime and weights into public/ (predev, prebuild)
+  onnx-fp16.mjs        float16 derivation of the pinned checkpoint (tested)
+public/                generated, gitignored: ort/ and models/
 tests/                 mirrors core, plus useful app tests
 ```
 
@@ -192,9 +200,9 @@ Images keyed by node ID. Canvas2DRenderer draws nodes only, with a white documen
 
 ## Interface
 
-White ground, black one-pixel outlines, one system sans font. No gradients, shadows, coloured chrome (except chosen colour swatch). Small floating icon toolbar: text, rectangle, shape library, image, colour and hex input, font size, weight, align, duplicate, lock, delete, export, keyboard shortcut reference. Monochrome SVG wheel. No onboarding, design-explaining tooltips, empty-state copy or toasts. Cursor changes and anchor flashes are the feedback vocabulary.
+White ground, black one-pixel outlines, one system sans font. No gradients, shadows, coloured chrome (except chosen colour swatch). Small floating icon toolbar: text, rectangle, shape library, image, colour and hex input, font size, weight, align, remove background, duplicate, lock, delete, export, keyboard shortcut reference. Monochrome SVG wheel. No onboarding, design-explaining tooltips, empty-state copy or toasts. Cursor changes and anchor flashes are the feedback vocabulary.
 
-## Keyboard controls (D-020, D-021)
+## Keyboard controls (D-025, D-026)
 
 Use Command on Mac and Ctrl on PC for duplicate (D), bold (B), lock/unlock (Shift+L), export (Shift+E), and finish text editing (Enter). Arrow keys move by 1 unit; Shift+Arrow moves by 10 units. Keyboard moves are explicit unit increments without snap attraction. Delete/Backspace removes unlocked selection; Enter edits text; Escape deselects or closes the active panel. Shortcuts do not intercept typing controls, composition or native modifier combinations. No undo/redo or clipboard commands are added by this scope update.
 

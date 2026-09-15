@@ -12,6 +12,7 @@ import { drawOverlay } from './app/canvas/overlay';
 import { installInteraction } from './app/canvas/interaction';
 import { toolbar, button, icons } from './app/tools';
 import { exportDocument } from './app/export';
+import { removeBackground, preloadBackgroundRemoval } from './app/tools/background';
 import type { SnapHit } from './core/snap';
 const { id, mode } = studySession();
 const app = document.querySelector<HTMLDivElement>('#app')!;
@@ -31,7 +32,7 @@ function openEditor(doc: RatioDoc): void {
   const renderer = new Canvas2DRenderer(canvas), images = new Map<string, ImageBitmap>();
   const measure = document.createElement('canvas').getContext('2d')!;
   let selectedId: string | undefined, scale = 1, hits: SnapHit[] = [], editor: HTMLTextAreaElement | undefined;
-  let loading = 0, exporting = false;
+  let loading = 0, exporting = false, removing = false, preloaded = false;
   const mac = isMac(navigator.platform);
   const selected = () => doc.nodes.find(n => n.id === selectedId);
   const persist = () => { const saved = saveDocument(doc, mode); canvas.setAttribute('data-autosave', saved ? 'saved' : 'unavailable'); };
@@ -39,7 +40,9 @@ function openEditor(doc: RatioDoc): void {
     for (const n of doc.nodes) if (n.type === 'text') n.rect.h = measureText(measure, n);
     renderer.render(doc, { scale: scale * (window.devicePixelRatio || 1), images });
     drawOverlay(overlay, size, scale, anchors, hits, selected()); tools.refresh();
-    tools.exportButton.disabled = loading > 0 || exporting;
+    tools.exportButton.disabled = loading > 0 || exporting || removing;
+    host.classList.toggle('busy', removing);
+    if (!preloaded && selected()?.type === 'image') { preloaded = true; preloadBackgroundRemoval(progress).catch(() => { preloaded = false; }); }
     persist();
   };
   const select = (nodeId?: string) => { selectedId = nodeId; hits = []; refresh(); };
@@ -55,6 +58,18 @@ function openEditor(doc: RatioDoc): void {
       add({ id: nodeId, type: 'image', src, naturalSize: { w: bitmap.width, h: bitmap.height }, rect: { x: (size.w - 500) / 2, y: (size.h - h) / 2, w: 500, h } });
     } finally { loading--; refresh(); }
   };
+  const progress = (fraction: number) => tools.backgroundButton.style.setProperty('--progress', fraction >= 1 ? '0' : String(fraction));
+  const cutout = async () => {
+    const n = selected(); if (n?.type !== 'image' || n.locked || removing) return;
+    removing = true; tools.backgroundButton.setAttribute('aria-busy', 'true'); tools.backgroundButton.removeAttribute('aria-invalid'); tools.backgroundButton.title = 'Remove image background'; refresh();
+    try {
+      const src = await removeBackground(n.src, progress), bitmap = await decode(src);
+      if (!doc.nodes.includes(n) || n.locked) { bitmap.close(); return; }
+      images.get(n.id)?.close(); images.set(n.id, bitmap); n.src = src; n.naturalSize = { w: bitmap.width, h: bitmap.height };
+    } catch (e) {
+      console.error(e); tools.backgroundButton.setAttribute('aria-invalid', 'true'); tools.backgroundButton.title = 'Remove image background: unavailable, check the connection and try again';
+    } finally { removing = false; tools.backgroundButton.removeAttribute('aria-busy'); progress(0); refresh(); }
+  };
   const remove = () => { const index = doc.nodes.findIndex(n => n.id === selectedId); if (index < 0 || doc.nodes[index].locked) return; const n = doc.nodes[index]; images.get(n.id)?.close(); images.delete(n.id); doc.nodes.splice(index, 1); select(); };
   const addShape = (shape: ShapeKind) => add({ id: crypto.randomUUID(), type: 'rect', shape, rect: { x: (size.w - 300) / 2, y: (size.h - 200) / 2, w: 300, h: 200 }, fill: '#111111' });
   const toggleLock = () => { const n = selected(); if (n) { n.locked = !n.locked; refresh(); } };
@@ -68,7 +83,7 @@ function openEditor(doc: RatioDoc): void {
   const tools = toolbar(host.querySelector<HTMLElement>('.tools')!, {
     selected, mac, addShape, toggleLock, duplicate: () => { void duplicate(); }, update: refresh, addText: () => addText('Text', 56, 400, true),
     addRect: () => add({ id: crypto.randomUUID(), type: 'rect', rect: { x: (size.w - 300) / 2, y: (size.h - 200) / 2, w: 300, h: 200 }, fill: '#111111' }),
-    addImage: () => file.click(), delete: remove,
+    addImage: () => file.click(), removeBackground: () => { void cutout(); }, delete: remove,
     export: () => { exporting = true; refresh(); void exportDocument(doc, mode, images).finally(() => { exporting = false; refresh(); }); },
   });
   const content = host.querySelector<HTMLDivElement>('.pack')!;
