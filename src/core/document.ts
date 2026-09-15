@@ -2,9 +2,11 @@ import type { Rect, Size } from './geometry';
 import type { GuideId } from './guides/types';
 export type RatioId = 'square' | 'portrait' | 'landscape' | 'story' | 'banner';
 export type NodeType = 'text' | 'rect' | 'image';
-export type NodeBase = { id: string; type: NodeType; rect: Rect };
+export type NodeBase = { id: string; type: NodeType; rect: Rect; locked?: boolean };
 export type TextNode = NodeBase & { type: 'text'; text: string; fontSize: number; weight: 400 | 700; align: 'left' | 'center' | 'right'; color: string };
-export type RectNode = NodeBase & { type: 'rect'; fill: string };
+export const shapeKinds = ['rectangle', 'ellipse', 'triangle', 'diamond', 'star', 'arrow'] as const;
+export type ShapeKind = typeof shapeKinds[number];
+export type RectNode = NodeBase & { type: 'rect'; fill: string; shape?: ShapeKind };
 export type ImageNode = NodeBase & { type: 'image'; src: string; naturalSize: Size };
 export type DocNode = TextNode | RectNode | ImageNode;
 export type RatioDoc = { version: 1; id: string; ratio: RatioId; guide: GuideId | null; nodes: DocNode[]; createdAt: string };
@@ -16,8 +18,9 @@ const size = (x: unknown): x is Size => object(x) && positive(x.w) && positive(x
 const color = (x: unknown): x is string => typeof x === 'string' && /^#[0-9a-f]{6}$/i.test(x);
 function node(x: unknown): x is DocNode {
   if (!object(x) || typeof x.id !== 'string' || !x.id || !object(x.rect) || !finite(x.rect.x) || !finite(x.rect.y) || !size(x.rect)) return false;
+  if (x.locked !== undefined && typeof x.locked !== 'boolean') return false;
   switch (x.type) {
-    case 'rect': return color(x.fill);
+    case 'rect': return color(x.fill) && (x.shape === undefined || shapeKinds.includes(x.shape as ShapeKind));
     case 'image': return typeof x.src === 'string' && /^data:image\/(png|jpeg|webp|gif);base64,[a-z0-9+/]+=*$/i.test(x.src) && size(x.naturalSize);
     case 'text': return typeof x.text === 'string' && positive(x.fontSize) && [400, 700].includes(x.weight as number) && ['left', 'center', 'right'].includes(x.align as string) && color(x.color);
     default: return false;

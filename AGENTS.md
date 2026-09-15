@@ -29,8 +29,9 @@ The complete in-scope list:
 
 - Radial wheel entry: centre skips ratio choice to square; outer ring has five ratios. Second wheel always follows in guide mode and offers three guides (D-010).
 - Rule of thirds, golden ratio and simple divisions (halves and quarters), identical choices for every ratio.
-- Text, rectangle and image nodes.
+- Text, shape and image nodes. Shape library: rectangle, ellipse, triangle, diamond, star and arrow (D-020).
 - Move and resize, snapping for position and size to guide anchors and canvas edges. No other targets.
+- Object colour picker and six-digit hex input; object locks; platform-aware shortcuts; Shift drag/corner-resize constraints (D-020, D-021).
 - Guide overlay visible on canvas, absent from export.
 - PNG export at the fixed pixel width for each ratio.
 - Blank control mode hides both wheels and guides, disables ALL snapping, and uses square. Export document JSON alongside PNG.
@@ -102,12 +103,13 @@ export type Rect = { x: number; y: number; w: number; h: number };
 ```ts
 export type RatioId = 'square' | 'portrait' | 'landscape' | 'story' | 'banner';
 export type NodeType = 'text' | 'rect' | 'image';
-export type NodeBase = { id: string; type: NodeType; rect: Rect };
+export type NodeBase = { id: string; type: NodeType; rect: Rect; locked?: boolean };
 export type TextNode = NodeBase & {
   type: 'text'; text: string; fontSize: number; weight: 400 | 700;
   align: 'left' | 'center' | 'right'; color: string;
 };
-export type RectNode = NodeBase & { type: 'rect'; fill: string };
+export type ShapeKind = 'rectangle' | 'ellipse' | 'triangle' | 'diamond' | 'star' | 'arrow';
+export type RectNode = NodeBase & { type: 'rect'; fill: string; shape?: ShapeKind };
 export type ImageNode = NodeBase & { type: 'image'; src: string; naturalSize: Size };
 export type DocNode = TextNode | RectNode | ImageNode;
 export type RatioDoc = {
@@ -116,9 +118,11 @@ export type RatioDoc = {
 };
 ```
 
+Shape nodes retain `type: rect`; absent `shape` means rectangle for version-1 compatibility. Absent `locked` means unlocked. Locks prevent movement, resizing, text/property edits, deletion and duplication; locked nodes remain selectable for unlocking. Shapes snap by bounding rectangle and use their actual path for pointer hit testing.
+
 `src` is a data URL in Phase 0. `createdAt` is ISO. Array order is draw order. Guide null only in blank mode. Store guide reference only; regenerate anchors from guide and canvas size, never serialise them.
 
-Text width is wrap width; height is last measured wrapped text height, written back by the app. Core never measures text. Text has e/w resize handles and move only; height is never a snap subject. Images have corner handles with locked aspect. Rectangles have all eight handles.
+Text width is wrap width; height is last measured wrapped text height, written back by the app. Core never measures text. Text has e/w resize handles and move only; height is never a snap subject. Images have corner handles with locked aspect. Shapes have all eight handles; holding Shift on a corner preserves aspect. Holding Shift while moving fixes the non-dominant axis, including after snapping. Locked nodes have no handles.
 
 ### Guides
 
@@ -127,7 +131,7 @@ export type GuideId = 'thirds' | 'golden' | 'divisions';
 export type Anchor =
   | { kind: 'line'; id: string; axis: 'x' | 'y'; at: number }
   | { kind: 'point'; id: string; x: number; y: number }
-  | { kind: 'region'; id: string; rect: Rect };
+  | { kind: 'region'; id: string; rect: Rect; locked?: boolean };
 export type Guide = {
   id: GuideId; name: string;
   generate(canvas: Size): Anchor[];
@@ -188,7 +192,11 @@ Images keyed by node ID. Canvas2DRenderer draws nodes only, with a white documen
 
 ## Interface
 
-White ground, black one-pixel outlines, one system sans font. No gradients, shadows, coloured chrome (except chosen colour swatch). Small floating icon toolbar: text, rectangle, image, colour, font size, weight, align, delete, export. Monochrome SVG wheel. No onboarding, design-explaining tooltips, empty-state copy or toasts. Cursor changes and anchor flashes are the feedback vocabulary.
+White ground, black one-pixel outlines, one system sans font. No gradients, shadows, coloured chrome (except chosen colour swatch). Small floating icon toolbar: text, rectangle, shape library, image, colour and hex input, font size, weight, align, duplicate, lock, delete, export, keyboard shortcut reference. Monochrome SVG wheel. No onboarding, design-explaining tooltips, empty-state copy or toasts. Cursor changes and anchor flashes are the feedback vocabulary.
+
+## Keyboard controls (D-020, D-021)
+
+Use Command on Mac and Ctrl on PC for duplicate (D), bold (B), lock/unlock (Shift+L), export (Shift+E), and finish text editing (Enter). Arrow keys move by 1 unit; Shift+Arrow moves by 10 units. Keyboard moves are explicit unit increments without snap attraction. Delete/Backspace removes unlocked selection; Enter edits text; Escape deselects or closes the active panel. Shortcuts do not intercept typing controls, composition or native modifier combinations. No undo/redo or clipboard commands are added by this scope update.
 
 ## Thesis test
 

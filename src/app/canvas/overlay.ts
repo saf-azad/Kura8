@@ -3,6 +3,7 @@ import type { DocNode } from '../../core/document';
 import type { Handle, SnapHit } from '../../core/snap';
 import type { Point, Size } from '../../core/geometry';
 export function handles(node: DocNode): { handle: Handle; point: Point }[] {
+  if (node.locked) return [];
   const { x, y, w, h } = node.rect;
   const list: { handle: Handle; point: Point }[] = [
     { handle: 'nw', point: { x, y } }, { handle: 'ne', point: { x: x + w, y } },
@@ -26,7 +27,7 @@ export function drawOverlay(canvas: HTMLCanvasElement, size: Size, scale: number
   ctx.strokeStyle = '#111'; ctx.lineWidth = 2 / scale; ctx.setLineDash([]);
   for (const [id, axis, at] of [['edge-left', 'x', 0], ['edge-right', 'x', size.w], ['edge-top', 'y', 0], ['edge-bottom', 'y', size.h]] as const) if (isHit(id)) line(axis, at);
   if (selected) {
-    const r = selected.rect; ctx.strokeStyle = '#111'; ctx.lineWidth = 1 / scale; ctx.strokeRect(r.x, r.y, r.w, r.h);
+    const r = selected.rect; ctx.strokeStyle = '#111'; ctx.lineWidth = 1 / scale; ctx.setLineDash(selected.locked ? [4 / scale, 3 / scale] : []); ctx.strokeRect(r.x, r.y, r.w, r.h);
     for (const { point } of handles(selected)) { const s = 7 / scale; ctx.fillStyle = '#fff'; ctx.fillRect(point.x - s / 2, point.y - s / 2, s, s); ctx.strokeRect(point.x - s / 2, point.y - s / 2, s, s); }
   }
 }

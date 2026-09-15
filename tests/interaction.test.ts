@@ -18,3 +18,6 @@ it('restricts text handles to east/west and images to corners', () => {
   expect(handles({ id: 'i', type: 'image', rect, src: '', naturalSize: rect }).map(h => h.handle)).toEqual(['nw', 'ne', 'sw', 'se']);
   expect(handles({ id: 'r', type: 'rect', rect, fill: '#000000' })).toHaveLength(8);
 });
+it('hides all handles on locked objects', () => {
+  expect(handles({ id: 'r', type: 'rect', rect, fill: '#000000', locked: true })).toEqual([]);
+});

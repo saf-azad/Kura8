@@ -1,5 +1,6 @@
+import { isMac, primaryModifier, isEditingTarget } from './app/tools/shortcuts';
 import './style.css';
-import { createDocument, type RatioDoc, type DocNode, type TextNode } from './core/document';
+import { createDocument, type RatioDoc, type DocNode, type TextNode, type ShapeKind } from './core/document';
 import { canvasSize, ratioById } from './core/ratios';
 import { guideById } from './core/guides';
 import { studySession } from './app/study';
@@ -31,6 +32,7 @@ function openEditor(doc: RatioDoc): void {
   const measure = document.createElement('canvas').getContext('2d')!;
   let selectedId: string | undefined, scale = 1, hits: SnapHit[] = [], editor: HTMLTextAreaElement | undefined;
   let loading = 0, exporting = false;
+  const mac = isMac(navigator.platform);
   const selected = () => doc.nodes.find(n => n.id === selectedId);
   const persist = () => { const saved = saveDocument(doc, mode); canvas.setAttribute('data-autosave', saved ? 'saved' : 'unavailable'); };
   const refresh = () => {
@@ -53,10 +55,18 @@ function openEditor(doc: RatioDoc): void {
       add({ id: nodeId, type: 'image', src, naturalSize: { w: bitmap.width, h: bitmap.height }, rect: { x: (size.w - 500) / 2, y: (size.h - h) / 2, w: 500, h } });
     } finally { loading--; refresh(); }
   };
-  const remove = () => { const index = doc.nodes.findIndex(n => n.id === selectedId); if (index < 0) return; const n = doc.nodes[index]; images.get(n.id)?.close(); images.delete(n.id); doc.nodes.splice(index, 1); select(); };
+  const remove = () => { const index = doc.nodes.findIndex(n => n.id === selectedId); if (index < 0 || doc.nodes[index].locked) return; const n = doc.nodes[index]; images.get(n.id)?.close(); images.delete(n.id); doc.nodes.splice(index, 1); select(); };
+  const addShape = (shape: ShapeKind) => add({ id: crypto.randomUUID(), type: 'rect', shape, rect: { x: (size.w - 300) / 2, y: (size.h - 200) / 2, w: 300, h: 200 }, fill: '#111111' });
+  const toggleLock = () => { const n = selected(); if (n) { n.locked = !n.locked; refresh(); } };
+  const duplicate = async () => {
+    const n = selected(); if (!n || n.locked) return;
+    const copy = structuredClone(n); copy.id = crypto.randomUUID(); copy.rect.x += 20; copy.rect.y += 20;
+    if (copy.type === 'image') { loading++; refresh(); try { images.set(copy.id, await decode(copy.src)); add(copy); } finally { loading--; refresh(); } }
+    else add(copy);
+  };
   const file = host.querySelector<HTMLInputElement>('.file-picker')!;
   const tools = toolbar(host.querySelector<HTMLElement>('.tools')!, {
-    selected, update: refresh, addText: () => addText('Text', 56, 400, true),
+    selected, mac, addShape, toggleLock, duplicate: () => { void duplicate(); }, update: refresh, addText: () => addText('Text', 56, 400, true),
     addRect: () => add({ id: crypto.randomUUID(), type: 'rect', rect: { x: (size.w - 300) / 2, y: (size.h - 200) / 2, w: 300, h: 200 }, fill: '#111111' }),
     addImage: () => file.click(), delete: remove,
     export: () => { exporting = true; refresh(); void exportDocument(doc, mode, images).finally(() => { exporting = false; refresh(); }); },
@@ -76,7 +86,7 @@ function openEditor(doc: RatioDoc): void {
     } catch { file.setCustomValidity('Choose a readable PNG, JPEG, WebP or GIF image.'); file.reportValidity(); }
   };
   function editText(node: DocNode): void {
-    if (node.type !== 'text' || editor) return;
+    if (node.type !== 'text' || node.locked || editor) return;
     select(node.id); editor = document.createElement('textarea'); const input = editor;
     input.className = 'text-editor'; input.setAttribute('aria-label', 'Edit text'); input.value = node.text;
     const position = () => {
@@ -85,14 +95,29 @@ function openEditor(doc: RatioDoc): void {
     position(); stack.append(input); input.focus(); input.select();
     input.oninput = () => { node.text = input.value; refresh(); position(); };
     input.onblur = () => { input.remove(); editor = undefined; refresh(); };
-    input.onkeydown = e => { if (e.key === 'Escape' || e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); input.blur(); overlay.focus(); } };
+    input.onkeydown = e => { if (e.key === 'Escape' || e.key === 'Enter' && primaryModifier(e, mac)) { e.preventDefault(); input.blur(); overlay.focus(); } };
   }
   installInteraction({ canvas: overlay, doc, size, anchors, snapping: mode === 'guide', scale: () => scale, selected, select, change: nextHits => { hits = nextHits; refresh(); }, edit: editText });
   document.onkeydown = e => {
-    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+    if (isEditingTarget(e.target) || e.isComposing || e.altKey) return;
+    const n = selected(), mod = primaryModifier(e, mac), key = e.key.toLowerCase();
+    if (mod) {
+      if (key === 'd' && !e.shiftKey) { e.preventDefault(); if (!e.repeat) void duplicate(); }
+      if (key === 'l' && e.shiftKey) { e.preventDefault(); if (!e.repeat) toggleLock(); }
+      if (key === 'b' && !e.shiftKey && n?.type === 'text' && !n.locked) { e.preventDefault(); if (!e.repeat) { n.weight = n.weight === 700 ? 400 : 700; refresh(); } }
+      if (key === 'e' && e.shiftKey) { e.preventDefault(); if (!e.repeat) tools.exportButton.click(); }
+      return;
+    }
+    if (e.metaKey || e.ctrlKey) return;
     if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); remove(); }
     if (e.key === 'Escape') select();
-    if (e.key === 'Enter') { const n = selected(); if (n) editText(n); }
+    if (e.key === 'Enter' && !(e.target instanceof HTMLButtonElement)) { if (n) editText(n); }
+    if (n && !n.locked && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+      e.preventDefault(); const amount = e.shiftKey ? 10 : 1;
+      n.rect.x += e.key === 'ArrowLeft' ? -amount : e.key === 'ArrowRight' ? amount : 0;
+      n.rect.y += e.key === 'ArrowUp' ? -amount : e.key === 'ArrowDown' ? amount : 0;
+      hits = []; refresh();
+    }
   };
   const fit = () => {
     editor?.blur(); const style = getComputedStyle(work);

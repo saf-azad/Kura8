@@ -25,3 +25,13 @@ describe('document', () => {
     expect(validateDocument({ ...create(), nodes: [r, r] })).toBe(false);
   });
 });
+
+it('round-trips every shape and lock state while accepting legacy rectangles', () => {
+  for (const shape of ['rectangle', 'ellipse', 'triangle', 'diamond', 'star', 'arrow'] as const) {
+    const d = create(); d.nodes = [{ id: 's', type: 'rect', rect, fill: '#aabbcc', shape, locked: true }];
+    expect(parseDocument(serialiseDocument(d))).toEqual(d);
+  }
+  for (const extra of [{ shape: 'heart' }, { shape: null }, { locked: 'yes' }, { locked: null }]) {
+    expect(validateDocument({ ...create(), nodes: [{ id: 's', type: 'rect', rect, fill: '#abcdef', ...extra }] })).toBe(false);
+  }
+});

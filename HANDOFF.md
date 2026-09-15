@@ -4,7 +4,7 @@ Rolling state for the Ratio Phase 0 build. Read in full at session start; rewrit
 
 ## Status
 
-Phase 0 build complete; ready for study. All 37 tests pass with 100% core line coverage and the production build succeeds. The Chromium audit against vite preview passes all 15 ratio/guide wheel paths, square centre entry, paired PNG/JSON downloads, all five export dimensions, overlay-free PNGs and exported JSON reload through document validation. Both conditions pass rectangle move/resize/delete, text editing/wrapping/movement, locked-aspect image resizing, real file-picker upload with raster normalisation, autosave recovery and identical content-pack checks, with no browser console errors. Screenshots confirm visible snapping feedback and blank mode without guides. Chrome must allow automatic multiple downloads to receive both export files. The existing private demo remains at https://ratio-phase-zero.alazadsafwat.chatgpt.site; application source is unchanged in this audit session. Remaining main-branch work is Safwat's study protocol, content approval and pilot. PR #1 was merged on GitHub as 0c21093 on 2026-09-15 at 12:34 UTC. PR #2 subsequently fixed source-alpha preservation and was merged as 9874066. Verification on 2026-09-16 passes all 47 tests, the production build, and the original transparent-PNG browser reproduction: zero transparent pixels become visible. This local main retains the separate browser audit and review commits; its handoff and D-019 entry still need reconciliation with remote main when integrating.
+The local editor now includes the six-shape library, colour picker plus validated hex entry, object locks, platform-aware keyboard controls and Shift drag/resize constraints. All 40 unit tests pass with 100% core line coverage, and the production build succeeds. Chromium checks cover all 15 ratio/guide paths, both original study-condition interaction flows, all export sizes and JSON reload without console errors. The new controls audit verifies all six coloured shape PNG/JSON exports, Mac and PC shortcut dispatch/labels, locks and reload recovery, text input guards, and Shift constraints in both conditions. Screenshots are under private/editor-controls-audit/. The existing private demo at https://ratio-phase-zero.alazadsafwat.chatgpt.site has not been redeployed with these changes. This checkout still needs reconciliation with remote main's merged background-remover work and its separate D-019 entry; the transparency fix was previously verified in its PR worktree, as recorded below. Study protocol, content approval and pilot remain Safwat's next decisions.
 
 ## Decision log
 
@@ -31,6 +31,9 @@ Append-only. New entries supersede named old entries; do not edit history. Forma
 
 - **D-019** 2026-09-15 astra — Keep a repeatable production-browser audit in scripts/browser_audit.py. Use a fresh temporary Chromium profile with automatic multiple downloads allowed, without changing the user's browser preferences. Why: paired downloads require browser permission, and the 15-path audit must be reproducible. No application or core contract change was needed.
 
+- **D-020** 2026-09-16 safwat — Extend the editor with a shape library, colour customisation, Mac Command / PC Ctrl shortcuts and object locks plus Shift constraints. Safwat confirmed “all” when asked about locks and keyboard controls. Supersedes D-001's feature freeze for these additions only; both study conditions receive identical controls.
+- **D-021** 2026-09-16 astra — Six shapes reuse rect nodes with optional shape; optional locked applies to every node, retaining version-1 compatibility. Locks prevent geometry/property edits, deletion and duplication while allowing selection/unlock. Shift constrains movement axis and shape corner aspect. Command/Ctrl+D duplicates by 20 units; B toggles text weight; Shift+L locks; Shift+E exports. Arrows move 1 unit (Shift: 10) without snapping so repeated key movement remains predictable. Add a compact shortcut reference and exact six-digit hex entry alongside the native colour picker. New shapes retain the neutral 300 × 200 start. Why: fulfil the authorised controls with reusable geometry/export and no dependencies.
+
 ## Next steps
 
 - [x] Scaffold Vite vanilla-ts, Vitest, strict tsconfig, scripts and folder layout.
@@ -45,6 +48,7 @@ Append-only. New entries supersede named old entries; do not edit history. Forma
 - [x] Offscreen PNG and validated JSON exports, named by id and mode.
 - [x] Study mode/session handling and identical fixed content pack.
 - [x] Finish the definition-of-done browser audit: all 15 wheel paths, both-condition interactions, image file picker, all ratio PNG dimensions and paired downloads with Chrome permission enabled.
+- [x] Shape library, exact colour input, object locks, platform-aware shortcuts and Shift constraints (D-020/D-021).
 - [ ] Safwat: approve the fixed content pack and define participants per condition, blinded raters, rating scale and success margin.
 - [ ] Run the pilot with those criteria; enable multiple downloads in each study browser and collect both PNG and JSON per participant.
 
@@ -81,3 +85,7 @@ GitHub reports PR #1 merged at 12:34:20 UTC, unchanged head 0e19437, remote main
 ## Transparency fix verified — 2026-09-16
 
 PR #2 is merged into remote main (9874066; fix e9b30e4). applyMask multiplies existing alpha by mask / 255; a regression test covers transparent, opaque and partial-alpha pixels. The matching local PR worktree passes all 47 tests with 100% core line coverage and npm run build. Repeated the original production Chromium reproduction with WebGPU disabled: hole alpha remains 0, zero previously transparent pixels become visible (formerly 5,145), geometry unchanged, no page errors, 10.4 s. Updated evidence is in private/pr-review/. The original alpha finding is resolved. No application edits or deployment performed.
+
+## Editor controls audit — 2026-09-16
+
+Run `npm run build`, start `npm run preview -- --port 4175`, then `python3 scripts/editor_controls_audit.py`. Uses Python Playwright and Pillow with an isolated Chromium profile. MacIntel and Win32 navigator settings exercise the platform branches on the local Chromium runtime; this is not native Windows or Safari testing. The test spaces paired downloads to avoid Chromium's rapid-download limit and captures a frame to complete headless canvas encoding. Evidence is ignored under `private/editor-controls-audit/`. Original regression audit also passes against port 4175. No deployment was requested or performed.

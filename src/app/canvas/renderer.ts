@@ -1,4 +1,5 @@
 import type { RatioDoc, TextNode } from '../../core/document';
+import { shapePath } from './shapes';
 import { canvasSize } from '../../core/ratios';
 export interface Renderer { render(doc: RatioDoc, opts: { scale: number; images: Map<string, ImageBitmap> }): void; }
 export const FONT = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
@@ -31,7 +32,7 @@ export class Canvas2DRenderer implements Renderer {
     ctx.setTransform(scale, 0, 0, scale, 0, 0); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, size.w, size.h);
     for (const node of doc.nodes) {
       const { x, y, w, h } = node.rect;
-      if (node.type === 'rect') { ctx.fillStyle = node.fill; ctx.fillRect(x, y, w, h); }
+      if (node.type === 'rect') { ctx.fillStyle = node.fill; ctx.fill(shapePath(node)); }
       else if (node.type === 'image') { const image = images.get(node.id); if (image) ctx.drawImage(image, x, y, w, h); }
       else {
         const lines = textLines(ctx, node); ctx.fillStyle = node.color; ctx.textBaseline = 'top'; ctx.textAlign = node.align;
