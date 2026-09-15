@@ -1,30 +1,35 @@
 // Prepares the self-hosted assets for the background remover (runs before `npm run dev` and `npm run build`).
 //  1. Copies the ONNX Runtime Web loader module the webgpu bundle references into public/ort/ and writes its wasm
 //     binary there as 16 MB parts (the client reassembles it and hands it to ORT as wasmBinary).
-//  2. Fetches the pinned ISNet general-use ONNX weights (DIS, Apache-2.0) for each served variant, verifies the SHA-256,
-//     and writes them to public/models/isnet/<variant>/ as 16 MB parts with a manifest, so static hosts with per-file
-//     limits can serve them and the browser can fetch parts in parallel. The licence notice ships next to the weights.
-// RATIO_MODEL_VARIANTS=fp32,fp16 chooses the variants (default: all with a source);
-// RATIO_MODEL_SOURCE_<variant>=/path/to/model.onnx uses a local copy instead of downloading;
-// RATIO_MODEL_FP16_URL=https://... serves the float16 conversion (scripts/to_fp16.py) from a release of this repo.
+//  2. Fetches the pinned ISNet general-use ONNX weights (DIS, Apache-2.0) once into node_modules/.cache, verifies the
+//     SHA-256, derives the float16 variant with onnx-fp16.mjs, and writes each served variant to
+//     public/models/isnet/<variant>/ as 16 MB parts with a manifest, so static hosts with per-file limits can serve
+//     them and the browser can fetch parts in parallel. The licence notice ships next to the weights.
+// RATIO_MODEL_VARIANTS=fp16,fp32 chooses the served variants (default fp16; fp32 is the untouched checkpoint);
+// RATIO_MODEL_SOURCE_fp32=/path/to/isnet-general-use.onnx uses a local copy instead of downloading.
 import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { copyFile, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { toFloat16Model } from './onnx-fp16.mjs';
 const root = path.resolve(import.meta.dirname, '..');
-const MODEL = { name: 'isnet', inputSize: 1024, upstream: 'https://github.com/xuebinqin/DIS', license: 'Apache-2.0' };
-// fp32 is the untouched general-use checkpoint published with rembg (MIT project, Apache-2.0 weights). fp16 is the same
-// network converted with onnxconverter-common (keep_io_types) for half the download; it needs a hosted URL or a local copy.
+const MODEL = { name: 'isnet', inputSize: 1024, output: 'output_image', upstream: 'https://github.com/xuebinqin/DIS', license: 'Apache-2.0' };
+// fp32 is the untouched general-use checkpoint published with rembg (MIT project, Apache-2.0 weights). fp16 is derived
+// from it here: only the fused prediction output kept, weights and compute in float16, inputs/outputs float32, Resize
+// fenced in float32. Its digest is pinned as a regression check; update it when onnx-fp16.mjs changes on purpose.
+const FP16_SHA256 = 'fd3157904827f5850a8c585c5f3c3f5a8814c46cf4b133005c5267aa13b19aa0'; // digest of the derived fp16 file; update when onnx-fp16.mjs changes on purpose
+const SOURCE = { url: 'https://github.com/danielgatis/rembg/releases/download/v0.0.0/isnet-general-use.onnx', sha256: '60920e99c45464f2ba57bee2ad08c919a52bbf852739e96947fbb4358c0d964a', bytes: 178648008 };
 const VARIANTS = {
-  fp32: { source: 'https://github.com/danielgatis/rembg/releases/download/v0.0.0/isnet-general-use.onnx', sha256: '60920e99c45464f2ba57bee2ad08c919a52bbf852739e96947fbb4358c0d964a', bytes: 178648008 },
-  fp16: { source: process.env.RATIO_MODEL_FP16_URL, sha256: '1e00f2f0b23dea1b687ff90652263144fdb98af942aaa0cae8630c49159b18f0', bytes: 90661254 },
+  fp32: { sha256: SOURCE.sha256, bytes: SOURCE.bytes, note: 'untouched checkpoint' },
+  fp16: { sha256: process.env.RATIO_MODEL_FP16_SHA256 ?? FP16_SHA256, bytes: 0, note: 'derived: output_image only, float16 weights and compute, float32 interface' },
 };
-const requested = (process.env.RATIO_MODEL_VARIANTS ?? 'fp32,fp16').split(',').map(v => v.trim()).filter(Boolean);
+const requested = (process.env.RATIO_MODEL_VARIANTS ?? 'fp16').split(',').map(v => v.trim()).filter(Boolean);
 const PART_BYTES = 16 * 1024 * 1024;
 const LICENSE = `ISNet general-use weights from Dichotomous Image Segmentation (DIS), Qin et al., ECCV 2022.
 ${MODEL.upstream}
-Downloaded from the rembg project's model release (https://github.com/danielgatis/rembg, MIT); the fp16 variant is the
-same network converted to float16 with onnxconverter-common, inputs and outputs kept float32.
+Downloaded from the rembg project's model release (https://github.com/danielgatis/rembg, MIT). The fp16 variant is the
+same network with the training-time side outputs removed and weights and compute converted to float16 (inputs and
+outputs kept float32) by scripts/onnx-fp16.mjs in this repository.
 
 Copyright 2022 Xuebin Qin and the DIS authors.
 
@@ -61,38 +66,49 @@ async function prepareRuntime() {
   await writeFile(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
   console.log(`ort: ${version} ${wasm} written to public/ort as ${parts.length} parts`);
 }
+let sourceBytes;
+async function loadSource() {
+  if (sourceBytes) return sourceBytes;
+  const local = process.env.RATIO_MODEL_SOURCE_fp32, cacheDir = path.join(root, 'node_modules/.cache/ratio-models'), cached = path.join(cacheDir, 'isnet-general-use.onnx');
+  const verify = (bytes, where) => {
+    const sha256 = createHash('sha256').update(bytes).digest('hex');
+    if (bytes.byteLength !== SOURCE.bytes || sha256 !== SOURCE.sha256) throw new Error(`Checkpoint at ${where} does not match the pinned digest: got ${sha256} (${bytes.byteLength} bytes), expected ${SOURCE.sha256} (${SOURCE.bytes} bytes)`);
+    return bytes;
+  };
+  if (local) { console.log(`model: reading checkpoint ${local}`); return sourceBytes = verify(new Uint8Array(await readFile(local)), local); }
+  if (existsSync(cached) && (await stat(cached)).size === SOURCE.bytes) { try { return sourceBytes = verify(new Uint8Array(await readFile(cached)), cached); } catch (e) { console.warn(String(e.message)); } }
+  console.log(`model: downloading checkpoint, ${(SOURCE.bytes / 1048576).toFixed(0)} MB from ${SOURCE.url}`);
+  const response = await fetch(SOURCE.url);
+  if (!response.ok) throw new Error(`Checkpoint download failed: ${response.status} ${response.statusText}`);
+  const bytes = verify(new Uint8Array(await response.arrayBuffer()), SOURCE.url);
+  await mkdir(cacheDir, { recursive: true }); await writeFile(cached, bytes);
+  return sourceBytes = bytes;
+}
 async function prepareVariant(variant) {
-  const spec = VARIANTS[variant], local = process.env[`RATIO_MODEL_SOURCE_${variant}`];
+  const spec = VARIANTS[variant];
   if (!spec) throw new Error(`Unknown model variant ${variant}; known: ${Object.keys(VARIANTS).join(', ')}`);
   const dir = path.join(root, 'public/models', MODEL.name, variant), manifestPath = path.join(dir, 'manifest.json');
-  const expectedParts = spec.bytes ? Math.ceil(spec.bytes / PART_BYTES) : 0;
   if (existsSync(manifestPath) && spec.sha256) {
     const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
-    let complete = manifest.sha256 === spec.sha256 && manifest.parts.length === expectedParts;
+    let complete = manifest.sha256 === spec.sha256;
     for (const [i, part] of manifest.parts.entries()) {
-      const file = path.join(dir, part), expected = Math.min(PART_BYTES, spec.bytes - i * PART_BYTES);
+      const file = path.join(dir, part), expected = Math.min(PART_BYTES, manifest.bytes - i * PART_BYTES);
       if (!existsSync(file) || (await stat(file)).size !== expected) complete = false;
     }
     if (complete) { console.log(`model: ${MODEL.name} ${variant} in public/models/${MODEL.name}/${variant} (up to date)`); return; }
   }
-  if (!spec.source && !local) { console.log(`model: ${variant} skipped (no source; set RATIO_MODEL_FP16_URL or RATIO_MODEL_SOURCE_${variant}); the app falls back to another variant`); return; }
-  let bytes;
-  if (local) { bytes = new Uint8Array(await readFile(local)); console.log(`model: ${variant} reading ${local}`); }
-  else {
-    console.log(`model: ${variant} downloading ${(spec.bytes / 1048576).toFixed(0)} MB from ${spec.source}`);
-    const response = await fetch(spec.source);
-    if (!response.ok) throw new Error(`Model download failed: ${response.status} ${response.statusText}`);
-    bytes = new Uint8Array(await response.arrayBuffer());
-  }
+  const source = await loadSource();
+  let bytes = source;
+  if (variant === 'fp16') { const t = Date.now(); bytes = toFloat16Model(source, { keepOutputs: [MODEL.output] }); console.log(`model: derived fp16 in ${Date.now() - t} ms`); }
   const sha256 = createHash('sha256').update(bytes).digest('hex');
-  if (spec.sha256 && (bytes.byteLength !== spec.bytes || sha256 !== spec.sha256)) throw new Error(`Model ${variant} checksum mismatch: got ${sha256} (${bytes.byteLength} bytes), expected ${spec.sha256} (${spec.bytes} bytes)`);
+  if (spec.sha256 && sha256 !== spec.sha256) throw new Error(`Model ${variant} digest mismatch: got ${sha256} (${bytes.byteLength} bytes), expected ${spec.sha256}. If onnx-fp16.mjs changed on purpose, update FP16_SHA256.`);
   const parts = split(bytes), partNames = parts.map(([name]) => `model.${name}`);
   await rm(dir, { recursive: true, force: true }); await mkdir(dir, { recursive: true });
   for (const [i, [, chunk]] of parts.entries()) await writeFile(path.join(dir, partNames[i]), chunk);
-  const manifest = { name: MODEL.name, variant, inputSize: MODEL.inputSize, bytes: bytes.byteLength, sha256, partBytes: PART_BYTES, parts: partNames, license: MODEL.license, source: spec.source ?? 'local', upstream: MODEL.upstream };
+  const manifest = { name: MODEL.name, variant, inputSize: MODEL.inputSize, bytes: bytes.byteLength, sha256, partBytes: PART_BYTES, parts: partNames, license: MODEL.license, source: SOURCE.url, upstream: MODEL.upstream, note: spec.note };
   await writeFile(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
   await writeFile(path.join(dir, 'LICENSE.txt'), LICENSE);
-  console.log(`model: wrote ${partNames.length} parts and manifest to public/models/${MODEL.name}/${variant} (sha256 ${sha256})`);
+  console.log(`model: wrote ${partNames.length} parts and manifest to public/models/${MODEL.name}/${variant} (${(bytes.byteLength / 1048576).toFixed(1)} MB, sha256 ${sha256})`);
 }
 await prepareRuntime();
 for (const variant of requested) await prepareVariant(variant);

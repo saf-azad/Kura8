@@ -48,7 +48,7 @@ D-002 governs the stack. Supersede it explicitly before changing it.
 - Strict TypeScript, Vite, Vitest, npm.
 - No UI framework. Vanilla DOM/SVG chrome, HTML canvas 2D document.
 - `src/core/` has zero DOM access and zero runtime dependencies. Every function depends only on inputs; fully unit tested.
-- The app layer's only runtime dependency is `onnxruntime-web` (MIT), imported lazily by `src/app/tools/background.ts` alone (D-022). Model weights (ISNet, Apache-2.0) and the ORT wasm are served from the app's own origin as 16 MB parts written to `public/` by `scripts/prepare-model.mjs`, which runs before `npm run dev` and `npm run build`. No request leaves the deployment at run time. Every dependency and every weight file must stay under a permissive licence (D-021).
+- The app layer's only runtime dependency is `onnxruntime-web` (MIT), imported lazily by `src/app/tools/background.ts` alone (D-022). Model weights (ISNet, Apache-2.0; float16 derived in Node from the pinned checkpoint, D-023) and the ORT wasm are served from the app's own origin as 16 MB parts written to `public/` by `scripts/prepare-model.mjs`, which runs before `npm run dev` and `npm run build`. No request leaves the deployment at run time. Every dependency and every weight file must stay under a permissive licence (D-021).
 - Renderer behind `Renderer` interface for a later CanvasKit/Skia swap. No CanvasKit in Phase 0.
 - One system sans stack. Browser text rendering accepted through Phase 1; HarfBuzz is a later decision.
 
@@ -86,7 +86,7 @@ src/
   main.ts
 scripts/
   prepare-model.mjs    runtime and weights into public/ (predev, prebuild)
-  to_fp16.py           one-off fp16 conversion of the ISNet checkpoint
+  onnx-fp16.mjs        float16 derivation of the pinned checkpoint (tested)
 public/                generated, gitignored: ort/ and models/
 tests/                 mirrors core, plus useful app tests
 ```
