@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { validateDocument, type DocNode } from '../src/core/document';
-import { placement, fromPlacement, coverPlacement, rebase, coverCrop } from '../src/core/images';
+import { placement, fromPlacement, coverPlacement, rebase, coverCrop, collageCells } from '../src/core/images';
 import { textBox, typeScale, displayText, textStyle, fitText, LINE_HEIGHT } from '../src/core/fit';
 import { fontStack, fontById, FONTS } from '../src/core/script';
 import { buildScene, gradientLine, rgba } from '../src/core/scene';
@@ -105,5 +105,13 @@ describe('effects in the scene and SVG (D-045)', () => {
   it('scales path coordinates for even strokes', () => {
     expect(scalePath('M0 0L100 50H20V10C1 2 3 4 5 6A10 20 30 1 0 40 50ZM1.5-2e1q1 2 3 4', 2, 3)).toBe('M0 0L200 150H40V30C2 6 6 12 10 18A20 60 30 1 0 80 150ZM3 -60q2 6 6 12');
     expect(scalePath('', 2, 2)).toBe('');
+  });
+});
+describe('collage (D-045)', () => {
+  it('gives each dropped photo its own cell, nearest first, then steps past the last', () => {
+    const cells = [0, 1, 2].flatMap(r => [0, 1, 2].map(c => ({ x: c * 100, y: r * 100, w: 100, h: 100 }))), quads = [{ x: 0, y: 0, w: 150, h: 150 }];
+    expect(collageCells({ x: 10, y: 10 }, cells, 3, { w: 300, h: 300 })).toEqual([cells[0], cells[1], cells[3]]);
+    expect(collageCells({ x: 10, y: 10 }, quads, 2, { w: 300, h: 300 })).toEqual([quads[0], { x: 20, y: 20, w: 150, h: 150 }]);
+    expect(collageCells({ x: 10, y: 10 }, [], 1, { w: 300, h: 300 })).toEqual([{ x: 75, y: 75, w: 150, h: 150 }]);
   });
 });

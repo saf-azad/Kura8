@@ -1,4 +1,4 @@
-import type { ColourRef, DocNode, Frame, ImageNode, KuraDoc, Palette, RatioId, SizeSpec, TextNode } from '../core/document';
+import type { AdjustKey, ColourRef, DocNode, Duotone, FontId, Frame, ImageNode, KuraDoc, Outline, Palette, RatioId, Shadow, SizeSpec, TextNode } from '../core/document';
 import { center, containsRotated, intersects, rotatedBounds, type Point, type Rect, type Size } from '../core/geometry';
 import type { Anchor } from '../core/guides/types';
 import { guideById } from '../core/guides';
@@ -8,8 +8,13 @@ import { defaultShapeSize, shapeLibrary, ICON_SHAPE } from '../core/shapes';
 import { LINE_HEIGHT, textBox, typeScale, crossing, type TypeScale } from '../core/fit';
 import { addNodes, duplicateNodes, nodeById, nudge, pasteNodes, removeNodes, reorder, setFill, setGround, setHidden, setLocked, updateNodes, type Order } from '../core/ops';
 import { reRatio, flagsFor } from '../core/reratio';
+import { buildScene } from '../core/scene';
 import { addSize, removeSize } from '../core/sizes';
-import { nearestCell, containIn, CENTRE } from '../core/images';
+import { containIn, collageCells, placement, fromPlacement, CENTRE } from '../core/images';
+import { align, distribute, unitsOf, offsetFrames, groupNodes, ungroupNodes, withGroups, fillPage, type AlignMode } from '../core/arrange';
+import { styleOf, applyStyle, type Style } from '../core/style';
+import { cleanAdjust, lookKey, FILTERS, type Look } from '../core/look';
+import { fontById } from '../core/script';
 import { direction, fontStack, physicalAlign } from '../core/script';
 import { exportSize } from '../core/ratios';
 import type { SnapHit, SnapLine } from '../core/snap';
@@ -21,6 +26,9 @@ import { drawOverlay, MARGIN, type Box, type HandleSet } from './canvas/overlay'
 import { Tween } from './canvas/tween';
 import { h, toast } from './ui';
 import { removeBackground as runRemoval, preloadBackgroundRemoval } from './tools/background';
+import { LookCache, withLook } from './looks';
+import { ensureFont, onFontReady } from './fonts';
+import { fontFor } from './measure';
 // The editor: one canvas for the document, one for the overlay, the chrome around them, and every editing action.
 export type Live = {
   hits: SnapHit[]; lines: SnapLine[]; near?: { x?: SnapLine; y?: SnapLine }; pull?: { x?: number; y?: number };
@@ -55,13 +63,24 @@ export class Editor {
   textarea: HTMLTextAreaElement | null = null;
   private textBefore: KuraDoc | null = null;
   readonly beforeAfter: HTMLDivElement;
+  readonly cropBar: HTMLDivElement;
   readonly info: HTMLDivElement;
+  private looks = new LookCache(() => this.invalidate());
+  /** Copied style (D-045), pasted with Mod+Alt+V or the Effects panel. */ styleClip: Style | null = null;
+  /** Colour panel: swatches set the gradient's end colour rather than the fill. */ gradientEnd = false;
+  /** The crop session: the document before it started, so the whole session is one undo step. */ private cropBefore: KuraDoc | null = null;
   constructor(root: HTMLElement, store: Store) {
     this.root = root; this.store = store;
     this.docCanvas = h('canvas', { className: 'doc', 'aria-label': 'Document' });
     this.overlay = h('canvas', { className: 'overlay', tabindex: 0, 'aria-label': 'Canvas: click to select, drag to move, double-click text to edit' });
     this.beforeAfter = h('div', { className: 'seg before-after hidden' }, h('button', { type: 'button', 'data-cut': '0' }, 'Before'), h('button', { type: 'button', 'data-cut': '1' }, 'After'));
-    this.stack = h('div', { className: 'canvas-stack' }, this.docCanvas, this.overlay, this.beforeAfter);
+    const zoom = h('input', { type: 'range', min: 1, max: 5, step: .01, 'aria-label': 'Zoom', title: 'Zoom the photo in its frame' });
+    zoom.addEventListener('input', () => this.setZoom(Number(zoom.value)));
+    zoom.addEventListener('keydown', e => { if (e.key === 'Escape' || e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); this.endCrop(); this.overlay.focus(); } else e.stopPropagation(); });
+    const resetCrop = h('button', { type: 'button', 'aria-label': 'Reset crop' }, 'Reset'), done = h('button', { type: 'button', 'aria-label': 'Done cropping', 'aria-pressed': 'true' }, 'Done');
+    resetCrop.addEventListener('click', () => this.resetCrop()); done.addEventListener('click', () => this.endCrop());
+    this.cropBar = h('div', { className: 'seg crop-bar hidden', role: 'group', 'aria-label': 'Crop' }, h('span', { className: 'muted', style: 'font-size:12px;padding:0 4px 0 10px' }, 'Zoom'), zoom, resetCrop, done);
+    this.stack = h('div', { className: 'canvas-stack' }, this.docCanvas, this.overlay, this.beforeAfter, this.cropBar);
     this.info = h('div', { className: 'info' });
     this.file = h('input', { type: 'file', accept: 'image/png,image/jpeg,image/webp,image/gif', multiple: true, className: 'hidden' });
     const stage = h('div', { className: 'stage' }, this.stack);
@@ -71,6 +90,7 @@ export class Editor {
     this.beforeAfter.addEventListener('click', e => { const b = (e.target as Element).closest('button'); if (b) this.setCutout(b.dataset.cut === '1'); });
     this.file.addEventListener('change', () => { const files = [...this.file.files ?? []]; this.file.value = ''; const target = this.fillTarget; this.fillTarget = null; void this.placeFiles(files, null, target); });
     new ResizeObserver(() => this.fit()).observe(root);
+    onFontReady(() => { this.invalidate(); this.positionTextarea(); });
     let evict = 0;
     store.on(c => { this.invalidate(); if (c.doc) { clearTimeout(evict); evict = window.setTimeout(() => { if (this.store.doc) this.evictBitmaps(); }, 2000); } });
     this.fit();
@@ -94,7 +114,7 @@ export class Editor {
   toUnits(e: { clientX: number; clientY: number }): Point { const r = this.overlay.getBoundingClientRect(); return { x: (e.clientX - r.left - MARGIN) / this.scale, y: (e.clientY - r.top - MARGIN) / this.scale }; }
   hitTest(p: Point): DocNode | undefined { return [...this.visible()].reverse().find(n => containsRotated(this.box(n), this.frame(n).rot, p)); }
   boxes(): Box[] {
-    const sel = this.selected().filter(n => !this.frame(n).hidden && n.id !== this.store.ui.editing), single = sel.length === 1 && !this.store.ui.armed && !this.store.ui.tool;
+    const sel = this.selected().filter(n => !this.frame(n).hidden && n.id !== this.store.ui.editing && n.id !== this.store.ui.crop), single = sel.length === 1 && !this.store.ui.armed && !this.store.ui.tool;
     return sel.map(n => {
       const handles: HandleSet = !single ? 'none' : n.kind === 'image' ? 'corners' : n.kind === 'text' ? (n.fit ? 'fit' : 'text') : 'all';
       return { id: n.id, rect: this.box(n), rot: this.frame(n).rot, handles, locked: !!n.locked };
@@ -111,7 +131,14 @@ export class Editor {
     this.positionTextarea(); this.invalidate();
   }
   invalidate(): void { if (!this.raf) this.raf = requestAnimationFrame(() => { this.raf = 0; this.draw(); }); }
-  image = (asset: string, cutout: boolean): ImageBitmap | null | undefined => {
+  /** The editor's picture of an asset: the working copy or cut-out, with a photo look applied at screen size (D-045). */
+  image = (asset: string, cutout: boolean, look?: Look | null): ImageBitmap | null | undefined => {
+    const base = this.decoded(asset, cutout);
+    if (!look || !base) return base;
+    const key = assets.bitmapKey(asset, cutout ? 'cutout' : 'working');
+    return this.looks.get(key, `${key}|${lookKey(look)}`, () => withLook(base, look, 1600)) ?? base;
+  };
+  private decoded(asset: string, cutout: boolean): ImageBitmap | null | undefined {
     const variant = cutout ? 'cutout' : 'working', key = assets.bitmapKey(asset, variant);
     if (this.bitmaps.has(key)) return this.bitmaps.get(key);
     if (!this.loading.has(key)) {
@@ -124,15 +151,15 @@ export class Editor {
       });
     }
     return undefined;
-  };
-  forgetBitmap(asset: string): void { for (const v of ['working', 'cutout'] as const) { const k = assets.bitmapKey(asset, v); this.bitmaps.delete(k); } this.missing.delete(asset); }
+  }
+  forgetBitmap(asset: string): void { for (const v of ['working', 'cutout'] as const) { const k = assets.bitmapKey(asset, v); this.bitmaps.delete(k); this.looks.forget(k); } this.missing.delete(asset); }
   /** Closes decoded bitmaps of assets the document no longer uses; undo reloads them from IndexedDB when needed. */
   evictBitmaps(): void {
     const keep = new Set(this.doc.nodes.flatMap(n => n.kind === 'image' && n.asset ? [n.asset] : []));
     for (const key of [...this.bitmaps.keys()]) {
       const asset = key.split('#')[0];
       if (keep.has(asset)) continue;
-      this.bitmaps.delete(key); assets.release(asset);
+      this.bitmaps.delete(key); this.looks.forget(key); assets.release(asset);
     }
   }
   private draw(): void {
@@ -157,9 +184,10 @@ export class Editor {
       flags: this.doc.nodes.filter(n => flagged.has(n.id) && !this.frame(n).hidden).map(n => ({ rect: this.box(n), rot: this.frame(n).rot })), crossings,
       sketch: { ...this.live.sketch, stroke: this.inkWidth(), ink: this.colour({ role: 'ink' }) },
       scan: scan ? { rect: this.box(scan), rot: this.frame(scan).rot, t: ((performance.now() - this.scan!.t0) % 900) / 900 } : null,
+      crop: this.cropView(),
     });
     if (this.scan) this.invalidate();
-    this.updateBeforeAfter(); this.updateInfo();
+    this.updateBeforeAfter(); this.updateCropBar(); this.updateInfo();
     for (const c of this.chrome) c.update();
   }
   inkWidth(): number { const c = this.canvas(); return Math.max(2, Math.min(c.w, c.h) * .005); }
@@ -171,7 +199,7 @@ export class Editor {
     this.info.replaceChildren(h('span', {}, one ? layerName(one) : `${sel.length} selected`), h('span', { className: 'muted' }, b ? `${Math.round(b.w)} × ${Math.round(b.h)}` : ''));
   }
   private updateBeforeAfter(): void {
-    const n = this.one(), show = n?.kind === 'image' && !!n.asset && this.cutouts.has(n.asset) && !this.display && !this.store.ui.tool;
+    const n = this.one(), show = n?.kind === 'image' && !!n.asset && this.cutouts.has(n.asset) && !this.display && !this.store.ui.tool && !this.store.ui.crop;
     this.beforeAfter.classList.toggle('hidden', !show);
     if (!show || n?.kind !== 'image') return;
     const b = rotatedBounds(this.box(n), this.frame(n).rot);
@@ -220,15 +248,17 @@ export class Editor {
     const images = files.filter(f => /^image\/(png|jpeg|webp|gif)$/.test(f.type));
     if (!images.length) { if (files.length) toast('Choose a PNG, JPEG, WebP or GIF image'); return; }
     const hit = target ? nodeById(this.doc, target) : at ? this.hitTest(at) : undefined;
+    // Several photos at once make a collage (D-045): each takes its own cell, nearest the drop point first.
+    const c = this.canvas(), p = at ?? { x: c.w / 2, y: c.h / 2 }, cells = this.cells(), fills = hit?.kind === 'image' && !hit.locked;
+    const slots = collageCells(p, cells, images.length - (fills ? 1 : 0), c), added: string[] = [];
     for (const [i, file] of images.entries()) {
       let stored: { key: string; natural: Size };
       try { stored = await assets.putImage(file, this.maxExport()); } catch { toast('That image could not be read'); continue; }
-      if (i === 0 && hit?.kind === 'image' && !hit.locked) { this.commit(updateNodes(this.doc, [hit.id], n => ({ ...n, asset: stored.key, cutout: false, focus: CENTRE }) as ImageNode), 'Filled'); this.select([hit.id]); continue; }
-      const c = this.canvas(), p = at ?? { x: c.w / 2, y: c.h / 2 }, cells = this.cells();
-      const rect = cells.length ? nearestCell(p, cells, c) : containIn(nearestCell(p, [], c), stored.natural);
-      if (i > 0) { rect.x += 20 * i; rect.y += 20 * i; }
-      this.add([{ id: newId(), kind: 'image', asset: stored.key, frames: this.framesFor(rect) }], 'Image');
+      if (i === 0 && fills) { this.commit(updateNodes(this.doc, [hit.id], n => ({ ...n, asset: stored.key, cutout: false, focus: CENTRE }) as ImageNode), 'Filled'); added.push(hit.id); continue; }
+      const slot = slots[i - (fills ? 1 : 0)], rect = cells.length ? slot : containIn(slot, stored.natural), id = newId();
+      this.commit(addNodes(this.doc, [{ id, kind: 'image', asset: stored.key, frames: this.framesFor(rect) }]), images.length > 1 ? `${images.length} photos` : 'Image'); added.push(id);
     }
+    if (added.length) this.store.setUI({ sel: added, armed: null });
   }
   remove(): void {
     const ids = this.selected().filter(n => !n.locked).map(n => n.id);
@@ -267,6 +297,8 @@ export class Editor {
   applySwatch(ref: ColourRef): void {
     this.store.setUI({ swatch: ref });
     const sel = this.selected(), ids = sel.filter(n => n.kind !== 'image' && !n.locked).map(n => n.id);
+    // With the gradient's end chosen in the colour panel, swatches set where the gradient ends (D-045).
+    if (this.gradientEnd && sel.some(n => n.kind === 'shape' && n.gradient)) { this.setGradient({ to: ref }); this.store.setUI({ armed: null }); return; }
     if (ids.length) { this.store.commit(setFill(this.doc, ids, ref), { key: 'fill' }); this.store.setUI({ armed: null }); }
     else if (!sel.length) this.store.setUI({ armed: ref });
   }
@@ -318,6 +350,160 @@ export class Editor {
   setGuides(on: boolean): void { this.store.setUI({ guides: on }); toast(on ? 'Guides on' : 'Guides off'); }
   openPanel(panel: PanelId | null): void { this.store.setUI({ panel: this.store.ui.panel === panel ? null : panel }); }
   setTool(tool: Tool | null): void { this.finishText(); this.live = emptyLive(); this.store.setUI({ tool, panel: null, armed: null, sel: tool ? [] : this.store.ui.sel }); }
+  // Canva-parity editing (D-045): photo adjustments, filters, duotone, shape frames, crop, effects, text styles,
+  // arranging, groups and copy style. Every edit skips locked nodes and is one undo step (slider drags coalesce).
+  /** Sets text frame heights to their measured height in every size, as finishing an edit does. */
+  syncText(doc: KuraDoc, ids: string[]): KuraDoc {
+    return updateNodes(doc, ids, n => {
+      if (n.kind !== 'text' || n.fit) return n;
+      const frames = { ...n.frames };
+      for (const s of doc.sizes) { const f = frames[s.id]; frames[s.id] = { ...f, rect: { ...f.rect, h: textBox(n, f, measure, typeScale(s.guide, canvasSize(s.ratio))).rect.h } }; }
+      return { ...n, frames };
+    });
+  }
+  /** Applies `fn` to every unlocked selected node; `message` toasts once. */
+  editSel(fn: (n: DocNode) => DocNode, o: { key?: string; message?: string } = {}): void {
+    const ids = this.selected().filter(n => !n.locked).map(n => n.id);
+    if (!ids.length) return;
+    this.store.commit(this.syncText(updateNodes(this.doc, ids, fn), ids), { key: o.key });
+    if (o.message) toast(o.message);
+  }
+  private unit(): number { const c = this.canvas(); return Math.min(c.w, c.h) / 1000; }
+  setAdjust(key: AdjustKey, value: number): void {
+    this.editSel(n => { if (n.kind !== 'image') return n; const next = { ...n }, adjust = cleanAdjust({ ...n.adjust, [key]: value }); if (adjust) next.adjust = adjust; else delete next.adjust; return next; }, { key: `adjust-${key}` });
+  }
+  applyFilter(id: string): void {
+    const f = FILTERS.find(x => x.id === id); if (!f) return;
+    this.editSel(n => { if (n.kind !== 'image') return n; const next = { ...n }, adjust = cleanAdjust(f.adjust); if (adjust) next.adjust = adjust; else delete next.adjust; return next; }, { message: f.id === 'none' ? 'No filter' : f.name });
+  }
+  setDuotone(d: Duotone | null): void { this.editSel(n => { if (n.kind !== 'image') return n; const next = { ...n }; if (d) next.duotone = d; else delete next.duotone; return next; }, { message: d ? 'Duotone' : 'No duotone' }); }
+  setMask(key: string | null): void {
+    this.editSel(n => { if (n.kind !== 'image') return n; const next = { ...n }; if (key) next.mask = key; else delete next.mask; return next; }, { message: key ? `${shapeLibrary[key].name} frame` : 'No frame shape' });
+  }
+  resetImage(): void {
+    this.editSel(n => { if (n.kind !== 'image') return n; const next = { ...n }; for (const k of ['adjust', 'duotone', 'mask', 'zoom', 'focus', 'flipX', 'flipY'] as const) delete next[k]; return next; }, { message: 'Photo reset' });
+  }
+  flip(axis: 'x' | 'y'): void {
+    const key = axis === 'x' ? 'flipX' : 'flipY';
+    this.editSel(n => { if (n.kind === 'text') return n; const next = { ...n }; if (n[key]) delete next[key]; else next[key] = true; return next; }, { message: axis === 'x' ? 'Flipped horizontally' : 'Flipped vertically' });
+  }
+  setOpacity(value: number): void { this.editSel(n => { const next = { ...n }; if (value >= 1) delete next.opacity; else next.opacity = Math.max(0, +value.toFixed(3)); return next; }, { key: 'opacity' }); }
+  defaultShadow(): Shadow { const u = this.unit(); return { x: 10 * u, y: 14 * u, blur: 24 * u, fill: { role: 'ink' }, alpha: .4 }; }
+  toggleShadow(): void {
+    const on = !this.selected().every(n => n.shadow), shadow = this.defaultShadow();
+    this.editSel(n => { const next = { ...n }; if (on) next.shadow = n.shadow ?? shadow; else delete next.shadow; return next; }, { message: on ? 'Shadow' : 'No shadow' });
+  }
+  setShadow(patch: Partial<Shadow>): void { this.editSel(n => n.shadow ? { ...n, shadow: { ...n.shadow, ...patch } } : n, { key: `shadow-${Object.keys(patch).join()}` }); }
+  outlined(n: DocNode): n is Exclude<DocNode, { kind: 'ink' }> { return n.kind !== 'ink'; }
+  toggleOutline(): void {
+    const sel = this.selected().filter(n => this.outlined(n)), on = !sel.every(n => n.outline), outline: Outline = { fill: { role: 'ink' }, width: Math.max(1, 6 * this.unit()) };
+    this.editSel(n => { if (n.kind === 'ink') return n; const next = { ...n }; if (on) next.outline = n.outline ?? outline; else delete next.outline; return next; }, { message: on ? 'Border' : 'No border' });
+  }
+  setOutline(patch: Partial<Outline>): void { this.editSel(n => n.kind !== 'ink' && n.outline ? { ...n, outline: { ...n.outline, ...patch } } as DocNode : n, { key: `outline-${Object.keys(patch).join()}` }); }
+  toggleGradient(): void {
+    const shapes = this.selected().filter(n => n.kind === 'shape'), on = !shapes.every(n => n.kind === 'shape' && n.gradient);
+    this.editSel(n => {
+      if (n.kind !== 'shape') return n;
+      const next = { ...n }, to: ColourRef = 'role' in n.fill && n.fill.role === 'accent' ? { role: 'ink' } : { role: 'accent' };
+      if (on) next.gradient = n.gradient ?? { to, angle: 90 }; else delete next.gradient;
+      return next;
+    }, { message: on ? 'Gradient' : 'Solid fill' });
+  }
+  setGradient(patch: Partial<{ to: ColourRef; angle: number }>): void { this.editSel(n => n.kind === 'shape' && n.gradient ? { ...n, gradient: { ...n.gradient, ...patch } } : n, { key: 'gradient' }); }
+  setFont(font: FontId): void {
+    const def = fontById(font);
+    for (const w of [400, 700] as const) ensureFont(fontFor('Aa', 40, w, { font }));
+    this.editSel(n => { if (n.kind !== 'text') return n; const next = { ...n }; if (font === 'space-grotesk') delete next.font; else next.font = font; return next; }, { message: def.name });
+  }
+  toggleText(key: 'italic' | 'underline' | 'upper'): void {
+    const texts = this.selected().filter((n): n is TextNode => n.kind === 'text'), on = !texts.every(n => n[key]);
+    this.editSel(n => { if (n.kind !== 'text') return n; const next = { ...n }; if (on) next[key] = true; else delete next[key]; return next; });
+  }
+  setSpacing(value: number): void { this.editSel(n => { if (n.kind !== 'text') return n; const next = { ...n }; if (value) next.spacing = Math.round(value); else delete next.spacing; return next; }, { key: 'spacing' }); }
+  setLeading(value: number): void { this.editSel(n => { if (n.kind !== 'text') return n; const next = { ...n }; if (Math.abs(value - LINE_HEIGHT) < 1e-6) delete next.leading; else next.leading = +value.toFixed(2); return next; }, { key: 'leading' }); }
+  /** Units to arrange: each selected node, groups collapsed, by its drawn, rotated box. */
+  private units() { return unitsOf(this.selected().filter(n => !this.frame(n).hidden).map(n => ({ id: n.id, group: n.group, box: rotatedBounds(this.box(n), this.frame(n).rot) }))); }
+  align(mode: AlignMode): void {
+    const units = this.units(); if (!units.length) return;
+    this.commit(offsetFrames(this.doc, this.sizeId, align(units, mode, this.canvas())), units.length === 1 ? `Aligned ${mode} to the page` : `Aligned ${mode}`);
+  }
+  distribute(axis: 'x' | 'y'): void {
+    const units = this.units(); if (units.length < 3) { toast('Select three or more to space evenly'); return; }
+    this.commit(offsetFrames(this.doc, this.sizeId, distribute(units, axis)), 'Spaced evenly');
+  }
+  group(): void {
+    const ids = this.store.ui.sel; if (ids.length < 2) { toast('Select two or more to group'); return; }
+    this.commit(groupNodes(this.doc, ids, newId()), 'Grouped');
+  }
+  ungroup(): void {
+    if (!this.selected().some(n => n.group)) { toast('Nothing grouped'); return; }
+    this.commit(ungroupNodes(this.doc, this.store.ui.sel), 'Ungrouped');
+  }
+  /** Selection expanded to whole groups. */
+  withGroups(ids: string[]): string[] { return withGroups(this.doc, ids); }
+  fillPage(): void { const n = this.one(); if (!n || n.locked) return; this.commit(fillPage(this.doc, this.sizeId, n.id, this.canvas()), 'Set as background'); }
+  copyStyle(): void { const n = this.one() ?? this.selected()[0]; if (!n) return; this.styleClip = styleOf(n); toast('Style copied'); }
+  pasteStyle(): void { const clip = this.styleClip; if (!clip) { toast('Copy a style first'); return; } this.editSel(n => applyStyle(n, clip), { message: 'Style pasted' }); }
+  /** Eyedropper: the colour drawn on the document canvas under a pointer. */
+  pickAt(e: { clientX: number; clientY: number }): void {
+    const r = this.docCanvas.getBoundingClientRect(), k = this.docCanvas.width / r.width, x = Math.floor((e.clientX - r.left) * k), y = Math.floor((e.clientY - r.top) * k);
+    this.store.setUI({ picking: false });
+    if (x < 0 || y < 0 || x >= this.docCanvas.width || y >= this.docCanvas.height) return;
+    const [red, g, b] = this.docCanvas.getContext('2d')!.getImageData(x, y, 1, 1).data, hex = `#${[red, g, b].map(v => v.toString(16).padStart(2, '0')).join('')}`;
+    this.applySwatch({ hex }); toast(`Picked ${hex.toUpperCase()}`);
+  }
+  // crop (D-045): double-click a photo; drag inside to move it, its corners to zoom, the frame's handles to crop.
+  /** The photo being cropped with its frame, picture size and placement in frame-local units. */
+  cropInfo(): { node: ImageNode; frame: Frame; natural: Size; place: Rect; bitmap: ImageBitmap } | null {
+    const id = this.store.ui.crop, node = id ? nodeById(this.doc, id) : undefined;
+    if (node?.kind !== 'image' || !node.asset) return null;
+    const bitmap = this.image(node.asset, !!node.cutout, null);
+    if (!bitmap) return null;
+    const frame = this.frame(node), natural = { w: bitmap.width, h: bitmap.height };
+    return { node, frame, natural, place: placement(natural, frame.rect, node.focus, node.zoom), bitmap };
+  }
+  private cropView() {
+    const c = this.cropInfo(); if (!c) return null;
+    const look = c.node.adjust || c.node.duotone ? (() => { const s = buildScene({ ...this.doc, nodes: [c.node] }, this.sizeId, measure).ops[0]; return s?.kind === 'image' ? s.look ?? null : null; })() : null;
+    return { rect: c.frame.rect, rot: c.frame.rot, place: c.place, bitmap: (c.node.asset && this.image(c.node.asset, !!c.node.cutout, look)) || c.bitmap, flip: [!!c.node.flipX, !!c.node.flipY] as [boolean, boolean] };
+  }
+  startCrop(id = this.one()?.id): void {
+    const n = id ? nodeById(this.doc, id) : undefined;
+    if (n?.kind !== 'image' || !n.asset || n.locked) return;
+    if (!this.image(n.asset, !!n.cutout, null)) { toast('The photo is still loading'); return; }
+    this.finishText(); this.cropBefore = this.doc;
+    this.store.setUI({ crop: n.id, sel: [n.id], panel: null, tool: null, armed: null });
+  }
+  /** Live crop change without a history step; endCrop records the session. */
+  setCrop(frame: Frame, place: Rect): void {
+    const c = this.cropInfo(); if (!c) return;
+    const { focus, zoom } = fromPlacement(c.natural, frame.rect, place);
+    this.store.set(updateNodes(this.doc, [c.node.id], n => {
+      const next = { ...n, focus, frames: { ...n.frames, [this.sizeId]: frame } } as ImageNode;
+      if (zoom > 1 + 1e-6) next.zoom = +zoom.toFixed(4); else delete next.zoom;
+      return next;
+    }));
+  }
+  setZoom(zoom: number): void {
+    const n = this.one(); if (n?.kind !== 'image' || n.locked) return;
+    const next = updateNodes(this.doc, [n.id], x => { const y = { ...x } as ImageNode; if (zoom > 1) y.zoom = zoom; else delete y.zoom; return y; });
+    if (this.store.ui.crop) this.store.set(next); else this.store.commit(next, { key: 'zoom' });
+  }
+  resetCrop(): void { const c = this.cropInfo(); if (!c) return; this.store.set(updateNodes(this.doc, [c.node.id], n => { const y = { ...n } as ImageNode; delete y.zoom; delete y.focus; return y; })); }
+  endCrop(): void {
+    if (!this.store.ui.crop) return;
+    const before = this.cropBefore; this.cropBefore = null;
+    this.store.setUI({ crop: null });
+    if (before && before !== this.doc && JSON.stringify(before.nodes) !== JSON.stringify(this.doc.nodes)) { this.store.commit(this.doc, { before }); toast('Cropped'); }
+  }
+  private updateCropBar(): void {
+    const c = this.store.ui.crop ? this.cropInfo() : null;
+    this.cropBar.classList.toggle('hidden', !c);
+    if (!c) return;
+    const b = rotatedBounds(c.frame.rect, c.frame.rot), zoom = this.cropBar.querySelector('input')!;
+    this.cropBar.style.left = `${(b.x + b.w / 2) * this.scale}px`; this.cropBar.style.top = `${(b.y + b.h) * this.scale}px`;
+    if (document.activeElement !== zoom) zoom.value = String(c.node.zoom ?? 1);
+  }
   // background removal (5o)
   async removeBackground(): Promise<void> {
     const n = this.one();
@@ -359,7 +545,8 @@ export class Editor {
     if (!area || node?.kind !== 'text') return;
     const f = this.frame(node), box = textBox(node, f, measure, this.typeScale()), k = this.scale, dir = direction(node.text || 'a');
     area.style.cssText = `left:${box.rect.x * k}px;top:${box.rect.y * k}px;width:${box.rect.w * k}px;height:${(box.rect.h + box.size * .4) * k}px;transform:rotate(${f.rot}deg);transform-origin:${box.rect.w * k / 2}px ${box.rect.h * k / 2}px;`
-      + `font:${node.weight} ${box.size * k}px ${fontStack(node.text)};line-height:${LINE_HEIGHT};text-align:${physicalAlign(node.align, dir)};color:${this.colour(node.fill)};caret-color:${this.colour(node.fill)}`;
+      + `font:${node.italic ? 'italic ' : ''}${node.weight} ${box.size * k}px ${fontStack(node.text, node.font)};line-height:${node.leading ?? LINE_HEIGHT};text-align:${physicalAlign(node.align, dir)};color:${this.colour(node.fill)};caret-color:${this.colour(node.fill)};`
+      + `letter-spacing:${(node.spacing ?? 0) / 1000 * box.size * k}px;text-decoration:${node.underline ? 'underline' : 'none'};text-transform:${node.upper ? 'uppercase' : 'none'}`;
   }
   finishText(): void {
     const area = this.textarea;

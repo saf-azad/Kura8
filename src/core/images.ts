@@ -46,3 +46,13 @@ export function rebase(p: Rect, a: Rect, b: Rect, rot: number): Rect {
   const corner = rotatePoint({ x: a.x + p.x, y: a.y + p.y }, center(a), rot), local = rotatePoint(corner, center(b), -rot);
   return { x: local.x - b.x, y: local.y - b.y, w: p.w, h: p.h };
 }
+const overlapArea = (a: Rect, b: Rect) => Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)) * Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
+/** Cells for several photos dropped at once (collage, D-045): the drop cell first, then the nearest cells that do not overlap one already used; once none is free, each extra photo steps 20 units from the last. */
+export function collageCells(p: Point, cells: Rect[], n: number, canvas: Size): Rect[] {
+  const out = [nearestCell(p, cells, canvas)], d = (c: Rect) => Math.hypot(center(c).x - p.x, center(c).y - p.y), byDistance = [...cells].sort((a, b) => d(a) - d(b));
+  while (out.length < n) {
+    const free = byDistance.find(c => out.every(u => overlapArea(c, u) < .05 * Math.min(c.w * c.h, u.w * u.h))), last = out[out.length - 1];
+    out.push(free ? { ...free } : { ...last, x: last.x + 20, y: last.y + 20 });
+  }
+  return out;
+}

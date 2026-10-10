@@ -36,6 +36,21 @@ export const ICON: Record<string, string> = {
   down: '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4L6 8L10 4"/></svg>',
   eye: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M1 8C3 4.5 5.5 3 8 3S13 4.5 15 8C13 11.5 10.5 13 8 13S3 11.5 1 8Z"/><circle cx="8" cy="8" r="2"/></svg>',
   padlock: '<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="10" height="7" rx="1.5"/><path d="M4.5 6V4.5A2.5 2.5 0 0 1 9.5 4.5V6"/></svg>',
+  sliders: stroke('<path d="M4 6H18M4 16H18"/><circle cx="8" cy="6" r="2.5" fill="var(--paper)"/><circle cx="14" cy="16" r="2.5" fill="var(--paper)"/>'),
+  effects: stroke('<rect x="3" y="3" width="12" height="12" rx="3"/><path d="M8 19H16A3 3 0 0 0 19 16V8"/>'),
+  position: stroke('<path d="M3 3V19"/><rect x="6" y="5" width="13" height="4" rx="1.5"/><rect x="6" y="13" width="8" height="4" rx="1.5"/>'),
+  dropper: stroke('<path d="M13 5L17 9"/><path d="M15 3.5A2.1 2.1 0 0 1 18.5 7L16 9.5L12.5 6Z"/><path d="M12.5 7.5L5 15V17H7L14.5 9.5"/>'),
+  flipX: stroke('<path d="M11 2V20" stroke-dasharray="2 3"/><path d="M8 5L3 17H8Z"/><path d="M14 5L19 17H14Z" fill="currentColor"/>'),
+  flipY: stroke('<path d="M2 11H20" stroke-dasharray="2 3"/><path d="M5 8L17 3V8Z"/><path d="M5 14L17 19V14Z" fill="currentColor"/>'),
+  crop: stroke('<path d="M6 2V16H20"/><path d="M2 6H16V20"/>'),
+  alignLeft: stroke('<path d="M3 2V20"/><rect x="6" y="5" width="13" height="4" rx="1.5"/><rect x="6" y="13" width="8" height="4" rx="1.5"/>'),
+  alignCentre: stroke('<path d="M11 2V20"/><rect x="4" y="5" width="14" height="4" rx="1.5"/><rect x="7" y="13" width="8" height="4" rx="1.5"/>'),
+  alignRight: stroke('<path d="M19 2V20"/><rect x="3" y="5" width="13" height="4" rx="1.5"/><rect x="8" y="13" width="8" height="4" rx="1.5"/>'),
+  alignTop: stroke('<path d="M2 3H20"/><rect x="5" y="6" width="4" height="13" rx="1.5"/><rect x="13" y="6" width="4" height="8" rx="1.5"/>'),
+  alignMiddle: stroke('<path d="M2 11H20"/><rect x="5" y="4" width="4" height="14" rx="1.5"/><rect x="13" y="7" width="4" height="8" rx="1.5"/>'),
+  alignBottom: stroke('<path d="M2 19H20"/><rect x="5" y="3" width="4" height="13" rx="1.5"/><rect x="13" y="8" width="4" height="8" rx="1.5"/>'),
+  spaceX: stroke('<path d="M2 3V19M20 3V19"/><rect x="8" y="6" width="6" height="10" rx="1.5"/>'),
+  spaceY: stroke('<path d="M3 2H19M3 20H19"/><rect x="6" y="8" width="10" height="6" rx="1.5"/>'),
 };
 export function iconButton(label: string, icon: string, onClick: (e: MouseEvent) => void, className = 'btn'): HTMLButtonElement {
   const b = h('button', { type: 'button', className, title: label, 'aria-label': label.replace(/\s*\(.*\)$/, '') });
@@ -90,6 +105,22 @@ const HELP: Record<string, string> = {
   'Close': 'Closes this panel.',
   'Help': 'Turns this help bar on or off. Hover anything to learn what it does.',
   'Keyboard shortcuts': 'Lists every shortcut.',
+  'Edit image': 'Filters, adjustments, duotone and shape frames for the selected photo. The original is never changed.',
+  'Crop': 'Drag inside the photo to move it, its round corners to zoom, the frame’s handles to crop. Enter or Esc finishes.',
+  'Effects': 'Transparency, drop shadow, border and flip for the selection, and copy or paste a style.',
+  'Position': 'Align to the page or to each other, space evenly, group, order, flip and fill the page.',
+  'Font': 'Choose one of six open-source fonts, italic, underline, uppercase and spacing.',
+  'Pick from canvas': 'Click anywhere on the canvas to take the colour drawn there.',
+  'Gradient': 'Runs the selected shape from its fill to a second colour. Choose End to set the second colour.',
+  'Flip horizontal': 'Mirrors the selection left to right.',
+  'Flip vertical': 'Mirrors the selection top to bottom.',
+  'Copy style': 'Copies colour, font and effects from the selection.',
+  'Paste style': 'Gives the selection the copied style. Its text and pictures stay.',
+  'Fill page': 'Sets the object as the background: it fills the page and goes to the back.',
+  'Replace image': 'Picks another picture for this frame.',
+  'Reset photo': 'Removes filters, adjustments, duotone, shape frame, crop and flips.',
+  'Group': 'Joins the selection so it selects, moves and aligns as one. Click again to pick one member.',
+  'Ungroup': 'Splits the selected group.',
 };
 /** Native titles become a Paper tooltip below the control; the opt-in help bar explains the hovered control. */
 export function installTips(): { setHelp(on: boolean): void; hint(title: string, body: string): void } {
@@ -118,3 +149,17 @@ export const isMac = (platform: string): boolean => /Mac|iPhone|iPad|iPod/i.test
 export const MOD = isMac(navigator.platform) ? '⌘' : 'Ctrl';
 export const SHIFT = isMac(navigator.platform) ? '⇧' : 'Shift';
 export const ALT = isMac(navigator.platform) ? '⌥' : 'Alt';
+/** A labelled range row: the input's accessible name is `label`; arrows and Escape stay with the slider. */
+export function slider(label: string, o: { min: number; max: number; step: number; format?: (v: number) => string; set: (v: number) => void }): { el: HTMLElement; input: HTMLInputElement; show(v: number): void } {
+  const input = h('input', { type: 'range', min: o.min, max: o.max, step: o.step, 'aria-label': label }), value = h('span', { className: 'muted' });
+  const format = o.format ?? (v => String(Math.round(v)));
+  input.addEventListener('input', () => { value.textContent = format(Number(input.value)); o.set(Number(input.value)); });
+  input.addEventListener('keydown', e => { if (e.key !== 'Escape') e.stopPropagation(); });
+  const el = h('label', { className: 'slider' }, h('span', { className: 'row' }, h('span', {}, label), value), input);
+  return { el, input, show(v) { if (document.activeElement !== input) input.value = String(v); value.textContent = format(v); } };
+}
+/** A small text button for panel actions. */
+export function textButton(label: string, text: string, onClick: () => void, title = label): HTMLButtonElement {
+  const b = h('button', { type: 'button', className: 'chip-button', 'aria-label': label, title }, text);
+  b.addEventListener('click', onClick); return b;
+}

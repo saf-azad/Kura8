@@ -107,7 +107,7 @@ export function installSketch(ed: Editor): SketchTools {
       if (far < 3) return;
       d.pts.push(pt(p));
       const sel = d.pts.length > 3 ? ed.visible().filter(n => { const c = ed.centreOf(n); return inPoly([c.x, c.y], d.pts); }).map(n => n.id) : [];
-      ed.live = { ...emptyLive(), sketch: { lasso: toPoints(d.pts) } }; ed.store.setUI({ sel });
+      ed.live = { ...emptyLive(), sketch: { lasso: toPoints(d.pts) } }; ed.store.setUI({ sel: ed.withGroups(sel) });
     },
     up() {
       const d = drag; drag = null; clearTimeout(holdTimer);

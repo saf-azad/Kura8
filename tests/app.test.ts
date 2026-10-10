@@ -38,6 +38,7 @@ describe('keyboard map', () => {
     expect([k('z', { shiftKey: true }), k('L', { shiftKey: true }), k('E', { shiftKey: true })]).toEqual(['redo', 'lock', 'export']);
     expect([k(']', { code: 'BracketRight' }), k('}', { code: 'BracketRight', shiftKey: true }), k('[', { code: 'BracketLeft' }), k('{', { code: 'BracketLeft', shiftKey: true })]).toEqual(['forward', 'front', 'backward', 'back']);
     expect([k('l'), k('e'), k('r'), k('v'), k('d', { altKey: true }), k('t', { shiftKey: true })]).toEqual([null, null, null, null, null, null]);
+    expect([k('g'), k('G', { shiftKey: true }), k('i'), k('u'), k('ç', { altKey: true, code: 'KeyC' }), k('√', { altKey: true, code: 'KeyV' }), k('C', { altKey: true, shiftKey: true })]).toEqual(['group', 'ungroup', 'italic', 'underline', 'copyStyle', 'pasteStyle', null]);
   });
   it('nudges one unit, or one grid cell with Shift when the grid is on (5l)', () => {
     expect([nudgeStep(false, { on: true, size: 40 }), nudgeStep(true, { on: true, size: 40 }), nudgeStep(true, { on: false, size: 40 })]).toEqual([1, 40, 10]);

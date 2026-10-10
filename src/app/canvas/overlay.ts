@@ -13,7 +13,21 @@ export type OverlayState = {
   boxes: Box[]; marquee: Rect | null; flags: { rect: Rect; rot: number }[]; crossings: { x: number; w: number; y: number }[];
   sketch: { live?: Point[]; stroke: number; ink: string; lasso?: Point[]; eraser?: Point | null };
   scan: { rect: Rect; rot: number; t: number } | null;
+  /** Crop mode (D-045): the frame, the whole picture's placement in frame-local units, and the picture to dim outside the frame. */
+  crop?: CropView | null;
 };
+export type CropView = { rect: Rect; rot: number; place: Rect; bitmap: ImageBitmap; flip: [boolean, boolean] };
+/** Frame-local, unmirrored content coordinates of a page point in crop mode, and back. */
+export function pageToCrop(v: { rect: Rect; rot: number; flip: [boolean, boolean] }, p: Point): Point {
+  const q = rotatePoint(p, center(v.rect), -v.rot), x = q.x - v.rect.x, y = q.y - v.rect.y;
+  return { x: v.flip[0] ? v.rect.w - x : x, y: v.flip[1] ? v.rect.h - y : y };
+}
+export function cropToPage(v: { rect: Rect; rot: number; flip: [boolean, boolean] }, q: Point): Point {
+  const x = v.flip[0] ? v.rect.w - q.x : q.x, y = v.flip[1] ? v.rect.h - q.y : q.y;
+  return rotatePoint({ x: v.rect.x + x, y: v.rect.y + y }, center(v.rect), v.rot);
+}
+/** The four corners of the picture in crop mode, in page units: nw, ne, se, sw of the unmirrored picture. */
+export const cropCorners = (v: CropView): Point[] => [[0, 0], [1, 0], [1, 1], [0, 1]].map(([u, w]) => cropToPage(v, { x: v.place.x + u * v.place.w, y: v.place.y + w * v.place.h }));
 export const HANDLE_PX = 12, ROTATE_PX = 44;
 /** The overlay reaches this far past the canvas on every side, so handles and knobs at the edges stay visible and grabbable. */
 export const MARGIN = 64;
@@ -23,7 +37,8 @@ export function handlePoints(box: Box, scale: number): { handle: Handle | 'rotat
   if (box.locked || box.handles === 'none') return [];
   const { rect: r, rot } = box, c = center(r), at = (u: number, v: number) => rotatePoint({ x: r.x + u * r.w, y: r.y + v * r.h }, c, rot);
   const pos: Record<Handle, Point> = { nw: at(0, 0), ne: at(1, 0), se: at(1, 1), sw: at(0, 1), n: at(.5, 0), e: at(1, .5), s: at(.5, 1), w: at(0, .5), move: c };
-  const knob = rotatePoint({ x: c.x, y: r.y - ROTATE_PX / scale }, c, rot);
+  // The knob sits above the box, or below it when above would reach more than 24 px over the canvas top, where the toolbar can cover it.
+  const up = r.y - ROTATE_PX / scale, knob = rotatePoint({ x: c.x, y: up >= -24 / scale ? up : r.y + r.h + ROTATE_PX / scale }, c, rot);
   return [...LETTERS[box.handles].map(handle => ({ handle, at: pos[handle] })), { handle: 'rotate' as const, at: knob }];
 }
 export function drawOverlay(canvas: HTMLCanvasElement, s: OverlayState): void {
@@ -81,7 +96,7 @@ export function drawOverlay(canvas: HTMLCanvasElement, s: OverlayState): void {
     }
     const points = handlePoints(b, s.scale);
     if (!points.length) continue;
-    const knob = points[points.length - 1].at, top = rotatePoint({ x: center(b.rect).x, y: b.rect.y }, center(b.rect), b.rot);
+    const knob = points[points.length - 1].at, below = rotatePoint(knob, center(b.rect), -b.rot).y > b.rect.y, top = rotatePoint({ x: center(b.rect).x, y: below ? b.rect.y + b.rect.h : b.rect.y }, center(b.rect), b.rot);
     ctx.strokeStyle = '#000'; ctx.beginPath(); ctx.moveTo(top.x, top.y); ctx.lineTo(knob.x, knob.y); ctx.stroke();
     ctx.fillStyle = '#ECF0F3'; ctx.beginPath(); ctx.arc(knob.x, knob.y, 8 * px, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
     for (const { handle, at } of points) {
@@ -89,6 +104,23 @@ export function drawOverlay(canvas: HTMLCanvasElement, s: OverlayState): void {
       const half = HANDLE_PX / 2 * px;
       ctx.save(); ctx.translate(at.x, at.y); ctx.rotate(b.rot * Math.PI / 180);
       ctx.beginPath(); ctx.roundRect(-half, -half, 2 * half, 2 * half, 2.5 * px); ctx.fill(); ctx.stroke(); ctx.restore();
+    }
+  }
+  if (s.crop) {
+    const v = s.crop, r = v.rect, p = v.place, c = center(r);
+    ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(v.rot * Math.PI / 180); ctx.translate(-r.w / 2, -r.h / 2);
+    if (v.flip[0] || v.flip[1]) { ctx.translate(v.flip[0] ? r.w : 0, v.flip[1] ? r.h : 0); ctx.scale(v.flip[0] ? -1 : 1, v.flip[1] ? -1 : 1); }
+    ctx.save(); ctx.beginPath(); ctx.rect(p.x, p.y, p.w, p.h); ctx.rect(0, 0, r.w, r.h); ctx.clip('evenodd');
+    ctx.globalAlpha = .45; ctx.drawImage(v.bitmap, p.x, p.y, p.w, p.h); ctx.restore();
+    ctx.strokeStyle = '#000'; ctx.lineWidth = px; ctx.setLineDash([4 * px, 3 * px]); ctx.strokeRect(p.x, p.y, p.w, p.h); ctx.setLineDash([]);
+    ctx.lineWidth = 2 * px; ctx.strokeRect(0, 0, r.w, r.h);
+    ctx.restore();
+    ctx.fillStyle = '#ECF0F3'; ctx.strokeStyle = '#000'; ctx.lineWidth = 2 * px;
+    for (const q of cropCorners(v)) { ctx.beginPath(); ctx.arc(q.x, q.y, 7 * px, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+    for (const { handle, at } of handlePoints({ id: '', rect: r, rot: v.rot, handles: 'all', locked: false }, s.scale)) {
+      if (handle === 'rotate') continue;
+      const half = HANDLE_PX / 2 * px; ctx.save(); ctx.translate(at.x, at.y); ctx.rotate(v.rot * Math.PI / 180); ctx.fillStyle = '#000';
+      ctx.beginPath(); ctx.roundRect(-half, -half, 2 * half, 2 * half, 2.5 * px); ctx.fill(); ctx.restore();
     }
   }
   if (s.marquee) { const m = s.marquee; ctx.fillStyle = 'rgba(156,171,194,.15)'; ctx.fillRect(m.x, m.y, m.w, m.h); ctx.lineWidth = px; ctx.strokeRect(m.x, m.y, m.w, m.h); }
