@@ -1,5 +1,5 @@
 // On-device background removal for image nodes.
-// ISNet (DIS, Apache-2.0) runs in the participant's browser through ONNX Runtime Web (MIT): WebGPU when available, WASM
+// ISNet (DIS, Apache-2.0) runs in the person's browser through ONNX Runtime Web (MIT): WebGPU when available, WASM
 // otherwise. Weights and the wasm runtime are served from this app's own origin (public/models, public/ort; see
 // scripts/prepare-model.mjs) and cached by the browser, so no pixels and no requests leave the deployment.
 import type * as ORT from 'onnxruntime-web';
@@ -41,14 +41,6 @@ export function alphaFromScores(scores: ArrayLike<number>, sigmoid: boolean): Ui
 /** Multiply each pixel's existing alpha by the mask (0..255 per pixel), so removal only ever adds transparency. */
 export function applyMask(rgba: Uint8ClampedArray, mask: ArrayLike<number>): void {
   for (let i = 0, n = rgba.length / 4; i < n; i++) rgba[i * 4 + 3] = Math.round(rgba[i * 4 + 3] * mask[i] / 255);
-}
-export function blobToDataUrl(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('Unreadable image'));
-    reader.onerror = () => reject(reader.error ?? new Error('Unreadable image'));
-    reader.readAsDataURL(blob);
-  });
 }
 const base = import.meta.env.BASE_URL;
 async function json<T>(url: string, what: string): Promise<T> {
@@ -143,10 +135,10 @@ async function infer(engine: Engine, input: ORT.Tensor): Promise<Float32Array> {
   }
 }
 const canvas = (w: number, h: number) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return [c, c.getContext('2d', { willReadFrequently: true })!] as const; };
-/** Replace the background of a raster data URL with transparency; resolves to a PNG data URL of the same pixel size. */
-export async function removeBackground(src: string, listen?: ProgressListener): Promise<string> {
+/** Replace the background of an image with transparency; resolves to a PNG of the same pixel size. The source is never changed. */
+export async function removeBackground(src: Blob | string, listen?: ProgressListener): Promise<Blob> {
   const engine = await preloadBackgroundRemoval(listen);
-  const bitmap = await createImageBitmap(await (await fetch(src)).blob());
+  const bitmap = await createImageBitmap(typeof src === 'string' ? await (await fetch(src)).blob() : src);
   try {
     const { width, height } = bitmap, size = engine.size, pixels = size * size;
     const [, small] = canvas(size, size); small.drawImage(bitmap, 0, 0, size, size);
@@ -161,7 +153,6 @@ export async function removeBackground(src: string, listen?: ProgressListener): 
     const [outCanvas, out] = canvas(width, height); out.drawImage(bitmap, 0, 0); const image = out.getImageData(0, 0, width, height);
     applyMask(image.data, coverage);
     out.putImageData(image, 0, 0);
-    const blob = await new Promise<Blob>((resolve, reject) => outCanvas.toBlob(b => b ? resolve(b) : reject(new Error('PNG encode failed')), 'image/png'));
-    return blobToDataUrl(blob);
+    return await new Promise<Blob>((resolve, reject) => outCanvas.toBlob(b => b ? resolve(b) : reject(new Error('PNG encode failed')), 'image/png'));
   } finally { bitmap.close(); }
 }
