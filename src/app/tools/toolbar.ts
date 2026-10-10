@@ -4,9 +4,10 @@ import { ratioById, ratioNumbers } from '../../core/ratios';
 import { canvasSize } from '../../core/ratios';
 import { textBox } from '../../core/fit';
 import { measure } from '../measure';
+import { fontById } from '../../core/script';
 // The Paper toolbar (top centre) and the corner controls (guides, sizes and ratio, layers, grid). Controls that do
 // not apply fade to 23 %. Panels hang 12 px below the control that owns them.
-export type Panels = { shapes: HTMLElement; colour: HTMLElement; layers: HTMLElement; grid: HTMLElement; ratio: HTMLElement };
+export type Panels = { shapes: HTMLElement; colour: HTMLElement; layers: HTMLElement; grid: HTMLElement; ratio: HTMLElement; image: HTMLElement; effects: HTMLElement; font: HTMLElement; arrange: HTMLElement };
 export function toolbar(ed: Editor, panels: Panels): HTMLElement {
   const ui = () => ed.store.ui;
   const tool = (name: 'pen' | 'erase' | 'lasso') => () => ed.setTool(ui().tool === name ? (name === 'pen' ? null : 'pen') : name);
@@ -22,13 +23,19 @@ export function toolbar(ed: Editor, panels: Panels): HTMLElement {
   const angle = h('span', { className: 'readout', title: 'Angle' });
   const size = h('span', { className: 'readout', title: 'Font size' });
   const smaller = iconButton('Smaller', ICON.minus, () => ed.fontStep(-1), 'btn small'), larger = iconButton('Larger', ICON.plus, () => ed.fontStep(1), 'btn small');
-  const bold = h('button', { type: 'button', className: 'btn', title: `Bold (${MOD} B)`, style: 'font-weight:700;font-size:16px' }, 'B');
+  const font = h('button', { type: 'button', className: 'font-button', title: 'Font', 'aria-label': 'Font' }, 'Space Grotesk');
+  font.addEventListener('click', () => ed.openPanel('font'));
+  const bold = h('button', { type: 'button', className: 'btn', title: `Bold (${MOD} B)`, 'aria-label': 'Bold', style: 'font-weight:700;font-size:16px' }, 'B');
   bold.addEventListener('click', () => ed.toggleBold());
   const align = iconButton('Align', '', () => ed.cycleAlign());
   const fit = h('button', { type: 'button', className: 'btn', title: 'Autofit', style: 'font-size:12px' }, 'Fit');
   fit.addEventListener('click', () => ed.toggleFit());
-  const textGroup = h('div', { className: 'group' }, smaller, size, larger, bold, align, fit);
+  const textGroup = h('div', { className: 'group' }, font, smaller, size, larger, bold, align, fit);
+  // With one photo selected, its controls take the text group's place (D-045).
+  const edit = iconButton('Edit image', ICON.sliders, () => ed.openPanel('image')), crop = iconButton('Crop (double-click the photo)', ICON.crop, () => ed.startCrop());
+  const imageGroup = h('div', { className: 'group hidden' }, edit, crop);
   const cut = iconButton('Remove background', ICON.cutout, () => void ed.removeBackground());
+  const effects = iconButton('Effects', ICON.effects, () => ed.openPanel('effects')), position = iconButton('Position', ICON.position, () => ed.openPanel('arrange'));
   const dup = iconButton(`Duplicate (${MOD} D)`, ICON.duplicate, () => ed.duplicate());
   const lock = iconButton(`Lock (${MOD} ${SHIFT} L)`, ICON.lock, () => ed.toggleLock());
   const del = iconButton('Delete (Delete)', ICON.remove, () => ed.remove());
@@ -36,9 +43,11 @@ export function toolbar(ed: Editor, panels: Panels): HTMLElement {
   const keys = iconButton('Keyboard shortcuts (?)', ICON.keys, () => ed.openPanel('keys'));
   const exp = iconButton(`Export (${MOD} ${SHIFT} E)`, ICON.go, () => ed.openPanel('export'), 'btn solid-btn');
   exp.style.cssText = 'background:#000;color:#fff';
-  const anchor = h('div', { className: 'toolbar-anchor' }, panels.shapes, panels.colour);
+  const anchor = h('div', { className: 'toolbar-anchor' }, panels.shapes, panels.colour, panels.image, panels.effects, panels.font, panels.arrange);
   panels.shapes.style.left = '0'; panels.colour.style.left = '110px';
-  const bar = h('div', { className: 'toolbar', role: 'toolbar', 'aria-label': 'Tools' }, text, shapes, image, pen, sketchGroup, h('span', { className: 'sep' }), colour, angle, textGroup, h('span', { className: 'sep' }), cut, dup, lock, del, h('span', { className: 'sep' }), undo, redo, h('span', { className: 'sep' }), keys, exp, anchor);
+  const bar = h('div', { className: 'toolbar', role: 'toolbar', 'aria-label': 'Tools' }, text, shapes, image, pen, sketchGroup, h('span', { className: 'sep' }), colour, angle, textGroup, imageGroup, h('span', { className: 'sep' }), cut, effects, position, dup, lock, del, h('span', { className: 'sep' }), undo, redo, h('span', { className: 'sep' }), keys, exp, anchor);
+  /** Panels hang below the control that owns them, kept inside the toolbar's width. */
+  const hang = (panel: HTMLElement, owner: HTMLElement) => { panel.style.left = `${Math.max(0, Math.min(owner.offsetLeft + (owner.parentElement === bar ? 0 : owner.parentElement!.offsetLeft), bar.offsetWidth - panel.offsetWidth))}px`; };
   const pressed = (b: HTMLElement, on: boolean, attr = 'aria-pressed') => b.setAttribute(attr, String(on));
   const fade = (b: HTMLElement, on: boolean) => { b.classList.toggle('faded', !on); if (b instanceof HTMLButtonElement) b.disabled = !on; };
   ed.chrome.push({ update() {
@@ -49,8 +58,18 @@ export function toolbar(ed: Editor, panels: Panels): HTMLElement {
     const swatch = one && one.kind !== 'image' ? one.fill : u.armed ?? u.swatch, value = ed.colour(swatch);
     chip.style.background = value; hex.textContent = value.toUpperCase();
     angle.textContent = one ? `${Math.round(ed.frame(one).rot)}°` : '—'; angle.classList.toggle('faded', !one);
+    const isImage = one?.kind === 'image';
+    textGroup.classList.toggle('hidden', isImage); imageGroup.classList.toggle('hidden', !isImage);
+    fade(edit, isImage && !!one.asset && !one.locked); fade(crop, isImage && !!one.asset && !one.locked);
+    pressed(edit, u.panel === 'image', 'aria-expanded'); pressed(effects, u.panel === 'effects', 'aria-expanded'); pressed(position, u.panel === 'arrange', 'aria-expanded'); pressed(font, u.panel === 'font', 'aria-expanded');
+    pressed(crop, !!u.crop);
+    fade(effects, unlocked); fade(position, sel.length > 0);
+    font.textContent = one?.kind === 'text' ? fontById(one.font).name : 'Font';
+    if (one?.kind === 'text') font.style.fontFamily = `${fontById(one.font).family}, ${fontById(one.font).generic}`; else font.style.fontFamily = '';
+    if (u.panel === 'image') hang(panels.image, imageGroup); if (u.panel === 'effects') hang(panels.effects, effects);
+    if (u.panel === 'font') hang(panels.font, textGroup); if (u.panel === 'arrange') hang(panels.arrange, position);
     textGroup.classList.toggle('faded', !isText || !!one?.locked);
-    for (const b of [smaller, larger, bold, align, fit]) b.disabled = !isText || !!one?.locked;
+    for (const b of [font, smaller, larger, bold, align, fit]) b.disabled = !isText || !!one?.locked;
     size.textContent = one?.kind === 'text' ? String(Math.round(textBox(one, ed.frame(one), measure, ed.typeScale()).size)) : '—';
     if (one?.kind === 'text') {
       pressed(bold, one.weight === 700); pressed(fit, !!one.fit);

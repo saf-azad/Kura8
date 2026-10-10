@@ -8,7 +8,7 @@ import { layout, compositionFit, type FitReason } from '../../core/compositions'
 import { hsl, hsvToHex, hexToHsv, HUES, resolve } from '../../core/palette';
 import { norm, modn } from '../../core/geometry';
 import { measure } from '../measure';
-import { Canvas2DRenderer } from '../canvas/renderer';
+import { Canvas2DRenderer, type ImageSource } from '../canvas/renderer';
 import type { DialSettings } from '../store';
 import { h, ICON } from '../ui';
 // The dial (M7): four rings (ratio, layout, guide, colour) turned by drag, scroll, arrows or Enter; the hub previews
@@ -28,7 +28,7 @@ function describe(comp: CompId, guide: GuideId): string {
 }
 export type DialHost = {
   settings(): DialSettings; set(patch: Partial<DialSettings>): void;
-  hasDoc(): boolean; preview(s: DialSettings): KuraDoc; image(asset: string, cutout: boolean): ImageBitmap | null | undefined;
+  hasDoc(): boolean; preview(s: DialSettings): KuraDoc; image: ImageSource;
   start(): void; fresh(): void; back(): void;
 };
 export function showDial(root: HTMLElement, host: DialHost): { paint(): void; destroy(): void } {

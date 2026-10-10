@@ -1,6 +1,7 @@
 import '@fontsource/space-grotesk/400.css';
 import '@fontsource/space-grotesk/700.css';
 import './style.css';
+import './app/fonts';
 import { createDocument, type KuraDoc } from './core/document';
 import { canvasSize } from './core/ratios';
 import { layout, starterNodes, STARTER } from './core/compositions';
@@ -20,6 +21,10 @@ import { gridPanel } from './app/tools/panels/grid';
 import { ratioPanel } from './app/tools/panels/ratio';
 import { keysPanel } from './app/tools/panels/keys';
 import { exportSheet } from './app/tools/panels/export';
+import { imagePanel } from './app/tools/panels/image';
+import { effectsPanel } from './app/tools/panels/effects';
+import { fontPanel } from './app/tools/panels/font';
+import { arrangePanel } from './app/tools/panels/arrange';
 import { showDial } from './app/dial';
 import { h, installTips, toast } from './app/ui';
 // Boot: restore the one current document (migrating version 1 and its inline images), then show the editor when a
@@ -72,17 +77,17 @@ function ensureEditor(): Editor {
   const ed = editor = new Editor(editorRoot, store);
   installInteraction(ed, installSketch(ed));
   installShortcuts(ed);
-  const panels = { shapes: shapesPanel(ed), colour: colourPanel(ed), layers: layersPanel(ed), grid: gridPanel(ed), ratio: ratioPanel(ed) };
+  const panels = { shapes: shapesPanel(ed), colour: colourPanel(ed), layers: layersPanel(ed), grid: gridPanel(ed), ratio: ratioPanel(ed), image: imagePanel(ed), effects: effectsPanel(ed), font: fontPanel(ed), arrange: arrangePanel(ed) };
   const word = h('button', { type: 'button', className: 'wordmark', title: 'Back to the dial' }, 'Kura8');
   word.addEventListener('click', () => toDial());
   const hint = h('button', { type: 'button', className: 'shortcut-hint', title: 'Keyboard shortcuts' }, h('span', { className: 'muted' }, 'Shortcuts'), h('span', { className: 'key' }, '?'));
   hint.addEventListener('click', () => ed.openPanel('keys'));
   editorRoot.append(word, toolbar(ed, panels), corner(ed, panels), hint, keysPanel(ed), exportSheet(ed));
-  // Escape or a click outside closes a panel; clicks on the canvas keep the colour, shapes and layers panels open.
+  // Escape or a click outside closes a panel; clicks on the canvas keep the colour, shapes, layers and editing panels open.
   document.addEventListener('pointerdown', e => {
     const t = e.target as Element, panel = store.ui.panel;
-    if (!panel || store.ui.screen !== 'editor' || t.closest('.panel, .modal, .sheet, .toolbar, .corner, .corner-stack, .help, .shortcut-hint')) return;
-    if (t === ed.overlay && (panel === 'colour' || panel === 'shapes' || panel === 'layers')) return;
+    if (!panel || store.ui.screen !== 'editor' || t.closest('.panel, .modal, .sheet, .toolbar, .corner, .corner-stack, .help, .shortcut-hint, .crop-bar')) return;
+    if (t === ed.overlay && ['colour', 'shapes', 'layers', 'image', 'effects', 'font', 'arrange'].includes(panel)) return;
     ed.openPanel(null);
   });
   let tool = store.ui.tool;
@@ -105,7 +110,7 @@ function route(): void {
   if (onDial) {
     dial ??= showDial(dialRoot, {
       settings: () => store.dial, set: patch => store.setDial(patch), hasDoc: () => !!store.doc, preview,
-      image: (asset, cutout) => editor?.image(asset, cutout), start: go, fresh, back: () => store.setUI({ screen: 'editor' }),
+      image: (asset, cutout, look) => editor?.image(asset, cutout, look), start: go, fresh, back: () => store.setUI({ screen: 'editor' }),
     });
     dial.paint();
   } else {

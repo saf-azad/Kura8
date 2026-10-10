@@ -13,15 +13,16 @@ export function isEditingTarget(target: EventTarget | null): boolean {
 }
 /** Arrow step (5l): one unit; with Shift one grid cell when the grid is on, otherwise ten units. */
 export const nudgeStep = (shift: boolean, grid: { on: boolean; size: number }): number => shift ? (grid.on ? grid.size : 10) : 1;
-export type Command = 'copy' | 'cut' | 'duplicate' | 'selectAll' | 'undo' | 'redo' | 'forward' | 'backward' | 'front' | 'back' | 'lock' | 'bold' | 'export';
-/** The Mod-combination a key event means, or null when Kura8 does not own it. */
+export type Command = 'copy' | 'cut' | 'duplicate' | 'selectAll' | 'undo' | 'redo' | 'forward' | 'backward' | 'front' | 'back' | 'lock' | 'bold' | 'export'
+  | 'group' | 'ungroup' | 'italic' | 'underline' | 'copyStyle' | 'pasteStyle';
+/** The Mod-combination a key event means, or null when Kura8 does not own it. Alt combinations use the physical key, since Option changes the character on a Mac. */
 export function modCommand(e: Pick<KeyboardEvent, 'key' | 'code' | 'shiftKey' | 'altKey'>): Command | null {
-  if (e.altKey) return null;
+  if (e.altKey) return e.shiftKey ? null : e.code === 'KeyC' ? 'copyStyle' : e.code === 'KeyV' ? 'pasteStyle' : null;
   if (e.code === 'BracketRight') return e.shiftKey ? 'front' : 'forward';
   if (e.code === 'BracketLeft') return e.shiftKey ? 'back' : 'backward';
   const k = e.key.toLowerCase();
-  if (e.shiftKey) return k === 'z' ? 'redo' : k === 'l' ? 'lock' : k === 'e' ? 'export' : null;
-  return ({ c: 'copy', x: 'cut', d: 'duplicate', a: 'selectAll', z: 'undo', y: 'redo', b: 'bold' } as Record<string, Command>)[k] ?? null;
+  if (e.shiftKey) return k === 'z' ? 'redo' : k === 'l' ? 'lock' : k === 'e' ? 'export' : k === 'g' ? 'ungroup' : null;
+  return ({ c: 'copy', x: 'cut', d: 'duplicate', a: 'selectAll', z: 'undo', y: 'redo', b: 'bold', g: 'group', i: 'italic', u: 'underline' } as Record<string, Command>)[k] ?? null;
 }
 export function installShortcuts(ed: Editor): void {
   const mac = isMac(navigator.platform);
@@ -29,6 +30,9 @@ export function installShortcuts(ed: Editor): void {
     const ui = ed.store.ui;
     if (ui.screen !== 'editor' || !ed.store.doc || e.isComposing || isEditingTarget(e.target)) return;
     if (ui.panel === 'export') { if (e.key === 'Escape') { e.preventDefault(); ed.openPanel(null); } return; }
+    // Crop mode (D-045): Escape or Enter finishes it; any other shortcut finishes it first.
+    if (ui.crop) { if (e.key === 'Escape' || e.key === 'Enter') { e.preventDefault(); ed.endCrop(); return; } ed.endCrop(); }
+    if (ui.picking && e.key === 'Escape') { e.preventDefault(); ed.store.setUI({ picking: false }); return; }
     if (ui.panel === 'keys' && (e.key === 'Escape' || e.key === '?')) { e.preventDefault(); ed.openPanel(null); return; }
     if (primaryModifier(e, mac)) {
       const command = modCommand(e);
@@ -37,7 +41,9 @@ export function installShortcuts(ed: Editor): void {
       if (e.repeat && command !== 'undo' && command !== 'redo') return;
       ({ copy: () => ed.copy(), cut: () => ed.cut(), duplicate: () => ed.duplicate(), selectAll: () => ed.selectAll(), undo: () => ed.undo(), redo: () => ed.redo(),
         forward: () => ed.reorder('forward'), backward: () => ed.reorder('backward'), front: () => ed.reorder('front'), back: () => ed.reorder('back'),
-        lock: () => ed.toggleLock(), bold: () => ed.toggleBold(), export: () => ed.openPanel('export') })[command]();
+        lock: () => ed.toggleLock(), bold: () => ed.toggleBold(), export: () => ed.openPanel('export'),
+        group: () => ed.group(), ungroup: () => ed.ungroup(), italic: () => ed.toggleText('italic'), underline: () => ed.toggleText('underline'),
+        copyStyle: () => ed.copyStyle(), pasteStyle: () => ed.pasteStyle() })[command]();
       return;
     }
     if (e.metaKey || e.ctrlKey || e.altKey) return;

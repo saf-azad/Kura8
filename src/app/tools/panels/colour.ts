@@ -1,7 +1,7 @@
 import type { ColourRef, RowId, Step } from '../../../core/document';
 import { addCustom, contrast, hexToHsv, hsvToHex, hueSwatch, HUES, passingShade, rows, resolve } from '../../../core/palette';
 import type { Editor } from '../../editor';
-import { h, toast } from '../../ui';
+import { h, iconButton, ICON, slider, toast } from '../../ui';
 // Colour (M8): roles, the 7-step shade row, the 12 hues plus neutral and custom hues (5g), any colour by SV picker or
 // hex, the contrast check with the nearest passing shade (5h), and the light/dark ground with a hold preview (5i).
 // A swatch fills the selection; with nothing selected it arms paint (5e).
@@ -16,14 +16,24 @@ export function colourPanel(ed: Editor): HTMLElement {
   const sv = h('div', { className: 'sv', title: 'Drag to pick any colour' }, h('i')), hueBar = h('div', { className: 'hue-bar', title: 'Drag to change hue' }, h('i'));
   const hex = h('input', { className: 'field', 'aria-label': 'Hex colour', spellcheck: 'false', maxlength: 7 });
   const addHue = h('button', { type: 'button', className: 'pill', title: 'Add as hue', style: 'height:32px' }, '+ Add as hue');
-  const hexRow = h('div', { style: 'display:flex;gap:8px;align-items:center' }, hex, addHue);
+  // Eyedropper and gradient (D-045): the next canvas click picks the colour drawn there; shapes can run a gradient.
+  const dropper = iconButton('Pick from canvas', ICON.dropper, () => { ed.store.setUI({ picking: !ed.store.ui.picking }); if (ed.store.ui.picking) toast('Click the canvas to pick a colour', 1800); });
+  const hexRow = h('div', { style: 'display:flex;gap:8px;align-items:center' }, hex, addHue, dropper);
+  const gradient = h('button', { type: 'button', className: 'pill', 'aria-label': 'Gradient', 'aria-pressed': 'false', style: 'height:32px' }, 'Gradient');
+  gradient.addEventListener('click', () => { ed.toggleGradient(); ed.gradientEnd = false; ed.invalidate(); });
+  const ends = h('div', { className: 'seg', role: 'group', 'aria-label': 'Gradient stop' }, ...(['Start', 'End'] as const).map(name => {
+    const b = h('button', { type: 'button', 'aria-label': `Gradient ${name.toLowerCase()}`, 'aria-pressed': 'false' }, name);
+    b.addEventListener('click', () => { ed.gradientEnd = name === 'End'; ed.invalidate(); }); return b;
+  }));
+  const angle = slider('Gradient angle', { min: 0, max: 359, step: 1, format: v => `${Math.round(v)}°`, set: v => ed.setGradient({ angle: v }) });
+  const gradientRow = h('div', { className: 'gradient-row' }, h('div', { style: 'display:flex;gap:8px;align-items:center' }, gradient, ends), angle.el);
   const contrastBox = h('div', { className: 'contrast hidden' });
   const light = h('button', { type: 'button', title: 'Light ground', style: 'background:#ECF0F3' }), dark = h('button', { type: 'button', title: 'Dark ground', style: 'background:#000' });
   const hint = h('div', { className: 'muted' });
   const panel = h('div', { className: 'panel colour-panel', hidden: true, role: 'dialog', 'aria-label': 'Colour' },
-    h('div', { className: 'roles' }, ...roleButtons), shades, hues, sv, hueBar, hexRow, contrastBox, h('div', { className: 'grounds' }, hint, h('div', { className: 'pair' }, light, dark)));
+    h('div', { className: 'roles' }, ...roleButtons), shades, hues, sv, hueBar, hexRow, gradientRow, contrastBox, h('div', { className: 'grounds' }, hint, h('div', { className: 'pair' }, light, dark)));
   let pick = { h: 210, s: 60, v: 70 }, editingHex = false, sliding = false, focusValue = '', built = '';
-  const current = (): ColourRef => { const one = ed.one(); return one && one.kind !== 'image' ? one.fill : ed.store.ui.armed ?? ed.store.ui.swatch; };
+  const current = (): ColourRef => { const one = ed.one(); return one?.kind === 'shape' && one.gradient && ed.gradientEnd ? one.gradient.to : one && one.kind !== 'image' ? one.fill : ed.store.ui.armed ?? ed.store.ui.swatch; };
   const drag = (el: HTMLElement, kind: 'sv' | 'h') => el.addEventListener('pointerdown', e => {
     e.preventDefault(); el.setPointerCapture(e.pointerId); sliding = true;
     const r = el.getBoundingClientRect();
@@ -110,6 +120,13 @@ export function colourPanel(ed: Editor): HTMLElement {
       }
     } else contrastBox.classList.add('hidden');
     light.setAttribute('aria-pressed', String(!p.dark)); dark.setAttribute('aria-pressed', String(p.dark));
+    dropper.setAttribute('aria-pressed', String(ui.picking));
+    const shapes = ed.selected().filter(n => n.kind === 'shape' && !n.locked), graded = shapes.length > 0 && shapes.every(n => n.kind === 'shape' && n.gradient);
+    gradientRow.classList.toggle('hidden', !shapes.length); gradient.setAttribute('aria-pressed', String(graded));
+    ends.classList.toggle('hidden', !graded); angle.el.classList.toggle('hidden', !graded);
+    if (!graded) ed.gradientEnd = false;
+    ends.querySelectorAll('button').forEach((b, i) => b.setAttribute('aria-pressed', String((i === 1) === ed.gradientEnd)));
+    const g = shapes[0]?.kind === 'shape' ? shapes[0].gradient : undefined; if (g) angle.show(g.angle);
     hint.textContent = ui.armed ? 'Tap anything to fill it · Esc stops' : ed.selected().length ? 'Swatches fill the selection' : 'Pick a swatch, then tap to fill';
   } });
   return panel;

@@ -1,9 +1,9 @@
-import { contains, center, type Point, type Rect, type Size } from './geometry';
+import { contains, center, rotatePoint, type Point, type Rect, type Size } from './geometry';
 // Image placement maths. The cover crop is derived from the frame and the focus point, never stored (AGENTS: Document v2).
 export const CENTRE: Point = { x: .5, y: .5 };
-/** Source rectangle (in natural pixels) that covers a frame of `frame` proportions, centred on `focus` and clamped inside the image. */
-export function coverCrop(natural: Size, frame: Size, focus: Point = CENTRE): Rect {
-  const scale = Math.max(frame.w / natural.w, frame.h / natural.h), w = Math.min(natural.w, frame.w / scale), h = Math.min(natural.h, frame.h / scale);
+/** Source rectangle (in natural pixels) that covers a frame of `frame` proportions, `zoom` times closer than a plain cover, centred on `focus` and clamped inside the image. */
+export function coverCrop(natural: Size, frame: Size, focus: Point = CENTRE, zoom = 1): Rect {
+  const scale = Math.max(frame.w / natural.w, frame.h / natural.h) * Math.max(1, zoom), w = Math.min(natural.w, frame.w / scale), h = Math.min(natural.h, frame.h / scale);
   const clamp = (v: number, max: number) => Math.max(0, Math.min(max, v));
   return { x: clamp(focus.x * natural.w - w / 2, natural.w - w), y: clamp(focus.y * natural.h - h / 2, natural.h - h), w, h };
 }
@@ -24,4 +24,35 @@ export function nearestCell(p: Point, cells: Rect[], canvas: Size): Rect {
 export function containIn(box: Rect, natural: Size): Rect {
   const k = Math.min(box.w / natural.w, box.h / natural.h), w = natural.w * k, h = natural.h * k;
   return { x: box.x + (box.w - w) / 2, y: box.y + (box.h - h) / 2, w, h };
+}
+/** Where the whole picture sits in frame-local units (frame top-left at 0, 0) for a cover crop with `focus` and `zoom`. */
+export function placement(natural: Size, frame: Size, focus: Point = CENTRE, zoom = 1): Rect {
+  const c = coverCrop(natural, frame, focus, zoom), s = frame.w / c.w;
+  return { x: 0 - c.x * s, y: 0 - c.y * s, w: natural.w * s, h: natural.h * s };
+}
+/** The focus and zoom that reproduce a placement covering the frame (the inverse of `placement`). */
+export function fromPlacement(natural: Size, frame: Size, p: Rect): { focus: Point; zoom: number } {
+  const s = p.w / natural.w, cover = Math.max(frame.w / natural.w, frame.h / natural.h), clamp = (v: number) => Math.max(0, Math.min(1, v));
+  return { focus: { x: clamp((-p.x + frame.w / 2) / s / natural.w), y: clamp((-p.y + frame.h / 2) / s / natural.h) }, zoom: Math.max(1, s / cover) };
+}
+/** A placement grown about its centre until it covers the frame, then shifted so no frame edge shows past the picture. */
+export function coverPlacement(frame: Size, p: Rect): Rect {
+  const k = Math.max(1, frame.w / p.w, frame.h / p.h), w = p.w * k, h = p.h * k;
+  const x = Math.min(0, Math.max(frame.w - w, p.x + p.w / 2 - w / 2)), y = Math.min(0, Math.max(frame.h - h, p.y + p.h / 2 - h / 2));
+  return { x, y, w, h };
+}
+/** Keeps the picture fixed on the page while its frame changes from `a` to `b` (both turned `rot` about their centres): the placement in b's local units. */
+export function rebase(p: Rect, a: Rect, b: Rect, rot: number): Rect {
+  const corner = rotatePoint({ x: a.x + p.x, y: a.y + p.y }, center(a), rot), local = rotatePoint(corner, center(b), -rot);
+  return { x: local.x - b.x, y: local.y - b.y, w: p.w, h: p.h };
+}
+const overlapArea = (a: Rect, b: Rect) => Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)) * Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
+/** Cells for several photos dropped at once (collage, D-045): the drop cell first, then the nearest cells that do not overlap one already used; once none is free, each extra photo steps 20 units from the last. */
+export function collageCells(p: Point, cells: Rect[], n: number, canvas: Size): Rect[] {
+  const out = [nearestCell(p, cells, canvas)], d = (c: Rect) => Math.hypot(center(c).x - p.x, center(c).y - p.y), byDistance = [...cells].sort((a, b) => d(a) - d(b));
+  while (out.length < n) {
+    const free = byDistance.find(c => out.every(u => overlapArea(c, u) < .05 * Math.min(c.w * c.h, u.w * u.h))), last = out[out.length - 1];
+    out.push(free ? { ...free } : { ...last, x: last.x + 20, y: last.y + 20 });
+  }
+  return out;
 }

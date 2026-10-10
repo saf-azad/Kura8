@@ -4,7 +4,7 @@ Rolling state for the Kura8 build (Phase 1; the Phase 0 study is frozen at tag `
 
 ## Status
 
-Phase 1 build complete. The dev branch is the Kura8 dial editor (M1–M15): the dial turns four rings (ratio, layout, guide, colour) with a live hub preview and opens a pre-arranged, fully editable canvas; the editor has the Paper toolbar and corner controls, multi-select, marquee, move/resize/rotate with snapping v2 (tiers, hold, soft pull, rotated corners, angle snapping, Alt bypass), undo/redo, clipboard, z-order, lock, hide, layers, grid, shortcuts, toasts and the opt-in help bar; colour roles with dark mirror, shade rows, custom hues, contrast hint and armed paint; images in IndexedDB with working copies, drop-to-fill and on-device background removal with Before/After; the 41-shape library and 1,512 Phosphor fill icons with synonym search; autofit and right-to-left text; sketch pen with hold-to-clean, scribble delete, eraser and lasso; change ratio with flags and linked sizes; PNG/JPG/SVG/PDF export. `npm test` passes 198 tests with `src/core` at 100 % line coverage (the fp16 converter tests now run on Node 22 because vitest workers get `--js-float16array`). `npx tsc --noEmit` and `npm run build` pass. `python3 scripts/browser_audit.py` passes all 43 named steps against `vite preview` with no app console errors and no off-origin requests, including all 6 ratios × 6 layouts × 3 guides, every card 5a–5z, exact export sizes (A4 2480 × 3508), transparent No ground PNG, SVG licence metadata, PDF page size, reload with images and v1 migration. Vercel (projects `kura8` and `kura8-lgqp`) deploys previews from pull requests and production from `main`. What does not exist by design: handwriting (D-030), user zoom/pan, groups, free crop, file open/save. The `study-v1` tag is still local only.
+Phase 1 build complete, plus Canva parity (D-045). The dev branch is the Kura8 dial editor (M1–M15): the dial turns four rings (ratio, layout, guide, colour) with a live hub preview and opens a pre-arranged, fully editable canvas; the editor has the Paper toolbar and corner controls, multi-select, marquee, move/resize/rotate with snapping v2, undo/redo, clipboard, z-order, lock, hide, layers, grid, shortcuts, toasts and the opt-in help bar; colour roles with dark mirror, shade rows, custom hues, contrast hint and armed paint; images in IndexedDB with on-device background removal; the 41-shape library and 1,512 Phosphor icons; autofit and right-to-left text; sketch tools; change ratio with flags and linked sizes; PNG/JPG/SVG/PDF export. D-045 added the Canva photo-editing and graphic-design tasks listed in `docs/canva-parity.md`: crop mode (frame handles, pan, zoom), flip, eight photo adjustments, ten filters with live thumbnails, duotone in palette roles, shape frames for photos, fill page, multi-photo collage into cells, opacity, drop shadow and border on any object, shape gradients, eyedropper, six OFL fonts with italic, underline, uppercase, letter and line spacing, align and distribute, groups and copy style, all exported by PNG/JPG/PDF (full-resolution pixels) and SVG (clip paths, gradients, drop-shadow filters, embedded faces). `npm test` passes 225 tests with `src/core` at 100 % line coverage; `npx tsc --noEmit` and `npm run build` pass. `python3 scripts/canva_audit.py` passes 41/41 Canva tasks (the first run, before D-045, passed 11); `python3 scripts/browser_audit.py` passes all 43 Phase 1 steps with no app console errors and no off-origin requests. Not built by design: generative or learned photo edits (Magic Eraser, Expand, Edit, Enhance), template and stock libraries, pages, animation, sharing, curved text, handwriting (D-030), user zoom/pan, file open/save. The `study-v1` tag is still local only.
 
 ## Decision log
 
@@ -62,6 +62,11 @@ Append-only. New entries supersede named old entries; do not edit history. Forma
 - **D-043** 2026-10-10 fable — Retire the Phase 0 editor controls audit from the dev branch (it lives at `study-v1`) and rewrite `scripts/browser_audit.py` for Phase 1. Supersedes D-024's audit scope for the dev branch. Why: the old audits drive the study arms, which no longer exist here.
 - **D-044** 2026-10-10 safwat — "Execute plan and merge and deploy": build M1–M15 in one session, merge to `main` and deploy. Deployment is the existing Vercel Git integration, which builds `main` for production. Why: explicit session request.
 
+- **D-045** 2026-10-10 safwat — "List the top 30–40 things people do in Canva related to photo editing and graphic design, try to do them here, and if you can't, figure out a way to add them in and retest." Supersedes the Phase 1 out-of-scope items free crop, groups and image adjustments beyond background removal. Decision rules 1, 3 and 4 stand on the conservative reading: generative or learned edits, template and stock libraries and anything needing a server are listed in `docs/canva-parity.md` as not built and asked below. Why: explicit session request.
+- **D-046** 2026-10-10 fable — Contract additions for D-045, all optional so earlier version 2 documents stay valid: `group`, `opacity`, `shadow`, `flipX`, `flipY` on every node; `outline` on text, shapes and images; `gradient` on shapes; `zoom`, `adjust`, `duotone`, `mask` on images; `font`, `italic`, `underline`, `upper`, `spacing`, `leading` on text. Effects are content, so linked sizes share them like colour. `Measure` takes an optional `TextStyle` (face, italic, letter spacing); `coverCrop` takes `zoom`; scene ops carry an `fx` record only when an effect is set. SVG writes stretched shape and icon paths at their drawn size (`scalePath`) instead of a scale transform, so borders stroke at an even width. Why: additive types keep every Phase 1 test and document valid; one scene feeds the canvas and SVG alike.
+- **D-047** 2026-10-10 fable — Photo looks are deterministic pixel maths in `src/core/look.ts` (box blur ×3 on premultiplied colour, unsharp mask, brightness/contrast/saturation/warmth/tint, luminance duotone, vignette), applied at draw time and never baked into the asset. The editor processes a copy capped at 1600 px with a small LRU of results; exports process the full-resolution original; the SVG embeds the adjusted picture as PNG. Blur radius is up to 3 % of the picture's long side so a look reads the same at any resolution. Filters are named adjustment sets. Six faces: Space Grotesk (default), Montserrat, Playfair Display, Bebas Neue, Space Mono, Caveat; SVG embeds only the Latin faces a size uses. Why: rule 3 allows deterministic processing of the person's own pixels; one pure function gives matching PNG, SVG and PDF.
+- **D-048** 2026-10-10 fable — Interface for D-045: Edit image and Crop take the text group's place while one photo is selected; Font leads the text group; Effects and Position follow Remove background; their panels hang under the owning control and stay open on canvas taps. Double-click a photo now enters crop mode (an empty frame still opens the file picker; replacing a photo moved to Edit image → Replace and drop). A crop session is one undo step; Enter, Escape, Done or a click outside the picture ends it. Shadows are page-fixed; borders sit inside shapes and photos and around letters. A click selects a whole group, a second click picks one member; marquee and lasso take whole groups. Shortcuts: Mod+G, Shift+Mod+G, Mod+I, Mod+U (Kura8 owns it in the editor as it owns Mod+B and Mod+D), Mod+Alt+C/V by physical key. Several photos dropped at once fill separate cells. The rotate knob drops below a box when above would reach more than 24 px over the canvas top, where the toolbar covered it. Bold has an accessible name. Why: Canva's conventions where they do not contradict logged decisions; the audit found the hidden knob and the unnamed button.
+
 ## Next steps
 
 Phase 1, in plan order (details per milestone in docs/plans/2026-10-10-phase1-dial.md):
@@ -83,12 +88,21 @@ Phase 1, in plan order (details per milestone in docs/plans/2026-10-10-phase1-di
 - [x] M14 Export sheet: PNG/JPG/SVG/PDF, scale and dpi, hidden count, No ground (5x–5z, 5u).
 - [x] M15 Performance, memory, Phase 1 browser audit, Definition of done.
 
+Canva parity (D-045, `docs/canva-parity.md`):
+
+- [x] List 41 Canva photo-editing and graphic-design tasks; `scripts/canva_audit.py` with one step each; first run 11/41.
+- [x] Core: optional node fields, `look.ts`, `arrange.ts`, `style.ts`, crop placement, collage cells, text styles in `Measure`, scene and SVG effects; core at 100 % lines.
+- [x] App: renderer effects, look cache, Edit image, Effects, Font and Position panels, crop mode, eyedropper, gradient, groups, copy style, six fonts, SVG faces; second run 41/41 and the Phase 1 audit 43/43.
+
 Follow-ups, each session-sized:
 
 - [ ] Safwat answers the open questions below; apply the answers (copy, labels, export widths).
 - [ ] Push the `study-v1` tag once Safwat agrees.
 - [ ] Test on Safari and Firefox (the audit covers Chromium only): IndexedDB in private mode, `OffscreenCanvas.convertToBlob`, canvas `direction`, `roundRect`.
-- [ ] A focus-point control for image crops (the document already stores `focus`).
+- [x] A focus-point control for image crops: crop mode moves and zooms the photo (D-048).
+- [ ] Safwat answers the D-045 questions below (generative edits, curved text, charts/QR, pages, the font set, Mod+U).
+- [ ] Move photo looks to a worker if 4K photos make slider drags slow; time it on a large photo first.
+- [ ] Test the D-045 features on Safari and Firefox: `ctx.letterSpacing` (Safari 18+), OffscreenCanvas `getImageData`, `Path2D.addPath` with a matrix.
 
 ### Study (frozen at `study-v1`)
 
@@ -125,9 +139,15 @@ Follow-ups, each session-sized:
 - Study build only: should a bad cut-out be recoverable there? (Phase 1 keeps the original and shows Before/After, 5o.)
 - Neutral ground: the 7-step scale makes the neutral light ground #EBEBEB instead of the prototype's white (D-038). Keep, or special-case white?
 
+- D-045: Canva's Magic Eraser, Magic Expand, Magic Edit, Magic Grab and Enhance are generative or learned (rule 3). Keep them out, or allow one? A deterministic patch fill for Magic Eraser is possible but still invents pixels.
+- D-045: curved text, charts, tables and QR codes, several pages, animation: wanted in a later phase?
+- D-047: the six faces are Space Grotesk, Montserrat, Playfair Display, Bebas Neue, Space Mono and Caveat (all OFL). Keep this set, or name others?
+- D-048: Mod+U underlines text, so Chrome's view-source shortcut does nothing in the editor. Keep?
+
 ## Deferred
 
-- User zoom and pan, groups, free crop, file open/save, accounts, collaboration, telemetry, vector PDF, image adjustments, booleans and path editing stay out of Phase 1 (AGENTS → Phase 1 scope).
+- User zoom and pan, file open/save, accounts, collaboration, telemetry, vector PDF, booleans and path editing stay out of Phase 1 (AGENTS → Phase 1 scope). Groups, crop and image adjustments came in with D-045.
+- Curved text, blend modes, a gradient ground (today: a gradient shape with Fill page), per-size effects, shadow spread and inner shadows (D-045).
 - Cross-origin isolation headers would allow multithreaded WASM inference for background removal where WebGPU is unavailable.
 - A smaller CPU model for background removal needs static quantisation; revisit BiRefNet_lite when ORT's WebGPU EP splits wide Concat nodes.
 - Autosave failures now show a toast; quota behaviour with many large images is untested beyond the audit.
@@ -135,6 +155,8 @@ Follow-ups, each session-sized:
 ## Browser audit
 
 Run `npm run build`, start `npm run preview -- --port 4173`, then `python3 scripts/browser_audit.py` (optional base URL argument; `ONLY=<step function name>` runs one step; `CHROMIUM=/path` picks the browser, otherwise `/opt/pw-browsers/chromium-*` or Playwright's own). Requires Python Playwright and Pillow, which are audit tools, not app dependencies. Each run uses a fresh browser context, writes screenshots of failures, downloads and `report.json` under ignored `private/browser-audit/`, and exits non-zero on any failed step, app console error or off-origin request. The 2026-10-10 run passed 43/43 steps in about seven minutes, including a real background removal (WASM, no WebGPU in headless Chromium).
+
+The Canva parity audit runs the same way: `python3 scripts/canva_audit.py` (same base URL, `ONLY` and `CHROMIUM` options), with evidence under ignored `private/canva-audit/`. One step per task in `docs/canva-parity.md`; the 2026-10-10 run passed 41/41 in about four minutes, including a real background removal. Step 5g of the Phase 1 audit now waits for the colour panel to open before typing a hex: the panel opens on the next frame, and typing into it while it was still inert was lost about one run in three.
 
 The sections below record Phase 0 work; their audits run from a checkout of `study-v1`.
 

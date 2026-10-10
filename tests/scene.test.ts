@@ -38,7 +38,7 @@ it('writes SVG with explicit tspans, licence metadata (5u) and optional ground (
   expect(out).toContain('<tspan x="0" y="28.75">one</tspan><tspan x="0" y="86.25">two</tspan>');
   expect(out).toContain('direction="rtl"'); expect(out).toContain('مساحة بين &lt;&amp;&gt;'); expect(out).toContain(`font-family="'Space Grotesk', system-ui, sans-serif"`);
   expect(out).toContain('viewBox="0 100 400 200" preserveAspectRatio="none"><image href="data:image/png;base64,AA" width="400" height="400"/>');
-  expect(out).toContain('d="M0 0L100 20"'); expect(out).toContain('transform="scale(0.5 0.5)"');
+  expect(out).toContain('d="M0 0L100 20"'); expect(out).toContain('fill="#123456" d="M0 0L50 50Z"');
   const bare = svg(s, { pixels: { w: 10, h: 10 }, ground: false, licences: [], image: () => undefined });
   expect(bare).not.toContain('<metadata>'); expect(bare).not.toContain('<rect width'); expect(bare).not.toContain('<image');
   const anchors = buildScene(doc([textNode('c', frame(0, 0, 100, 10), 'x', { align: 'center' }), textNode('e', frame(0, 0, 100, 10), 'x', { align: 'end' }), textNode('r', frame(0, 0, 100, 10), 'שלום', { align: 'start' }), textNode('l', frame(0, 0, 100, 10), 'שלום', { align: 'end' })]), 'main', fakeMeasure);

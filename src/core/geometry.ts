@@ -1,8 +1,10 @@
 export type Point = { x: number; y: number };
 export type Size = { w: number; h: number };
 export type Rect = Point & Size;
+/** Font family id, italic and letter spacing (thousandths of an em) for measuring; absent keys are the defaults. */
+export type TextStyle = { font?: string; italic?: boolean; spacing?: number };
 /** Injected line breaker: core never measures text itself. Returns the wrapped lines of `text` at `size` and `weight` within `width`. */
-export type Measure = (text: string, size: number, weight: 400 | 700, width: number) => string[];
+export type Measure = (text: string, size: number, weight: 400 | 700, width: number, style?: TextStyle) => string[];
 export const center = (r: Rect): Point => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 });
 export const contains = (r: Rect, p: Point): boolean => p.x >= r.x && p.y >= r.y && p.x <= r.x + r.w && p.y <= r.y + r.h;
 export const intersects = (a: Rect, b: Rect): boolean => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
