@@ -3,30 +3,26 @@ import './style.css';
 import { createDocument, type RatioDoc, type DocNode, type TextNode, type ShapeKind } from './core/document';
 import { canvasSize, ratioById } from './core/ratios';
 import { guideById } from './core/guides';
-import { studySession } from './app/study';
-import { pack } from './app/study/pack';
-import { loadDocument, saveDocument } from './app/store';
+import { loadDocument, saveDocument, newDocumentId } from './app/store';
 import { showWheel } from './app/wheel';
 import { Canvas2DRenderer, measureText, FONT } from './app/canvas/renderer';
 import { drawOverlay } from './app/canvas/overlay';
 import { installInteraction } from './app/canvas/interaction';
-import { toolbar, button, icons } from './app/tools';
+import { toolbar } from './app/tools';
 import { exportDocument } from './app/export';
 import { removeBackground, preloadBackgroundRemoval } from './app/tools/background';
 import type { SnapHit } from './core/snap';
-const { id, mode } = studySession();
 const app = document.querySelector<HTMLDivElement>('#app')!;
 app.innerHTML = '<header class="topbar"><div class="wordmark" aria-label="Ratio">ratio<span aria-hidden="true"></span></div><div class="document-meta"></div></header><main></main>';
 const host = app.querySelector('main')!, meta = app.querySelector<HTMLDivElement>('.document-meta')!;
-const existing = loadDocument(id, mode);
+const existing = loadDocument();
 if (existing) openEditor(existing);
-else if (mode === 'blank') openEditor(createDocument(id, 'square', null, new Date().toISOString()));
-else showWheel(host, (ratio, guide) => openEditor(createDocument(id, ratio, guide, new Date().toISOString())));
+else showWheel(host, (ratio, guide) => openEditor(createDocument(newDocumentId(), ratio, guide, new Date().toISOString())));
 function openEditor(doc: RatioDoc): void {
   const size = canvasSize(doc.ratio), ratio = ratioById(doc.ratio), anchors = doc.guide ? guideById(doc.guide).generate(size) : [];
   meta.textContent = `${ratio.w}:${ratio.h}`;
   host.className = 'editor';
-  host.innerHTML = '<div class="work-area"><div class="canvas-stack"><canvas aria-label="Document"></canvas><canvas class="overlay" tabindex="0" aria-label="Canvas: select and drag objects; double-click text to edit"></canvas></div></div><div class="bottom-bar"><div class="tools"></div><div class="pack" role="toolbar" aria-label="Content pack"></div></div><input type="file" class="file-picker" accept="image/png,image/jpeg,image/webp,image/gif">';
+  host.innerHTML = '<div class="work-area"><div class="canvas-stack"><canvas aria-label="Document"></canvas><canvas class="overlay" tabindex="0" aria-label="Canvas: select and drag objects; double-click text to edit"></canvas></div></div><div class="bottom-bar"><div class="tools"></div></div><input type="file" class="file-picker" accept="image/png,image/jpeg,image/webp,image/gif">';
   const work = host.querySelector<HTMLDivElement>('.work-area')!, stack = host.querySelector<HTMLDivElement>('.canvas-stack')!;
   const canvas = stack.querySelector('canvas')!, overlay = stack.querySelector<HTMLCanvasElement>('.overlay')!;
   const renderer = new Canvas2DRenderer(canvas), images = new Map<string, ImageBitmap>();
@@ -35,7 +31,7 @@ function openEditor(doc: RatioDoc): void {
   let loading = 0, exporting = false, removing = false, preloaded = false;
   const mac = isMac(navigator.platform);
   const selected = () => doc.nodes.find(n => n.id === selectedId);
-  const persist = () => { const saved = saveDocument(doc, mode); canvas.setAttribute('data-autosave', saved ? 'saved' : 'unavailable'); };
+  const persist = () => { const saved = saveDocument(doc); canvas.setAttribute('data-autosave', saved ? 'saved' : 'unavailable'); };
   const refresh = () => {
     for (const n of doc.nodes) if (n.type === 'text') n.rect.h = measureText(measure, n);
     renderer.render(doc, { scale: scale * (window.devicePixelRatio || 1), images });
@@ -84,13 +80,8 @@ function openEditor(doc: RatioDoc): void {
     selected, mac, addShape, toggleLock, duplicate: () => { void duplicate(); }, update: refresh, addText: () => addText('Text', 56, 400, true),
     addRect: () => add({ id: crypto.randomUUID(), type: 'rect', rect: { x: (size.w - 300) / 2, y: (size.h - 200) / 2, w: 300, h: 200 }, fill: '#111111' }),
     addImage: () => file.click(), removeBackground: () => { void cutout(); }, delete: remove,
-    export: () => { exporting = true; refresh(); void exportDocument(doc, mode, images).finally(() => { exporting = false; refresh(); }); },
+    export: () => { exporting = true; refresh(); void exportDocument(doc, images).finally(() => { exporting = false; refresh(); }); },
   });
-  const content = host.querySelector<HTMLDivElement>('.pack')!;
-  const label = document.createElement('span'); label.className = 'pack-label'; label.textContent = pack.instruction;
-  content.append(label, button('Add pack headline', icons.text, () => addText(pack.headline, 72, 700)), button('Add pack paragraph', icons.paragraph, () => addText(pack.body, 28)));
-  const imageButton = button('Add pack image', '', () => { void addImage(pack.image); });
-  const thumbnail = document.createElement('img'); thumbnail.src = pack.image; thumbnail.alt = ''; imageButton.replaceChildren(thumbnail); content.append(imageButton);
   file.onchange = async () => {
     const image = file.files?.[0]; file.value = ''; if (!image) return;
     try {
@@ -112,7 +103,7 @@ function openEditor(doc: RatioDoc): void {
     input.onblur = () => { input.remove(); editor = undefined; refresh(); };
     input.onkeydown = e => { if (e.key === 'Escape' || e.key === 'Enter' && primaryModifier(e, mac)) { e.preventDefault(); input.blur(); overlay.focus(); } };
   }
-  installInteraction({ canvas: overlay, doc, size, anchors, snapping: mode === 'guide', scale: () => scale, selected, select, change: nextHits => { hits = nextHits; refresh(); }, edit: editText });
+  installInteraction({ canvas: overlay, doc, size, anchors, snapping: true, scale: () => scale, selected, select, change: nextHits => { hits = nextHits; refresh(); }, edit: editText });
   document.onkeydown = e => {
     if (isEditingTarget(e.target) || e.isComposing || e.altKey) return;
     const n = selected(), mod = primaryModifier(e, mac), key = e.key.toLowerCase();
