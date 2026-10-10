@@ -22,10 +22,10 @@ export function colourPanel(ed: Editor): HTMLElement {
   const hint = h('div', { className: 'muted' });
   const panel = h('div', { className: 'panel colour-panel', hidden: true, role: 'dialog', 'aria-label': 'Colour' },
     h('div', { className: 'roles' }, ...roleButtons), shades, hues, sv, hueBar, hexRow, contrastBox, h('div', { className: 'grounds' }, hint, h('div', { className: 'pair' }, light, dark)));
-  let pick = { h: 210, s: 60, v: 70 }, editingHex = false, built = '';
+  let pick = { h: 210, s: 60, v: 70 }, editingHex = false, sliding = false, focusValue = '', built = '';
   const current = (): ColourRef => { const one = ed.one(); return one && one.kind !== 'image' ? one.fill : ed.store.ui.armed ?? ed.store.ui.swatch; };
   const drag = (el: HTMLElement, kind: 'sv' | 'h') => el.addEventListener('pointerdown', e => {
-    e.preventDefault(); el.setPointerCapture(e.pointerId);
+    e.preventDefault(); el.setPointerCapture(e.pointerId); sliding = true;
     const r = el.getBoundingClientRect();
     const at = (ev: PointerEvent) => {
       const fx = Math.max(0, Math.min(1, (ev.clientX - r.left) / r.width)), fy = Math.max(0, Math.min(1, (ev.clientY - r.top) / r.height));
@@ -33,15 +33,19 @@ export function colourPanel(ed: Editor): HTMLElement {
       ed.store.setUI({ swatch: { hex: hsvToHex(pick.h, pick.s, pick.v) } });
     };
     at(e);
-    const move = (ev: PointerEvent) => at(ev), up = () => { el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); ed.applySwatch({ hex: hsvToHex(pick.h, pick.s, pick.v) }); };
-    el.addEventListener('pointermove', move); el.addEventListener('pointerup', up);
+    const move = (ev: PointerEvent) => at(ev), up = (ev: PointerEvent) => {
+      el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up);
+      if (ev.type === 'pointerup') at(ev);
+      sliding = false; ed.applySwatch({ hex: hsvToHex(pick.h, pick.s, pick.v) });
+    };
+    el.addEventListener('pointermove', move); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
   });
   drag(sv, 'sv'); drag(hueBar, 'h');
   const typed = () => { const v = hex.value.trim().replace(/^#/, ''); return /^[0-9a-f]{6}$/i.test(v) ? `#${v.toLowerCase()}` : null; };
-  hex.addEventListener('focus', () => { editingHex = true; });
+  hex.addEventListener('focus', () => { editingHex = true; focusValue = hex.value.trim().toLowerCase().replace(/^#/, ''); });
   hex.addEventListener('input', () => { const v = typed(); addHue.classList.toggle('hidden', !v || Object.values(rows(ed.palette())).some(r => r.includes(v))); });
   hex.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); hex.blur(); } if (e.key === 'Escape') { editingHex = false; hex.blur(); } });
-  hex.addEventListener('blur', () => { const v = editingHex ? typed() : null; editingHex = false; if (v) { ed.applySwatch({ hex: v }); pick = hexToHsv(v); } ed.invalidate(); });
+  hex.addEventListener('blur', () => { const v = editingHex ? typed() : null; editingHex = false; if (v && v.slice(1) !== focusValue) { ed.applySwatch({ hex: v }); pick = hexToHsv(v); } ed.invalidate(); });
   addHue.addEventListener('pointerdown', e => e.preventDefault());
   addHue.addEventListener('click', () => {
     const v = typed() ?? (('hex' in current()) ? (current() as { hex: string }).hex : null);
@@ -64,7 +68,7 @@ export function colourPanel(ed: Editor): HTMLElement {
   ground(light, false); ground(dark, true);
   ed.chrome.push({ update() {
     const ui = ed.store.ui, open = ui.panel === 'colour';
-    panel.hidden = !open;
+    panel.hidden = !open; panel.inert = !open;
     if (!open) return;
     const p = ed.palette(), all = rows(p), ref = current(), value = resolve(ref, p);
     ROLES.forEach(([role], i) => {
@@ -85,7 +89,8 @@ export function colourPanel(ed: Editor): HTMLElement {
       hueDot(hueSwatch(null), p.hue === null, 'No hue', () => ed.setPalette({ hue: null, accent: undefined })),
       ...p.custom.map((c, i) => hueDot(c, rowId === `c${i}`, `Custom hue ${c.toUpperCase()}`, () => { ed.store.setUI({ row: `c${i}` }); ed.applySwatch({ row: `c${i}`, step: 3 }); })),
     ); }
-    if (!editingHex) { hex.value = value.toUpperCase(); pick = { ...hexToHsv(value), h: hexToHsv(value).s ? hexToHsv(value).h : pick.h }; }
+    if (!editingHex) hex.value = value.toUpperCase();
+    if (!editingHex && !sliding) pick = { ...hexToHsv(value), h: hexToHsv(value).s ? hexToHsv(value).h : pick.h };
     const inRows = Object.values(all).some(r => r.includes(typed() ?? value));
     addHue.classList.toggle('hidden', inRows);
     sv.style.background = `linear-gradient(to top,#000,transparent),linear-gradient(to right,#fff,${hsvToHex(pick.h, 100, 100)})`;

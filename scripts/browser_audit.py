@@ -48,16 +48,23 @@ class App:
     def __init__(self, browser):
         self.ctx = browser.new_context(viewport={'width': 1440, 'height': 900}, accept_downloads=True)
         self.page = self.ctx.new_page()
-        self.page.on('console', lambda m: errors.append(f'{m.type}: {m.text}') if m.type == 'error' else None)
+        # Failed loads are reported from responses (with their URLs) rather than console text; the static page used to
+        # reset storage asks for /favicon.ico, which the app itself never requests.
+        self.page.on('console', lambda m: errors.append(f'{m.type}: {m.text}') if m.type == 'error' and not m.text.startswith('Failed to load resource') else None)
+        self.page.on('response', lambda r: errors.append(f'HTTP {r.status}: {r.url}') if r.status >= 400 and not r.url.endswith('/favicon.ico') else None)
         self.page.on('pageerror', lambda e: errors.append(f'pageerror: {e}'))
         self.page.on('request', lambda r: offorigin.append(r.url) if not (r.url.startswith(ORIGIN) or r.url.startswith('data:') or r.url.startswith('blob:')) else None)
 
     def fresh(self, dial=None):
         p = self.page
-        p.goto(BASE); p.evaluate('localStorage.clear(); indexedDB.deleteDatabase("kura8")')
+        self.reset()
         p.evaluate('localStorage.setItem("kura8:lifted", "true")')
         if dial: p.evaluate(f'localStorage.setItem("kura8:dial", {json.dumps(json.dumps(dial))})')
         p.goto(BASE); p.wait_for_timeout(400)
+
+    def reset(self):
+        # Clear storage from a static same-origin file: leaving the app would save its document again on pagehide.
+        p = self.page; p.goto(BASE + 'icons/LICENSE.txt'); p.evaluate('localStorage.clear(); indexedDB.deleteDatabase("kura8")'); p.wait_for_timeout(100)
 
     def start(self, dial=None):
         self.fresh(dial); self.page.keyboard.press('Enter'); self.page.wait_for_timeout(500)
@@ -165,7 +172,7 @@ def s_5a(app):
     for label in ['Post 1:1', 'Portrait 4:5', 'Slide 16:9', 'Story 9:16', 'Print A4', 'Banner 3:1']:
         check(p.locator(f'[data-ring="ratio"][data-tip="{label}"]').count() == 1, f'missing {label}')
     before = p.locator('.hub canvas').bounding_box()
-    p.locator('[data-ring="ratio"][data-tip="Banner 3:1"] path').hover(); p.wait_for_timeout(700)
+    g = p.locator('[data-ring="ratio"][data-tip="Banner 3:1"] > g').bounding_box(); p.mouse.move(g['x'] + g['width'] / 2, g['y'] + g['height'] / 2); p.wait_for_timeout(700)
     after = p.locator('.hub canvas').bounding_box()
     check(after['width'] / after['height'] > 2.5, f'hub did not preview banner: {after}')
     check(abs(before['width'] / before['height'] - .8) < .05, 'hub was not portrait first')
@@ -248,7 +255,7 @@ def s_5c(app):
 
 @step('5d first open lifts blocks once')
 def s_5d(app):
-    p = app.page; p.goto(BASE); p.evaluate('localStorage.clear()'); p.goto(BASE); p.wait_for_timeout(300)
+    p = app.page; app.reset(); p.goto(BASE); p.wait_for_timeout(300)
     check(p.evaluate('localStorage.getItem("kura8:lifted")') is None, 'lift flag set before first open')
     p.keyboard.press('Enter'); p.wait_for_timeout(1500)
     check(p.evaluate('localStorage.getItem("kura8:lifted")') == 'true', 'lift did not run on first open')
@@ -626,9 +633,9 @@ def s_5z(app):
     check(p.locator('.sheet button[aria-label="No ground"]').is_visible(), 'No ground not offered')
     img = Image.open(app.export('png', '1×', no_ground=True)); check(img.mode == 'RGBA' and img.getpixel((1075, 1075))[3] == 0, f'not transparent: {img.mode} {img.getpixel((1075, 1075))}')
     check(img.getpixel((180, 139))[3] == 255, 'content lost')
-    p.locator('.sheet .seg[aria-label="Format"] button', has_text='JPG').click(); check(not p.locator('.sheet button[aria-label="No ground"]').is_visible(), 'No ground offered for JPG')
+    p.locator('.sheet .seg[aria-label="Format"] button', has_text='JPG').click(); p.wait_for_timeout(200); check(not p.locator('.sheet button[aria-label="No ground"]').is_visible(), 'No ground offered for JPG')
     app.close_panels(); p.keyboard.press('c'); p.locator('.colour-panel .shades button').nth(2).click(); app.click_unit(990, 990); p.keyboard.press('Escape'); p.keyboard.press('Escape')
-    p.keyboard.press('Control+Shift+E'); p.wait_for_timeout(300); p.locator('.sheet .seg[aria-label="Format"] button', has_text='PNG').click()
+    p.keyboard.press('Control+Shift+E'); p.wait_for_timeout(300); p.locator('.sheet .seg[aria-label="Format"] button', has_text='PNG').click(); p.wait_for_timeout(200)
     check(not p.locator('.sheet button[aria-label="No ground"]').is_visible(), 'No ground offered after filling the ground')
     app.close_panels()
 
@@ -738,7 +745,7 @@ def s_reload(app):
 
 @step('version 1 documents migrate with their images')
 def s_migrate(app):
-    p = app.page; p.goto(BASE); p.evaluate('localStorage.clear(); indexedDB.deleteDatabase("kura8")')
+    p = app.page; app.reset()
     png = 'data:image/png;base64,' + __import__('base64').b64encode((OUT / 'small.png').read_bytes()).decode()
     v1 = {'version': 1, 'id': 'ab12', 'ratio': 'square', 'guide': 'thirds', 'createdAt': '2026-09-14T00:00:00.000Z', 'nodes': [
         {'id': 'r', 'type': 'rect', 'rect': {'x': 10, 'y': 10, 'w': 200, 'h': 100}, 'fill': '#AA0000', 'shape': 'star'},

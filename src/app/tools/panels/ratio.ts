@@ -19,7 +19,7 @@ export function ratioPanel(ed: Editor): HTMLElement {
   const show = (id: RatioId) => { const r = ratios.find(x => x.id === id)!, e = exportSize(id, { scale: 1 }); name.textContent = ratioNumbers(id); sub.textContent = r.label; px.textContent = `${e.w} × ${e.h} px`; };
   ed.chrome.push({ update() {
     const ui = ed.store.ui, open = ui.panel === 'ratio';
-    panel.hidden = !open;
+    panel.hidden = !open; panel.inert = !open;
     if (!open) return;
     const current = ed.spec().ratio, add = ui.ratioMode === 'add', key = `${current}|${add}|${hover}|${ed.doc.sizes.length}`;
     heading.replaceChildren(h('span', { className: 'muted' }, add ? 'Add a linked size' : 'Change this size'));

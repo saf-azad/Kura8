@@ -23,7 +23,7 @@ export function exportSheet(ed: Editor): HTMLElement {
   button.addEventListener('click', () => void go());
   sheet.addEventListener('keydown', e => { if (e.key === 'Enter' && !(e.target instanceof HTMLButtonElement && e.target !== button)) { e.preventDefault(); void go(); } });
   async function go(): Promise<void> {
-    if (working || !scale) return;
+    if (working || !scale || ed.store.ui.panel !== 'export') return;
     working = true; button.classList.add('working'); label.textContent = 'Exporting';
     try {
       const c = choice(), blob = await render(ed.doc, ed.sizeId, c);
@@ -35,7 +35,7 @@ export function exportSheet(ed: Editor): HTMLElement {
   let built = '';
   ed.chrome.push({ update() {
     const open = ed.store.ui.panel === 'export';
-    sheet.hidden = !open;
+    sheet.hidden = !open; sheet.inert = !open;
     if (!open) { wasOpen = false; return; }
     const ratio = ed.spec().ratio, r = ratioById(ratio);
     if (!wasOpen) { wasOpen = true; scale = r.mm ? { dpi: 300 } : { scale: 1 }; setTimeout(() => button.focus(), 0); }

@@ -11,6 +11,6 @@ export function keysPanel(ed: Editor): HTMLElement {
   const modal = h('div', { className: 'modal', hidden: true, role: 'dialog', 'aria-label': 'Keyboard shortcuts' }, h('header', {}, h('span', {}, 'Keyboard shortcuts'), close),
     h('div', { className: 'keys' }, ...KEY_GROUPS.map(([name, rows]) => h('div', {}, h('h3', { style: 'font-size:11px;font-weight:400;opacity:.6;margin:0' }, name),
       ...rows.map(([label, keys]) => h('div', { className: 'row' }, h('span', {}, label), h('span', {}, ...keys.map(k => h('span', { className: 'key' }, k)))))))));
-  ed.chrome.push({ update() { modal.hidden = ed.store.ui.panel !== 'keys'; } });
+  ed.chrome.push({ update() { modal.hidden = ed.store.ui.panel !== 'keys'; modal.inert = modal.hidden; } });
   return modal;
 }

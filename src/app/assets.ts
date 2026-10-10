@@ -59,6 +59,13 @@ export function bitmap(key: string, variant: Variant = 'working'): Promise<Image
   }
   return p;
 }
+/** Closes and forgets the decoded bitmaps of an asset (the stored blobs stay). */
+export function release(key: string): void {
+  for (const variant of ['working', 'cutout'] as const) {
+    const id = bitmapKey(key, variant), p = bitmaps.get(id);
+    if (p) { bitmaps.delete(id); void p.then(b => b?.close()); }
+  }
+}
 /** Deletes assets no document references any more. */
 export async function gc(keep: Set<string>): Promise<void> {
   const keys = await tx<IDBValidKey[]>('readonly', s => s.getAllKeys()).catch(() => [] as IDBValidKey[]);

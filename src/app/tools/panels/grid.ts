@@ -11,7 +11,7 @@ export function gridPanel(ed: Editor): HTMLElement {
   const panel = h('div', { className: 'panel grid-panel', hidden: true, role: 'dialog', 'aria-label': 'Snap grid' },
     h('div', { className: 'row' }, h('span', {}, 'Snap to grid'), toggle), h('div', { className: 'row', style: 'font-size:12px' }, h('span', { className: 'muted' }, 'Grid size'), value), range, h('div', { className: 'presets' }, ...presets));
   ed.chrome.push({ update() {
-    const g = ed.store.ui.grid; panel.hidden = ed.store.ui.panel !== 'grid';
+    const g = ed.store.ui.grid; panel.hidden = ed.store.ui.panel !== 'grid'; panel.inert = panel.hidden;
     toggle.setAttribute('aria-checked', String(g.on)); value.textContent = `${g.size} units`;
     if (document.activeElement !== range) range.value = String(g.size);
     presets.forEach(b => b.setAttribute('aria-pressed', String(Number(b.textContent) === g.size)));

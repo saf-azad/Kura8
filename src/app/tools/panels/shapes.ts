@@ -35,7 +35,7 @@ export function shapesPanel(ed: Editor): HTMLElement {
   let shown = false;
   ed.chrome.push({ update() {
     const open = ed.store.ui.panel === 'shapes';
-    panel.hidden = !open;
+    panel.hidden = !open; panel.inert = !open;
     panel.style.maxHeight = `${window.innerHeight - 120}px`;
     if (open && !shown) void show();
     shown = open;

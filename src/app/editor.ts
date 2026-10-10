@@ -71,7 +71,8 @@ export class Editor {
     this.beforeAfter.addEventListener('click', e => { const b = (e.target as Element).closest('button'); if (b) this.setCutout(b.dataset.cut === '1'); });
     this.file.addEventListener('change', () => { const files = [...this.file.files ?? []]; this.file.value = ''; const target = this.fillTarget; this.fillTarget = null; void this.placeFiles(files, null, target); });
     new ResizeObserver(() => this.fit()).observe(root);
-    store.on(() => this.invalidate());
+    let evict = 0;
+    store.on(c => { this.invalidate(); if (c.doc) { clearTimeout(evict); evict = window.setTimeout(() => { if (this.store.doc) this.evictBitmaps(); }, 2000); } });
     this.fit();
   }
   get doc(): KuraDoc { return this.store.doc!; }
@@ -124,10 +125,19 @@ export class Editor {
     }
     return undefined;
   };
-  forgetBitmap(asset: string): void { for (const v of ['working', 'cutout'] as const) { const k = assets.bitmapKey(asset, v); this.bitmaps.delete(k); } }
+  forgetBitmap(asset: string): void { for (const v of ['working', 'cutout'] as const) { const k = assets.bitmapKey(asset, v); this.bitmaps.delete(k); } this.missing.delete(asset); }
+  /** Closes decoded bitmaps of assets the document no longer uses; undo reloads them from IndexedDB when needed. */
+  evictBitmaps(): void {
+    const keep = new Set(this.doc.nodes.flatMap(n => n.kind === 'image' && n.asset ? [n.asset] : []));
+    for (const key of [...this.bitmaps.keys()]) {
+      const asset = key.split('#')[0];
+      if (keep.has(asset)) continue;
+      this.bitmaps.delete(key); assets.release(asset);
+    }
+  }
   private draw(): void {
     if (!this.store.doc || this.store.ui.screen !== 'editor') return;
-    if (this.canvas().w * this.scale !== parseFloat(this.stack.style.width) || this.canvas().h * this.scale !== parseFloat(this.stack.style.height)) this.fit();
+    if (Math.abs(this.canvas().w * this.scale - parseFloat(this.stack.style.width)) > .5 || Math.abs(this.canvas().h * this.scale - parseFloat(this.stack.style.height)) > .5) this.fit();
     const dpr = window.devicePixelRatio || 1, ui = this.store.ui;
     let doc = this.display ?? this.doc;
     if (ui.editing) doc = { ...doc, nodes: doc.nodes.filter(n => n.id !== ui.editing) };
@@ -256,9 +266,9 @@ export class Editor {
   /** A swatch fills the selection; with nothing selected it arms paint (5e). */
   applySwatch(ref: ColourRef): void {
     this.store.setUI({ swatch: ref });
-    const ids = this.selected().filter(n => n.kind !== 'image').map(n => n.id);
+    const sel = this.selected(), ids = sel.filter(n => n.kind !== 'image' && !n.locked).map(n => n.id);
     if (ids.length) { this.store.commit(setFill(this.doc, ids, ref), { key: 'fill' }); this.store.setUI({ armed: null }); }
-    else this.store.setUI({ armed: ref });
+    else if (!sel.length) this.store.setUI({ armed: ref });
   }
   paintAt(node: DocNode | undefined): void {
     const armed = this.store.ui.armed; if (!armed) return;
@@ -270,7 +280,7 @@ export class Editor {
   editOne(fn: (n: DocNode) => DocNode, key?: string): void { const n = this.one(); if (n && !n.locked) this.store.commit(updateNodes(this.doc, [n.id], fn), { key }); }
   fontStep(dir: 1 | -1): void {
     const n = this.one(); if (n?.kind !== 'text') return;
-    const f = this.frame(n), size = f.fontSize ?? this.typeScale().body, next = Math.max(6, size + dir * Math.max(2, Math.round(size * .1)));
+    const f = this.frame(n), size = textBox(n, f, measure, this.typeScale()).size, next = Math.max(6, size + dir * Math.max(2, Math.round(size * .1)));
     this.editOne(x => { const t = { ...x, frames: { ...x.frames, [this.sizeId]: { ...f, fontSize: next } } } as TextNode; delete t.fit; return t; }, 'font');
   }
   toggleBold(): void { this.editOne(n => n.kind === 'text' ? { ...n, weight: n.weight === 700 ? 400 : 700 } : n); }

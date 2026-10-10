@@ -33,6 +33,7 @@ export class Store {
   dial: DialSettings;
   history: History<KuraDoc> = emptyHistory();
   /** Autosave waits while a tween runs. */ paused = false;
+  /** Never overwrite the saved document (a v1 migration whose images could not be stored). */ keepSaved = false;
   private listeners = new Set<(c: Change) => void>();
   private saveTimer = 0;
   private warned = false;
@@ -77,6 +78,7 @@ export class Store {
   /** Returns false when the browser refused the write (quota, private mode). */
   save(onError?: () => void): boolean {
     if (!this.doc) return true;
+    if (this.keepSaved) return false;
     if (this.paused) { this.scheduleSave(); return true; }
     let json: string;
     try { json = serialiseDocument(this.doc); } catch (e) { console.warn('Not saved: invalid document', e); return false; }

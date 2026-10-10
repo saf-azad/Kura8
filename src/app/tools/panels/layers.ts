@@ -9,7 +9,7 @@ export function layersPanel(ed: Editor): HTMLElement {
   const mini = (label: string, icon: string, on: boolean, go: () => void) => { const b = h('button', { type: 'button', title: label, 'aria-label': label, className: on ? '' : 'off', html: icon }); b.addEventListener('click', e => { e.stopPropagation(); go(); }); return b; };
   ed.chrome.push({ update() {
     const open = ed.store.ui.panel === 'layers';
-    panel.hidden = !open; panel.style.maxHeight = `${window.innerHeight - 160}px`;
+    panel.hidden = !open; panel.inert = !open; panel.style.maxHeight = `${window.innerHeight - 160}px`;
     if (!open) return;
     const doc = ed.doc, sel = new Set(ed.store.ui.sel), key = JSON.stringify([doc.nodes.map(n => [n.id, layerName(n), n.locked, ed.frame(n).hidden, n.kind !== 'image' && ed.colour(n.fill)]), [...sel]]);
     if (key === built) return;

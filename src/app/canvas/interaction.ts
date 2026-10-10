@@ -11,10 +11,12 @@ import type { SketchTools } from '../sketch';
 // Pointer interaction on the overlay canvas: select, shift-select, marquee, move (snapping v2 with hold and pull),
 // resize in the node's own frame, rotate with angle snapping, armed paint, double-click to edit. Alt skips
 // snapping (5j); Shift constrains the drag axis, corner aspect and rotation steps.
+// `last` is the document this drag last wrote; anything else committed meanwhile (Delete, undo, a finished background
+// removal) ends the drag rather than being overwritten from `before`.
 type Drag =
-  | { kind: 'move'; ids: string[]; start: Point; before: KuraDoc; frames: Record<string, Frame>; box: Rect; rot: number; moved: boolean; held?: { x?: string; y?: string } }
-  | { kind: 'resize'; id: string; handle: Handle; before: KuraDoc; frame: Frame; box: Rect; moved: boolean }
-  | { kind: 'rotate'; id: string; c: Point; a0: number; r0: number; before: KuraDoc; held: number | null; moved: boolean }
+  | { kind: 'move'; ids: string[]; start: Point; before: KuraDoc; last?: KuraDoc; frames: Record<string, Frame>; box: Rect; rot: number; moved: boolean; held?: { x?: string; y?: string } }
+  | { kind: 'resize'; id: string; handle: Handle; before: KuraDoc; last?: KuraDoc; frame: Frame; box: Rect; size: number; moved: boolean }
+  | { kind: 'rotate'; id: string; c: Point; a0: number; r0: number; before: KuraDoc; last?: KuraDoc; held: number | null; moved: boolean }
   | { kind: 'marquee'; start: Point; base: string[] };
 const MIN = 20;
 const CURSORS: Record<string, string> = { n: 'ns-resize', s: 'ns-resize', e: 'ew-resize', w: 'ew-resize', nw: 'nwse-resize', se: 'nwse-resize', ne: 'nesw-resize', sw: 'nesw-resize', rotate: 'grab' };
@@ -46,7 +48,7 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
     if (knob) {
       const node = ed.doc.nodes.find(n => n.id === knob.id)!, f = ed.frame(node);
       if (knob.handle === 'rotate') { const c = center(ed.box(node)); drag = { kind: 'rotate', id: node.id, c, a0: Math.atan2(p.y - c.y, p.x - c.x) * 180 / Math.PI, r0: f.rot, before: ed.doc, held: null, moved: false }; }
-      else drag = { kind: 'resize', id: node.id, handle: knob.handle, before: ed.doc, frame: f, box: ed.box(node), moved: false };
+      else drag = { kind: 'resize', id: node.id, handle: knob.handle, before: ed.doc, frame: f, box: ed.box(node), size: node.kind === 'text' ? textBox(node, f, measure, ed.typeScale()).size : 0, moved: false };
       el.setPointerCapture(e.pointerId); e.preventDefault(); return;
     }
     const hit = ed.hitTest(p);
@@ -76,6 +78,7 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
     if (ui.tool && !drag) { sketch.move(e, p); return; }
     if (!drag) { hover(p); return; }
     const snapping = !e.altKey;
+    if (drag.kind !== 'marquee' && drag.last && ed.doc !== drag.last) { drag = null; ed.live = emptyLive(); ed.invalidate(); return; }
     if (drag.kind === 'marquee') {
       const m = { x: Math.min(p.x, drag.start.x), y: Math.min(p.y, drag.start.y), w: Math.abs(p.x - drag.start.x), h: Math.abs(p.y - drag.start.y) };
       if (m.w * ed.scale < 2 && m.h * ed.scale < 2) return;
@@ -98,7 +101,7 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
       } else { ed.live = emptyLive(); drag.held = undefined; }
       const next: Record<string, Frame> = {};
       for (const id of drag.ids) { const f = drag.frames[id]; next[id] = { ...f, rect: { ...f.rect, x: f.rect.x + dx, y: f.rect.y + dy } }; }
-      ed.store.set(setFrames(drag.before, ed.sizeId, next)); return;
+      drag.last = setFrames(drag.before, ed.sizeId, next); ed.store.set(drag.last); return;
     }
     if (drag.kind === 'resize') {
       drag.moved = true;
@@ -116,13 +119,13 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
       if (node.kind === 'text') {
         // Corners scale the font (a manual size change turns autofit off); e/w rewrap; n/s move an autofit box's bottom.
         const scale = ed.typeScale();
-        if (corner) { frame = { ...frame, fontSize: (f.fontSize ?? scale.body) * rect.w / drag.box.w }; unfit = !!node.fit; }
+        if (corner) { frame = { ...frame, fontSize: drag.size * rect.w / drag.box.w }; unfit = !!node.fit; }
         if (!node.fit || corner) frame = { ...frame, rect: { ...frame.rect, h: textBox({ ...node, fit: undefined }, frame, measure, scale).rect.h } };
         else if (drag.handle === 'e' || drag.handle === 'w') frame = { ...frame, rect: { ...frame.rect, h: f.rect.h } };
       }
       let doc = setFrames(drag.before, ed.sizeId, { [node.id]: frame });
       if (unfit) doc = { ...doc, nodes: doc.nodes.map(n => { if (n.id !== node.id) return n; const t = { ...n } as TextNode; delete t.fit; return t; }) };
-      ed.store.set(doc); return;
+      drag.last = doc; ed.store.set(doc); return;
     }
     drag.moved = true;
     const a = Math.atan2(p.y - drag.c.y, p.x - drag.c.x) * 180 / Math.PI;
@@ -135,13 +138,14 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
     drag.held = caught;
     ed.live = { ...emptyLive(), angle: caught === null ? null : { deg: caught, centre: drag.c } };
     const id = drag.id, node = drag.before.nodes.find(n => n.id === id)!, f = node.frames[ed.sizeId];
-    ed.store.set(setFrames(drag.before, ed.sizeId, { [node.id]: { ...f, rot: Math.abs(angle) < 1e-9 ? 0 : angle } }));
+    drag.last = setFrames(drag.before, ed.sizeId, { [node.id]: { ...f, rot: Math.abs(angle) < 1e-9 ? 0 : angle } }); ed.store.set(drag.last);
   });
   const finish = (e: PointerEvent) => {
     if (sketch.active()) { sketch.up(e, ed.toUnits(e)); return; }
     const d = drag; drag = null; ed.live = emptyLive();
     if (!d) return;
     if (d.kind === 'marquee') { ed.invalidate(); return; }
+    if (d.last && ed.doc !== d.last) { ed.invalidate(); return; }
     if (d.moved && ed.doc !== d.before) ed.store.commit(ed.doc, { before: d.before });
     else if (d.kind === 'move' && !e.shiftKey && ed.store.ui.sel.length > 1) { const hit = ed.hitTest(ed.toUnits(e)); if (hit) ed.select([hit.id]); }
     ed.invalidate();

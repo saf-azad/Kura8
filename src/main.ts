@@ -32,12 +32,19 @@ void navigator.storage?.persist?.().catch(() => false);
 addEventListener('pagehide', () => store.save());
 let saveWarned = false;
 store.on(() => { if (store.saveFailed && !saveWarned) { saveWarned = true; toast('Couldn’t save in this browser; export to keep your work', 3000); } if (!store.saveFailed) saveWarned = false; });
+/** Writes a migrated version 1 document's inline images to IndexedDB; the v2 document is saved only when all of them landed. */
 async function restoreAssets(): Promise<void> {
   if (!loaded) return;
-  for (const { asset, dataUrl } of loaded.inline) { try { await assets.putImage(await assets.dataUrlToBlob(dataUrl), editor?.maxExport() ?? 2160, asset); } catch { /* missing images render as empty frames */ } }
-  if (loaded.inline.length) store.save();
-  const keep = new Set(store.doc?.nodes.flatMap(n => n.kind === 'image' && n.asset ? [n.asset] : []) ?? []);
-  if (store.doc) void assets.gc(keep);
+  let ok = true;
+  for (const { asset, dataUrl } of loaded.inline) {
+    try { await assets.putImage(await assets.dataUrlToBlob(dataUrl), 2160, asset); editor?.forgetBitmap(asset); }
+    catch { ok = false; }
+  }
+  if (loaded.inline.length) {
+    if (ok) store.save(); else { store.keepSaved = true; toast('Some images could not be stored; the old document is kept', 3000); }
+    editor?.invalidate();
+  }
+  if (store.doc && ok) void assets.gc(new Set(store.doc.nodes.flatMap(n => n.kind === 'image' && n.asset ? [n.asset] : [])));
 }
 const editorRoot = h('div', { className: 'screen', style: 'position:absolute;inset:0' }), dialRoot = h('div', { className: 'screen', style: 'position:absolute;inset:0' });
 app.append(editorRoot, dialRoot);
@@ -140,7 +147,7 @@ store.on(() => {
   if (now !== screen) { screen = now; route(); } else if (now === 'dial') dial?.paint();
 });
 screen = store.ui.screen === 'dial' || !store.doc ? 'dial' : 'editor';
-route();
-void restoreAssets();
-if (store.doc && store.ui.screen === 'editor') ensureEditor().lift();
+const restored = restoreAssets();
+if (loaded?.inline.length) void restored.finally(() => { route(); editor?.invalidate(); }); else route();
+if (store.doc && store.ui.screen === 'editor' && !loaded?.inline.length) ensureEditor().lift();
 document.fonts?.ready.then(() => { clearMeasureCache(); editor?.invalidate(); dial?.paint(); });

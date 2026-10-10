@@ -56,8 +56,11 @@ export function installSketch(ed: Editor): SketchTools {
     if (r.type === 'head') {
       const line = doc.nodes.find(n => n.id === r.line);
       if (line?.kind === 'ink') {
-        const f = ed.frame(line), merged = inkNode([...absolutePaths(line.paths, f.rect, f.rot), r.clean], line.stroke, 'arrow', line.id);
-        ed.commit(updateNodes(doc, [line.id], n => ({ ...merged, fill: (n as InkNode).fill, frames: { ...n.frames, [ed.sizeId]: merged.frames[ed.sizeId] } })), 'Arrow'); return;
+        const f = ed.frame(line), merged = inkNode([...absolutePaths(line.paths, f.rect, f.rot), r.clean], line.stroke, 'arrow', line.id), a = f.rect, b = merged.frames[ed.sizeId].rect;
+        // The paths are shared by every size: move each other size's frame by the same relative change as this one.
+        const frames = Object.fromEntries(Object.entries(line.frames).map(([id, o]) => [id, id === ed.sizeId ? { ...o, rect: b } : { ...o, rect: {
+          x: o.rect.x + (b.x - a.x) * o.rect.w / a.w, y: o.rect.y + (b.y - a.y) * o.rect.h / a.h, w: b.w * o.rect.w / a.w, h: b.h * o.rect.h / a.h } }]));
+        ed.commit(updateNodes(doc, [line.id], n => ({ ...merged, fill: (n as InkNode).fill, frames })), 'Arrow'); return;
       }
     }
     if (r.type === 'line' && r.rect) {
