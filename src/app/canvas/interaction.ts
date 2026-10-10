@@ -50,7 +50,7 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
       el.setPointerCapture(e.pointerId); e.preventDefault(); return;
     }
     const hit = ed.hitTest(p);
-    const keepPanel = ui.panel === 'shapes' || ui.panel === 'layers' ? ui.panel : null;
+    const keepPanel = ui.panel === 'shapes' || ui.panel === 'layers' || ui.panel === 'colour' ? ui.panel : null;
     if (!hit) {
       const base = e.shiftKey ? ui.sel : [];
       ed.store.setUI({ sel: base, panel: keepPanel });

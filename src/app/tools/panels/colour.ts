@@ -39,6 +39,7 @@ export function colourPanel(ed: Editor): HTMLElement {
   drag(sv, 'sv'); drag(hueBar, 'h');
   const typed = () => { const v = hex.value.trim().replace(/^#/, ''); return /^[0-9a-f]{6}$/i.test(v) ? `#${v.toLowerCase()}` : null; };
   hex.addEventListener('focus', () => { editingHex = true; });
+  hex.addEventListener('input', () => { const v = typed(); addHue.classList.toggle('hidden', !v || Object.values(rows(ed.palette())).some(r => r.includes(v))); });
   hex.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); hex.blur(); } if (e.key === 'Escape') { editingHex = false; hex.blur(); } });
   hex.addEventListener('blur', () => { const v = editingHex ? typed() : null; editingHex = false; if (v) { ed.applySwatch({ hex: v }); pick = hexToHsv(v); } ed.invalidate(); });
   addHue.addEventListener('pointerdown', e => e.preventDefault());

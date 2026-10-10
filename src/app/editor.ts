@@ -17,7 +17,7 @@ import { Store, newId, type PanelId, type Tool } from './store';
 import { measure } from './measure';
 import * as assets from './assets';
 import { Canvas2DRenderer } from './canvas/renderer';
-import { drawOverlay, type Box, type HandleSet } from './canvas/overlay';
+import { drawOverlay, MARGIN, type Box, type HandleSet } from './canvas/overlay';
 import { Tween } from './canvas/tween';
 import { h, toast } from './ui';
 import { removeBackground as runRemoval, preloadBackgroundRemoval } from './tools/background';
@@ -46,6 +46,7 @@ export class Editor {
   private bitmaps = new Map<string, ImageBitmap | null>();
   private loading = new Set<string>();
   readonly cutouts = new Set<string>();
+  private missing = new Set<string>();
   private renderer: Canvas2DRenderer;
   private raf = 0;
   private scan: { id: string; t0: number } | null = null;
@@ -63,7 +64,9 @@ export class Editor {
     this.stack = h('div', { className: 'canvas-stack' }, this.docCanvas, this.overlay, this.beforeAfter);
     this.info = h('div', { className: 'info' });
     this.file = h('input', { type: 'file', accept: 'image/png,image/jpeg,image/webp,image/gif', multiple: true, className: 'hidden' });
-    root.append(h('div', { className: 'stage' }, this.stack), this.info, this.file);
+    const stage = h('div', { className: 'stage' }, this.stack);
+    root.append(stage, this.info, this.file);
+    stage.addEventListener('pointerdown', e => { if (e.target !== stage) return; this.finishText(); this.store.setUI({ sel: [], panel: null }); });
     this.renderer = new Canvas2DRenderer(this.docCanvas);
     this.beforeAfter.addEventListener('click', e => { const b = (e.target as Element).closest('button'); if (b) this.setCutout(b.dataset.cut === '1'); });
     this.file.addEventListener('change', () => { const files = [...this.file.files ?? []]; this.file.value = ''; const target = this.fillTarget; this.fillTarget = null; void this.placeFiles(files, null, target); });
@@ -87,7 +90,7 @@ export class Editor {
   palette(): Palette { const p = this.doc.palette, d = this.store.ui.previewDark; return d === null ? p : { ...p, dark: d }; }
   colour(ref: ColourRef): string { return resolve(ref, this.palette()); }
   /** Unit-space point under a pointer event. */
-  toUnits(e: { clientX: number; clientY: number }): Point { const r = this.overlay.getBoundingClientRect(); return { x: (e.clientX - r.left) / this.scale, y: (e.clientY - r.top) / this.scale }; }
+  toUnits(e: { clientX: number; clientY: number }): Point { const r = this.overlay.getBoundingClientRect(); return { x: (e.clientX - r.left - MARGIN) / this.scale, y: (e.clientY - r.top - MARGIN) / this.scale }; }
   hitTest(p: Point): DocNode | undefined { return [...this.visible()].reverse().find(n => containsRotated(this.box(n), this.frame(n).rot, p)); }
   boxes(): Box[] {
     const sel = this.selected().filter(n => !this.frame(n).hidden && n.id !== this.store.ui.editing), single = sel.length === 1 && !this.store.ui.armed && !this.store.ui.tool;
@@ -112,7 +115,12 @@ export class Editor {
     if (this.bitmaps.has(key)) return this.bitmaps.get(key);
     if (!this.loading.has(key)) {
       this.loading.add(key);
-      void assets.bitmap(asset, variant).then(b => { this.bitmaps.set(key, b); this.loading.delete(key); if (b && cutout) this.cutouts.add(asset); this.invalidate(); });
+      void assets.bitmap(asset, variant).then(b => {
+        this.bitmaps.set(key, b); this.loading.delete(key);
+        if (b && cutout) this.cutouts.add(asset);
+        if (!b && !cutout && !this.missing.has(asset)) { this.missing.add(asset); toast('An image is missing from this browser’s storage', 2400); }
+        this.invalidate();
+      });
     }
     return undefined;
   };
@@ -172,7 +180,7 @@ export class Editor {
   }
   add(nodes: DocNode[], message?: string): void {
     this.commit(addNodes(this.doc, nodes), message);
-    this.store.setUI({ sel: nodes.map(n => n.id), armed: null, panel: this.store.ui.panel === 'colour' || this.store.ui.panel === 'shapes' ? null : this.store.ui.panel });
+    this.store.setUI({ sel: nodes.map(n => n.id), armed: null, panel: this.store.ui.panel === 'colour' ? null : this.store.ui.panel });
   }
   centred(w: number, hgt: number): Rect { const c = this.canvas(), o = this.nextOffset(); return { x: (c.w - w) / 2 + o, y: (c.h - hgt) / 2 + o, w, h: hgt }; }
   addText(): void {
@@ -189,7 +197,12 @@ export class Editor {
     this.add([{ id: newId(), kind: 'shape', shape: ICON_SHAPE, fill: { role: 'ink' }, icon: { set: 'phosphor', name, d, licence: 'MIT' }, frames: this.framesFor(this.centred(side, side)) }],
       flattened ? `${title(name)} · flattened to one ink` : title(name));
   }
-  addImageFrame(): void { const c = this.canvas(); this.add([{ id: newId(), kind: 'image', asset: null, frames: this.framesFor(this.centred(c.w * .5, c.h * .35)) }], 'Image frame'); }
+  /** Image tool: with an empty frame selected it picks a file for it, otherwise it adds an empty frame. */
+  addImageFrame(): void {
+    const one = this.one();
+    if (one?.kind === 'image' && !one.asset && !one.locked) { this.pickImage(one.id); return; }
+    const c = this.canvas(); this.add([{ id: newId(), kind: 'image', asset: null, frames: this.framesFor(this.centred(c.w * .5, c.h * .35)) }], 'Image frame · drop a picture on it');
+  }
   pickImage(target: string | null = null): void { this.fillTarget = target; this.file.click(); }
   maxExport(): number { return Math.max(...this.doc.sizes.map(s => { const e = exportSize(s.ratio, { scale: 1 }); return Math.max(e.w, e.h); })); }
   /** Drop, paste or pick (5p): onto an image block it fills it, cropped to cover; elsewhere a new image fills the nearest cell. */
@@ -376,5 +389,5 @@ export function layerName(n: DocNode): string {
   if (n.kind === 'shape') return n.icon ? title(n.icon.name) : shapeLibrary[n.shape]?.name ?? 'Shape';
   if (n.kind === 'text') return n.text.split('\n')[0] || 'Text';
   if (n.kind === 'image') return n.asset ? (n.cutout ? 'Cut-out' : 'Image') : 'Image frame';
-  return n.form ? title(n.form === 'tri' ? 'triangle' : n.form) : 'Ink';
+  return n.form ? { line: 'Line', arrow: 'Arrow', rect: 'Rectangle', ellipse: 'Ellipse', tri: 'Triangle' }[n.form] : 'Ink';
 }

@@ -15,6 +15,8 @@ export type OverlayState = {
   scan: { rect: Rect; rot: number; t: number } | null;
 };
 export const HANDLE_PX = 12, ROTATE_PX = 44;
+/** The overlay reaches this far past the canvas on every side, so handles and knobs at the edges stay visible and grabbable. */
+export const MARGIN = 64;
 const LETTERS: Record<HandleSet, Handle[]> = { all: ['nw', 'ne', 'se', 'sw', 'n', 'e', 's', 'w'], corners: ['nw', 'ne', 'se', 'sw'], text: ['nw', 'ne', 'se', 'sw', 'w', 'e'], fit: ['nw', 'ne', 'se', 'sw', 'n', 'e', 's', 'w'], none: [] };
 /** Handle positions in unit space on the rotated box, plus the rotate knob above the top edge (`scale` is px per unit). */
 export function handlePoints(box: Box, scale: number): { handle: Handle | 'rotate'; at: Point }[] {
@@ -25,10 +27,10 @@ export function handlePoints(box: Box, scale: number): { handle: Handle | 'rotat
   return [...LETTERS[box.handles].map(handle => ({ handle, at: pos[handle] })), { handle: 'rotate' as const, at: knob }];
 }
 export function drawOverlay(canvas: HTMLCanvasElement, s: OverlayState): void {
-  const dpr = window.devicePixelRatio || 1, w = Math.round(s.size.w * s.scale * dpr), h = Math.round(s.size.h * s.scale * dpr);
+  const dpr = window.devicePixelRatio || 1, w = Math.round((s.size.w * s.scale + 2 * MARGIN) * dpr), h = Math.round((s.size.h * s.scale + 2 * MARGIN) * dpr);
   if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
   const ctx = canvas.getContext('2d')!, px = 1 / s.scale;
-  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, w, h); ctx.setTransform(s.scale * dpr, 0, 0, s.scale * dpr, 0, 0);
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, w, h); ctx.setTransform(s.scale * dpr, 0, 0, s.scale * dpr, MARGIN * dpr, MARGIN * dpr);
   const line = (axis: 'x' | 'y', at: number, over = 0) => { ctx.beginPath(); if (axis === 'x') { ctx.moveTo(at, -over); ctx.lineTo(at, s.size.h + over); } else { ctx.moveTo(-over, at); ctx.lineTo(s.size.w + over, at); } ctx.stroke(); };
   if (s.grid) {
     ctx.strokeStyle = s.dark ? 'rgba(255,255,255,.18)' : 'rgba(0,0,0,.12)'; ctx.lineWidth = px;
