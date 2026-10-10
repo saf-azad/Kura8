@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/paper-wireframe-design-system-72d81a7d-25aa-4885-8fde-e91c1d59ff21/styles.css">
+  <script src="_ds/paper-wireframe-design-system-72d81a7d-25aa-4885-8fde-e91c1d59ff21/_ds_bundle.js"></script>
+  <style>body{margin:0;background:#fff;color:#111;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}a{color:#111;text-decoration:underline}a:hover{color:#111;text-decoration:none}*{box-sizing:border-box}</style>
+</helmet>
+<div style="max-width:1160px;margin:0 auto;padding:40px 40px 120px;display:flex;flex-direction:column;gap:90px;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#111">
+
+  <header style="display:flex;justify-content:space-between;align-items:center;height:85px">
+    <div style="font-size:29px;font-weight:500;letter-spacing:-1.8px;line-height:1;display:flex;align-items:flex-end;gap:5px">kura8<span style="display:inline-block;border:1px solid #111;width:14px;height:21px"></span></div>
+    <div style="font-size:12px;letter-spacing:.09em;text-transform:uppercase">UI kit · Phase 0</div>
+  </header>
+
+  <section data-screen-label="Foundations" style="display:flex;flex-direction:column;gap:40px">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:12px;letter-spacing:.09em;text-transform:uppercase">01 / Foundations</div>
+      <h2 style="margin:0;font-size:22px;font-weight:500;letter-spacing:-.5px;max-width:640px;text-wrap:pretty">Black and white throughout. The only colour on screen is the swatch of the colour you've picked.</h2>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:20px">
+      <sc-for list="{{ swatches }}" as="s" hint-placeholder-count="6">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="height:90px;border:1px solid #111;background:{{ s.v }}"></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px"><span>{{ s.name }}</span><span style="font-size:12px">{{ s.v }}</span></div>
+          <div style="font-size:12px;line-height:1.4;opacity:.6">{{ s.use }}</div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:40px">
+      <div style="display:flex;flex-direction:column;border-top:1px solid #111">
+        <sc-for list="{{ type }}" as="t" hint-placeholder-count="5">
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) 160px;align-items:center;gap:20px;padding:15px 0;border-bottom:1px solid #d0d0d0">
+            <div style="font-size:{{ t.size }}px;font-weight:{{ t.weight }};letter-spacing:{{ t.track }};text-transform:{{ t.case }};line-height:1.1">{{ t.sample }}</div>
+            <div style="font-size:12px;line-height:1.4;opacity:.6">{{ t.spec }}</div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:30px">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="font-size:12px;letter-spacing:.09em;text-transform:uppercase">Spacing, from Paper</div>
+          <div style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap">
+            <sc-for list="{{ spacing }}" as="p" hint-placeholder-count="10">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:5px">
+                <div style="width:{{ p.v }}px;height:{{ p.v }}px;border:1px solid #111"></div>
+                <div style="font-size:11px">{{ p.v }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="font-size:12px;letter-spacing:.09em;text-transform:uppercase">Radius</div>
+          <div style="display:flex;gap:20px;flex-wrap:wrap">
+            <sc-for list="{{ radii }}" as="r" hint-placeholder-count="4">
+              <div style="display:flex;flex-direction:column;gap:5px;width:90px">
+                <div style="width:60px;height:60px;border:1px solid #111;border-radius:{{ r.v }}px"></div>
+                <div style="font-size:11px;line-height:1.4">{{ r.v }} · {{ r.use }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="font-size:12px;letter-spacing:.09em;text-transform:uppercase">Stroke</div>
+          <sc-for list="{{ strokes }}" as="k" hint-placeholder-count="4">
+            <div style="display:grid;grid-template-columns:80px minmax(0,1fr);align-items:center;gap:15px">
+              <div style="height:{{ k.w }}px;background:{{ k.c }}"></div>
+              <div style="font-size:12px">{{ k.label }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section data-screen-label="Icons" style="display:flex;flex-direction:column;gap:30px">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:12px;letter-spacing:.09em;text-transform:uppercase">02 / Icons</div>
+      <h2 style="margin:0;font-size:22px;font-weight:500;letter-spacing:-.5px;max-width:640px;text-wrap:pretty">Line icons at 20px, 1.5 stroke with round caps and joins. Paper glyphs are used where Paper has a match.</h2>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));border-top:1px solid #111;border-left:1px solid #111">
+      <sc-for list="{{ iconList }}" as="i" hint-placeholder-count="20">
+        <div style="height:110px;border-right:1px solid #111;border-bottom:1px solid #111;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:15px">
+          <div style="width:20px;height:20px">{{ i.el }}</div>
+          <div style="font-size:11px;text-align:center">{{ i.label }}</div>
+          <div style="font-size:10px;letter-spacing:.09em;text-transform:uppercase;opacity:.5">{{ i.src }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section data-screen-label="Toolbar" style="display:flex;flex-direction:column;gap:30px">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:12px;letter-spacing:.09em;text-transform:uppercase">03 / Toolbar</div>
+      <h2 style="margin:0;font-size:22px;font-weight:500;letter-spacing:-.5px;max-width:640px;text-wrap:pretty">One floating row under the canvas. Controls that don't apply to the selection fade to 23%.</h2>
+    </div>
+    <sc-for list="{{ toolbars }}" as="tb" hint-placeholder-count="3">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:12px;opacity:.6">{{ tb.label }}</div>
+        <div style="overflow-x:auto;padding-bottom:5px">
+          <div style="display:inline-flex;align-items:center;gap:3px;height:52px;padding:5px;border:1px solid #111;border-radius:19px;background:#fff">
+            <sc-for list="{{ tb.items }}" as="it" hint-placeholder-count="16">
+              <sc-if value="{{ it.isBtn }}" hint-placeholder-val="{{ true }}">
+                <div title="{{ it.label }}" style="width:38px;height:38px;border-radius:9px;display:grid;place-items:center;flex-shrink:0;background:{{ it.bg }};color:{{ it.fg }};opacity:{{ it.op }};position:relative;outline:{{ it.outline }};outline-offset:2px">
+                  <div style="width:20px;height:20px">{{ it.el }}</div>
+                  <sc-if value="{{ it.progress }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;left:4px;bottom:3px;height:1px;width:{{ it.progress }};background:#111"></div></sc-if>
+                </div>
+              </sc-if>
+              <sc-if value="{{ it.isSep }}" hint-placeholder-val="{{ false }}"><div style="width:1px;height:22px;background:#d0d0d0;margin:0 4px;flex-shrink:0"></div></sc-if>
+              <sc-if value="{{ it.isColour }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;align-items:center;gap:5px;opacity:{{ it.op }};flex-shrink:0">
+                  <div style="width:24px;height:24px;margin:0 5px;border:1px solid #111;border-radius:999px;background:{{ it.colour }}"></div>
+                  <div style="width:77px;padding:5px 2px;font-size:12px;letter-spacing:.02em;border-bottom:1px solid #bbb">{{ it.colour }}</div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ it.isNum }}" hint-placeholder-val="{{ false }}">
+                <div title="Font size" style="width:47px;height:30px;display:grid;place-items:center;font-size:13px;opacity:{{ it.op }};flex-shrink:0">{{ it.val }}</div>
+              </sc-if>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-for>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:20px">
+      <sc-for list="{{ btnStates }}" as="b" hint-placeholder-count="6">
+        <div style="display:flex;flex-direction:column;gap:10px;align-items:flex-start">
+          <div style="width:38px;height:38px;border-radius:9px;display:grid;place-items:center;background:{{ b.bg }};color:{{ b.fg }};opacity:{{ b.op }};position:relative;outline:{{ b.outline }};outline-offset:{{ b.offset }}">
+            <div style="width:20px;height:20px">{{ b.el }}</div>
+            <sc-if value="{{ b.progress }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;left:4px;bottom:3px;height:1px;width:{{ b.progress }};background:#111"></div></sc-if>
+          </div>
+          <div style="font-size:13px">{{ b.name }}</div>
+          <div style="font-size:12px;line-height:1.4;opacity:.6">{{ b.spec }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section data-screen-label="Panels" style="display:flex;flex-direction:column;gap:30px">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:12px;letter-spacing:.09em;text-transform:uppercase">04 / Panels</div>
+      <h2 style="margin:0;font-size:22px;font-weight:500;letter-spacing:-.5px;max-width:640px;text-wrap:pretty">Panels open 12px above the button that owns them. Escape or a click outside closes them.</h2>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:12px;opacity:.6">Shape library</div>
+        <div style="display:grid;grid-template-columns:repeat(3,86px);gap:4px;padding:12px;border:1px solid #111;border-radius:19px;background:#fff">
+          <sc-for list="{{ shapeLib }}" as="s" hint-placeholder-count="6">
+            <div style="width:86px;height:74px;border-radius:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;background:{{ s.bg }};color:{{ s.fg }};cursor:pointer" style-hover="background:#111;color:#fff">
+              <div style="width:20px;height:20px">{{ s.el }}</div>
+              <span style="font-size:11px">{{ s.name }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:12px;opacity:.6">Keyboard shortcuts</div>
+        <div style="width:370px;max-width:100%;padding:16px;border:1px solid #111;border-radius:19px;background:#fff;display:flex;flex-direction:column">
+          <sc-for list="{{ shortcuts }}" as="k" hint-placeholder-count="11">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;font-size:12px;padding:7px 0">
+              <span>{{ k.name }}</span>
+              <kbd style="font:11px system-ui,-apple-system,sans-serif;white-space:nowrap">{{ k.keys }}</kbd>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:12px;opacity:.6">Hex input</div>
+        <div style="display:flex;flex-direction:column;gap:20px;padding:16px;border:1px solid #111;border-radius:19px">
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <div style="width:77px;padding:5px 2px;font-size:12px;letter-spacing:.02em;border-bottom:1px solid #bbb">#336699</div>
+            <div style="font-size:11px;opacity:.6">Valid</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <div style="width:77px;padding:5px 2px;font-size:12px;letter-spacing:.02em;border-bottom:2px solid #111">#3366</div>
+            <div style="font-size:11px;opacity:.6">Invalid: underline thickens</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section data-screen-label="Wheels" style="display:flex;flex-direction:column;gap:30px">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:12px;letter-spacing:.09em;text-transform:uppercase">05 / Wheels</div>
+      <h2 style="margin:0;font-size:22px;font-weight:500;letter-spacing:-.5px;max-width:640px;text-wrap:pretty">Two wheels, one after the other. Hovering a wedge fills it black. The centre of the first wheel picks square.</h2>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:40px">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:15px;border:1px solid #111;padding:40px 20px 30px">
+        <svg viewBox="0 0 600 600" style="width:100%;max-width:440px;overflow:visible">
+          <sc-for list="{{ ratioWheel }}" as="w" hint-placeholder-count="5">
+            <g style="cursor:pointer">
+              <path d="{{ w.d }}" fill="{{ w.fill }}" stroke="#111" stroke-width="1"></path>
+              <rect x="{{ w.gx }}" y="{{ w.gy }}" width="{{ w.gw }}" height="{{ w.gh }}" fill="none" stroke="{{ w.ink }}" stroke-width="1.3"></rect>
+              <text x="{{ w.tx }}" y="{{ w.ty1 }}" text-anchor="middle" fill="{{ w.ink }}" style="font-size:17px;letter-spacing:-.3px">{{ w.ratio }}</text>
+              <text x="{{ w.tx }}" y="{{ w.ty2 }}" text-anchor="middle" fill="{{ w.ink }}" style="font-size:12px">{{ w.name }}</text>
+            </g>
+          </sc-for>
+          <circle cx="300" cy="300" r="85" fill="#fff" stroke="#111" stroke-width="1"></circle>
+          <g transform="translate(288 288)" style="color:#111">{{ arrowEl }}</g>
+        </svg>
+        <div style="font-size:12px;letter-spacing:.14em">01 / RATIO</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:15px;border:1px solid #111;padding:40px 20px 30px">
+        <svg viewBox="0 0 600 600" style="width:100%;max-width:440px;overflow:visible">
+          <sc-for list="{{ guideWheel }}" as="w" hint-placeholder-count="3">
+            <g style="cursor:pointer">
+              <path d="{{ w.d }}" fill="{{ w.fill }}" stroke="#111" stroke-width="1"></path>
+              <rect x="{{ w.gx }}" y="{{ w.gy }}" width="54" height="54" fill="none" stroke="{{ w.ink }}" stroke-width="1.3"></rect>
+              <sc-for list="{{ w.lines }}" as="l" hint-placeholder-count="4">
+                <line x1="{{ l.x1 }}" y1="{{ l.y1 }}" x2="{{ l.x2 }}" y2="{{ l.y2 }}" stroke="{{ w.ink }}" stroke-width="1.3"></line>
+              </sc-for>
+              <text x="{{ w.tx }}" y="{{ w.ty1 }}" text-anchor="middle" fill="{{ w.ink }}" style="font-size:17px;letter-spacing:-.3px">{{ w.name }}</text>
+            </g>
+          </sc-for>
+          <circle cx="300" cy="300" r="85" fill="#fff" stroke="#111" stroke-width="1"></circle>
+          <text x="300" y="306" text-anchor="middle" fill="#111" style="font-size:17px;letter-spacing:-.3px">4:5</text>
+        </svg>
+        <div style="font-size:12px;letter-spacing:.14em">02 / GUIDE</div>
+      </div>
+    </div>
+  </section>
+
+  <section data-screen-label="Canvas" style="display:flex;flex-direction:column;gap:30px">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:12px;letter-spacing:.09em;text-transform:uppercase">06 / Guides on the canvas</div>
+      <h2 style="margin:0;font-size:22px;font-weight:500;letter-spacing:-.5px;max-width:640px;text-wrap:pretty">Lines at 19% black, 0.7px. Crossing points at 40%, 2px radius. Regions stay invisible until something snaps to them.</h2>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:40px">
+      <sc-for list="{{ guideCanvases }}" as="g" hint-placeholder-count="3">
+        <div style="display:flex;flex-direction:column;gap:15px">
+          <svg viewBox="0 0 240 240" style="width:100%;outline:1px solid #111;background:#fff;display:block">
+            <sc-for list="{{ g.lines }}" as="l" hint-placeholder-count="4">
+              <line x1="{{ l.x1 }}" y1="{{ l.y1 }}" x2="{{ l.x2 }}" y2="{{ l.y2 }}" stroke="rgba(0,0,0,.19)" stroke-width="0.7"></line>
+            </sc-for>
+            <sc-for list="{{ g.points }}" as="p" hint-placeholder-count="4">
+              <circle cx="{{ p.x }}" cy="{{ p.y }}" r="2" fill="rgba(0,0,0,.4)"></circle>
+            </sc-for>
+          </svg>
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <div style="font-size:13px">{{ g.name }}</div>
+            <div style="font-size:12px;line-height:1.4;opacity:.6">{{ g.spec }}</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section data-screen-label="Selection and snap" style="display:flex;flex-direction:column;gap:30px">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:12px;letter-spacing:.09em;text-transform:uppercase">07 / Selection and snap feedback</div>
+      <h2 style="margin:0;font-size:22px;font-weight:500;letter-spacing:-.5px;max-width:640px;text-wrap:pretty">When something snaps, the line or region it caught on goes black. No text, no message.</h2>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:40px">
+      <sc-for list="{{ states }}" as="s" hint-placeholder-count="6">
+        <div style="display:flex;flex-direction:column;gap:15px">
+          <svg viewBox="0 0 240 240" style="width:100%;outline:1px solid #111;background:#fff;display:block;overflow:visible">
+            <sc-for list="{{ s.guide }}" as="l" hint-placeholder-count="4">
+              <line x1="{{ l.x1 }}" y1="{{ l.y1 }}" x2="{{ l.x2 }}" y2="{{ l.y2 }}" stroke="{{ l.c }}" stroke-width="{{ l.w }}"></line>
+            </sc-for>
+            <sc-if value="{{ s.region }}" hint-placeholder-val="{{ false }}">
+              <rect x="{{ s.region.x }}" y="{{ s.region.y }}" width="{{ s.region.w }}" height="{{ s.region.h }}" fill="none" stroke="#111" stroke-width="1.5" stroke-dasharray="4 3"></rect>
+            </sc-if>
+            <sc-if value="{{ s.edge }}" hint-placeholder-val="{{ false }}">
+              <line x1="{{ s.edge.x1 }}" y1="{{ s.edge.y1 }}" x2="{{ s.edge.x2 }}" y2="{{ s.edge.y2 }}" stroke="#111" stroke-width="2"></line>
+            </sc-if>
+            <sc-if value="{{ s.isText }}" hint-placeholder-val="{{ false }}">
+              <rect x="{{ s.o.x }}" y="{{ s.o.ty1 }}" width="{{ s.o.w }}" height="5" fill="#111"></rect>
+              <rect x="{{ s.o.x }}" y="{{ s.o.ty2 }}" width="{{ s.o.w2 }}" height="5" fill="#111"></rect>
+            </sc-if>
+            <sc-if value="{{ s.isImage }}" hint-placeholder-val="{{ false }}">
+              <rect x="{{ s.o.x }}" y="{{ s.o.y }}" width="{{ s.o.w }}" height="{{ s.o.h }}" fill="#d0d0d0"></rect>
+            </sc-if>
+            <sc-if value="{{ s.isShape }}" hint-placeholder-val="{{ false }}">
+              <rect x="{{ s.o.x }}" y="{{ s.o.y }}" width="{{ s.o.w }}" height="{{ s.o.h }}" fill="#111"></rect>
+            </sc-if>
+            <rect x="{{ s.o.x }}" y="{{ s.o.y }}" width="{{ s.o.w }}" height="{{ s.o.h }}" fill="none" stroke="#111" stroke-width="1" stroke-dasharray="{{ s.dash }}"></rect>
+            <sc-for list="{{ s.handles }}" as="h" hint-placeholder-count="2">
+              <rect x="{{ h.x }}" y="{{ h.y }}" width="7" height="7" fill="#fff" stroke="#111" stroke-width="1"></rect>
+            </sc-for>
+          </svg>
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <div style="font-size:13px">{{ s.name }}</div>
+            <div style="font-size:12px;line-height:1.4;opacity:.6">{{ s.spec }}</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section data-screen-label="Rules" style="display:flex;flex-direction:column;gap:20px;border-top:1px solid #111;padding-top:30px">
+    <div style="font-size:12px;letter-spacing:.09em;text-transform:uppercase">Never</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px 40px;font-size:13px;line-height:1.5">
+      <div>Gradients or shadows</div>
+      <div>Colour in the interface other than the picked swatch</div>
+      <div>Onboarding, tooltips that explain design, empty-state hints, toasts</div>
+      <div>Text feedback for a snap</div>
+      <div>Guide lines in the export</div>
+      <div>A second typeface</div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const h = React.createElement;
+    const P = {
+      text: '<path d="M5 5h14M12 5v14M8 19h8"/>',
+      rect: '<rect x="5" y="5" width="14" height="14"/>',
+      shapes: '<circle cx="8" cy="8" r="5"/><path d="m15 10 7 11H8Z"/>',
+      image: '<rect x="3" y="4" width="18" height="16"/><circle cx="8" cy="9" r="1.5"/><path d="m4 18 6-6 4 4 3-3 4 4"/>',
+      background: '<rect x="3" y="4" width="18" height="16" stroke-dasharray="2 2.5"/><path d="m4 18 6-6 4 4 3-3 4 4"/><circle cx="8" cy="9" r="1.5"/>',
+      duplicate: '<rect x="8" y="8" width="13" height="13"/><path d="M16 8V3H3v13h5"/>',
+      lock: '<rect x="5" y="10" width="14" height="11"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/>',
+      export: '<path d="M12 3v12m-4-4 4 4 4-4M4 16v5h16v-5"/>',
+      keyboard: '<rect x="2" y="5" width="20" height="14"/><path d="M5 9h2m2 0h2m2 0h2m2 0h2M5 12h2m2 0h2m2 0h2m2 0h2M7 16h10"/>',
+      bold: '<path stroke-width="2" d="M7 4h6a4 4 0 0 1 0 8H7V4Zm0 8h7a4 4 0 0 1 0 8H7v-8Z"/>',
+      alignLeft: '<path d="M3 5h18M3 10h12M3 15h18M3 20h12"/>',
+      alignCenter: '<path d="M3 5h18M6 10h12M3 15h18M6 20h12"/>',
+      alignRight: '<path d="M3 5h18M9 10h12M3 15h18M9 20h12"/>',
+      rectangle: '<rect x="4" y="6" width="16" height="12"/>',
+      ellipse: '<ellipse cx="12" cy="12" rx="8" ry="6"/>',
+      triangle: '<path d="M12 4 21 20H3Z"/>',
+      diamond: '<path d="m12 3 9 9-9 9-9-9Z"/>',
+      star: '<path d="m12 3 2.8 5.8 6.4.9-4.6 4.5 1.1 6.3-5.7-3-5.7 3 1.1-6.3-4.6-4.5 6.4-.9Z"/>',
+      arrow: '<path d="M3 9h10V4l8 8-8 8v-5H3Z"/>',
+    };
+    const ns = window.PaperWireframeDesignSystem_72d81a;
+    const I = (name) => {
+      if (name === 'delete' || name === 'arrowRight') {
+        const g = name === 'delete' ? 'x-circle' : 'arrow-right';
+        return ns && ns.Icon ? h(ns.Icon, { name: g, size: name === 'delete' ? 20 : 24, color: 'currentColor' }) : null;
+      }
+      return h('svg', { viewBox: '0 0 24 24', width: 20, height: 20, fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round', style: { display: 'block' }, dangerouslySetInnerHTML: { __html: P[name] } });
+    };
+    const iconList = [
+      ['text', 'Add text', 'Kura8'], ['rect', 'Add rectangle', 'Kura8'], ['shapes', 'Shape library', 'Kura8'], ['image', 'Add image', 'Kura8'],
+      ['bold', 'Bold', 'Kura8'], ['alignLeft', 'Align left', 'Kura8'], ['alignCenter', 'Align centre', 'Kura8'], ['alignRight', 'Align right', 'Kura8'],
+      ['background', 'Remove background', 'Kura8'], ['duplicate', 'Duplicate', 'Kura8'], ['lock', 'Lock', 'Kura8'], ['delete', 'Delete', 'Paper'],
+      ['export', 'Export', 'Kura8'], ['keyboard', 'Shortcuts', 'Kura8'], ['arrowRight', 'Continue', 'Paper'],
+      ['rectangle', 'Rectangle', 'Kura8'], ['ellipse', 'Ellipse', 'Kura8'], ['triangle', 'Triangle', 'Kura8'], ['diamond', 'Diamond', 'Kura8'], ['star', 'Star', 'Kura8'], ['arrow', 'Arrow', 'Kura8'],
+    ].map(([n, label, src]) => ({ el: I(n), label, src }));
+
+    const btn = (name, label, o = {}) => ({ isBtn: true, el: I(name), label, bg: o.on ? '#111' : '#fff', fg: o.on ? '#fff' : '#111', op: o.dis ? .23 : 1, outline: o.invalid ? '1px dashed #111' : 'none', progress: o.progress || false });
+    const sep = { isSep: true };
+    const bar = (sel) => {
+      const none = !sel, text = sel === 'text', img = sel === 'image', locked = sel === 'locked';
+      const colourDis = none || img || locked, textDis = !text;
+      return [
+        btn('text', 'Add text'), btn('rect', 'Add rectangle'), btn('shapes', 'Shape library'), btn('image', 'Add image'), sep,
+        { isColour: true, colour: text ? '#111111' : '#000000', op: colourDis ? .23 : 1 },
+        { isNum: true, val: text ? '72' : '—', op: textDis ? .23 : 1 },
+        btn('bold', 'Bold', { on: text, dis: textDis }), btn('alignLeft', 'Text alignment', { dis: textDis }), sep,
+        btn('background', 'Remove background', { dis: !img, progress: img ? 'calc((100% - 8px) * .4)' : false }),
+        btn('duplicate', 'Duplicate', { dis: none || locked }), btn('lock', 'Lock', { dis: none, on: locked }), btn('delete', 'Delete', { dis: none || locked }), sep,
+        btn('export', 'Export PNG and JSON'), btn('keyboard', 'Keyboard shortcuts'),
+      ];
+    };
+    const toolbars = [
+      { label: 'Nothing selected', items: bar(null) },
+      { label: 'Headline selected, bold on', items: bar('text') },
+      { label: 'Image selected, background removal at 40%', items: bar('image') },
+      { label: 'Locked object selected', items: bar('locked') },
+    ];
+    const st = (name, spec, ic, o = {}) => ({ name, spec, el: I(ic), bg: o.on ? '#111' : '#fff', fg: o.on ? '#fff' : '#111', op: o.dis ? .23 : 1, outline: o.outline || 'none', offset: o.offset || '0', progress: o.progress || false });
+    const btnStates = [
+      st('Default', '38 × 38, radius 9, white', 'rect'),
+      st('Hover / pressed', 'Fills #111, icon flips white', 'rect', { on: true }),
+      st('Disabled', '23% opacity, no hover', 'rect', { dis: true }),
+      st('Focus', '2px #111 outline, 5px offset', 'rect', { outline: '2px solid #111', offset: '5px' }),
+      st('Working', '1px progress line along the bottom', 'background', { progress: 'calc((100% - 8px) * .65)' }),
+      st('Unavailable', '1px dashed outline, 2px offset', 'background', { outline: '1px dashed #111', offset: '2px' }),
+    ];
+
+    const swatches = [
+      { name: 'Paper', v: '#FFFFFF', use: 'Every background: app, canvas, toolbar, panels' },
+      { name: 'Ink', v: '#111111', use: 'Text, outlines, icons, pressed fills, active snap' },
+      { name: 'Guide line', v: 'rgba(0,0,0,.19)', use: 'Resting guide lines on the canvas' },
+      { name: 'Guide point', v: 'rgba(0,0,0,.4)', use: 'Where guide lines cross' },
+      { name: 'Separator', v: '#D0D0D0', use: 'Toolbar dividers only' },
+      { name: 'Field rule', v: '#BBBBBB', use: 'Underline of the hex input' },
+    ];
+    const type = [
+      { sample: 'kura8', size: 29, weight: 500, track: '-1.8px', case: 'none', spec: 'Wordmark · 29 / 500 / -1.8px' },
+      { sample: 'Make a poster for this', size: 22, weight: 500, track: '-.5px', case: 'none', spec: 'Heading · 22 / 500 / -.5px' },
+      { sample: '4:5', size: 17, weight: 400, track: '-.3px', case: 'none', spec: 'Wheel label · 17 / 400 / -.3px' },
+      { sample: 'Rule of thirds', size: 13, weight: 400, track: 'normal', case: 'none', spec: 'Control · 13 / 400' },
+      { sample: '01 / Ratio', size: 12, weight: 400, track: '.14em', case: 'uppercase', spec: 'Meta · 12 / 400 / .09–.14em caps' },
+      { sample: 'Ellipse', size: 11, weight: 400, track: 'normal', case: 'none', spec: 'Panel label · 11 / 400' },
+    ];
+    const spacing = [5, 10, 15, 20, 25, 30, 40, 45, 60, 70].map(v => ({ v }));
+    const radii = [{ v: 0, use: 'Canvas, selection, swatch frames' }, { v: 9, use: 'Buttons, panel cells' }, { v: 19, use: 'Toolbar, panels' }, { v: 999, use: 'Colour swatch' }];
+    const strokes = [
+      { w: 1, c: 'rgba(0,0,0,.19)', label: '0.7 · resting guide line' },
+      { w: 1, c: '#111', label: '1 · outlines, selection, wedges' },
+      { w: 2, c: '#111', label: '1.5 · active guide line or region' },
+      { w: 2, c: '#111', label: '2 · canvas-edge snap, focus ring' },
+    ];
+
+    const pol = (r, a) => [300 + r * Math.cos(a), 300 + r * Math.sin(a)];
+    const wedge = (s, e) => { const a = pol(262, s), b = pol(262, e), c = pol(85, e), d = pol(85, s); return `M${a} A262,262 0 0 1 ${b} L${c} A85,85 0 0 0 ${d} Z`; };
+    const geo = (i, n) => { const m = -Math.PI / 2 + i * Math.PI * 2 / n, half = Math.PI / n; const [cx, cy] = pol(179, m); return { d: wedge(m - half, m + half), cx, cy }; };
+    const ratios = [['Square', 1, 1], ['Portrait', 4, 5], ['Landscape', 16, 9], ['Story', 9, 16], ['Banner', 3, 1]];
+    const ratioWheel = ratios.map(([name, w, hh], i) => {
+      const { d, cx, cy } = geo(i, 5), s = 47 / Math.max(w, hh), gw = w * s, gh = hh * s, on = i === 1;
+      return { d, gx: cx - gw / 2, gy: cy - 18 - gh / 2, gw, gh, tx: cx, ty1: cy + 38, ty2: cy + 58, ratio: `${w}:${hh}`, name, fill: on ? '#111' : '#fff', ink: on ? '#fff' : '#111' };
+    });
+    const G = [['Rule of thirds', [1 / 3, 2 / 3]], ['Golden ratio', [0.382, 0.618]], ['Simple divisions', [0.25, 0.5, 0.75]]];
+    const guideWheel = G.map(([name, L], i) => {
+      const { d, cx, cy } = geo(i, 3), gx = cx - 27, gy = cy - 18 - 27, on = i === 1;
+      const lines = L.flatMap(f => [{ x1: gx + 54 * f, y1: gy, x2: gx + 54 * f, y2: gy + 54 }, { x1: gx, y1: gy + 54 * f, x2: gx + 54, y2: gy + 54 * f }]);
+      return { d, gx, gy, lines, tx: cx, ty1: cy + 40, name, fill: on ? '#111' : '#fff', ink: on ? '#fff' : '#111' };
+    });
+    const S = 240;
+    const linesFor = (L, c = 'rgba(0,0,0,.19)', w = .7) => L.flatMap(f => [{ x1: S * f, y1: 0, x2: S * f, y2: S, c, w }, { x1: 0, y1: S * f, x2: S, y2: S * f, c, w }]);
+    const spec = ['Two lines each way. Nine cells.', 'Lines at 38.2% and 61.8%. Nine cells plus four golden rectangles, one off each side.', 'Halves and quarters each way. Four quadrants and two centre bands.'];
+    const guideCanvases = G.map(([name, L], i) => ({ name, spec: spec[i], lines: linesFor(L), points: L.flatMap(x => L.map(y => ({ x: S * x, y: S * y }))) }));
+
+    const handlesFor = (o, kind) => {
+      const { x, y, w, h: hh } = o, pts = { nw: [x, y], ne: [x + w, y], sw: [x, y + hh], se: [x + w, y + hh], n: [x + w / 2, y], s: [x + w / 2, y + hh], w: [x, y + hh / 2], e: [x + w, y + hh / 2] };
+      const keys = kind === 'shape' ? Object.keys(pts) : kind === 'image' ? ['nw', 'ne', 'sw', 'se'] : kind === 'text' ? ['w', 'e'] : [];
+      return keys.map(k => ({ x: pts[k][0] - 3.5, y: pts[k][1] - 3.5 }));
+    };
+    const t3 = [1 / 3, 2 / 3];
+    const mk = (name, spec, kind, o, extra = {}) => ({ name, spec, o, isText: kind === 'text', isImage: kind === 'image', isShape: kind === 'shape' || kind === 'locked', handles: handlesFor(o, kind), dash: kind === 'locked' ? '4 3' : 'none', guide: extra.guide || linesFor(t3), region: extra.region || false, edge: extra.edge || false });
+    const textO = { x: 80, y: 150, w: 130, h: 30, ty1: 156, ty2: 168, w2: 90 };
+    const states = [
+      mk('Text', 'Left and right handles only. Height follows the text.', 'text', textO),
+      mk('Image', 'Corner handles only. Proportions always kept.', 'image', { x: 40, y: 40, w: 120, h: 90 }),
+      mk('Shape', 'All eight handles. Shift on a corner keeps proportions.', 'shape', { x: 100, y: 60, w: 100, h: 60 }),
+      mk('Locked', 'Dashed outline, no handles. Click to unlock.', 'locked', { x: 100, y: 60, w: 100, h: 60 }),
+      mk('Snap to a line', 'Left edge caught on the first third. That line goes black at 1.5px.', 'text', textO,
+        { guide: [...linesFor(t3)].map(l => (l.x1 === 80 && l.x2 === 80 ? { ...l, c: '#111', w: 1.5 } : l)) }),
+      mk('Snap to a size', 'Width matched one third. The cell it matched is outlined, dashed.', 'shape', { x: 80, y: 180, w: 80, h: 40 },
+        { region: { x: 80, y: 80, w: 80, h: 80 } }),
+      mk('Snap to the canvas edge', 'Top edge caught on the canvas. The edge draws at 2px.', 'image', { x: 100, y: 0, w: 100, h: 70 },
+        { edge: { x1: 0, y1: 0, x2: 240, y2: 0 } }),
+    ];
+    const shapeLib = ['rectangle', 'ellipse', 'triangle', 'diamond', 'star', 'arrow'].map((n, i) => ({ el: I(n), name: n[0].toUpperCase() + n.slice(1), bg: i === 1 ? '#111' : '#fff', fg: i === 1 ? '#fff' : '#111' }));
+    const shortcuts = [['Duplicate', '⌘D'], ['Lock / unlock', '⌘⇧L'], ['Bold text', '⌘B'], ['Export PNG + JSON', '⌘⇧E'], ['Move', 'Arrow keys'], ['Move 10 units', '⇧Arrow keys'], ['Constrain drag / corner resize', '⇧Drag'], ['Delete', 'Backspace / Delete'], ['Edit text', 'Enter'], ['Finish editing', '⌘Enter'], ['Deselect / close', 'Escape']].map(([name, keys]) => ({ name, keys }));
+
+    return { swatches, type, spacing, radii, strokes, iconList, toolbars, btnStates, shapeLib, shortcuts, ratioWheel, guideWheel, arrowEl: I('arrowRight'), guideCanvases, states };
+  }
+}
+</script>
+</body>
+</html>

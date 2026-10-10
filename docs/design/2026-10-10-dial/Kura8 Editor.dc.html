@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <meta name="design_doc_mode" content="canvas">
+  <link rel="stylesheet" href="_ds/paper-wireframe-design-system-72d81a7d-25aa-4885-8fde-e91c1d59ff21/tokens/fonts.css">
+  <link rel="stylesheet" href="_ds/paper-wireframe-design-system-72d81a7d-25aa-4885-8fde-e91c1d59ff21/tokens/colors.css">
+  <link rel="stylesheet" href="_ds/paper-wireframe-design-system-72d81a7d-25aa-4885-8fde-e91c1d59ff21/tokens/typography.css">
+  <link rel="stylesheet" href="_ds/paper-wireframe-design-system-72d81a7d-25aa-4885-8fde-e91c1d59ff21/tokens/spacing.css">
+  <link rel="stylesheet" href="_ds/paper-wireframe-design-system-72d81a7d-25aa-4885-8fde-e91c1d59ff21/tokens/geometry.css">
+  <link rel="stylesheet" href="_ds/paper-wireframe-design-system-72d81a7d-25aa-4885-8fde-e91c1d59ff21/tokens/motion.css">
+  <link rel="stylesheet" href="_ds/paper-wireframe-design-system-72d81a7d-25aa-4885-8fde-e91c1d59ff21/tokens/base.css">
+  <link rel="stylesheet" href="_ds/paper-wireframe-design-system-72d81a7d-25aa-4885-8fde-e91c1d59ff21/styles.css">
+  <script src="_ds/paper-wireframe-design-system-72d81a7d-25aa-4885-8fde-e91c1d59ff21/_ds_bundle.js"></script>
+  <style>body{margin:0;background:#ECF0F3;font-family:'Space Grotesk',system-ui,sans-serif;color:#000}a{color:#000}a:hover{color:#9CABC2}</style>
+</helmet>
+<section style="display:flex;flex-direction:column;gap:20px;padding:60px">
+  <div data-screen-label="5 Refinements" style="display:flex;align-items:center;gap:10px;font-size:13px;margin-bottom:10px">
+    <span style="border:2px solid #000;border-radius:999px;padding:1px 10px">5</span>
+    <span style="opacity:.6">Refinements. Who hits each step, where it breaks, and the smallest change that fixes it. Reference by id.</span>
+  </div>
+    <div style="display:grid;grid-template-columns:180px repeat(4,300px);gap:20px;align-items:stretch">
+      <div style="display:flex;flex-direction:column;gap:6px;padding-top:20px"><div style="font-size:20px;letter-spacing:-0.045em">Dial</div><div style="font-size:13px;opacity:.6">Picking ratio, composition, guide, hue</div></div>
+      <div id="5a" style="box-sizing:border-box;border:2px solid #000;border-radius:19px;background:#ECF0F3;padding:20px;display:flex;flex-direction:column;gap:15px;font-size:13px;line-height:1.45;text-wrap:pretty">
+        <div style="display:flex;align-items:center;gap:10px"><span style="border:2px solid #000;border-radius:999px;padding:1px 10px">5a</span><span style="opacity:.6">Café owner, menu post for Instagram</span></div>
+        <div style="position:relative;height:150px;box-sizing:border-box;border:2px solid #000;border-radius:13px;background:#ECF0F3;overflow:hidden"><div style="position:absolute;left:30px;top:31px;width:60px;height:60px;box-sizing:border-box;border:2px solid #000;background:#ECF0F3;"></div><div style="position:absolute;left:112px;top:20px;width:40px;height:71px;box-sizing:border-box;border:2px solid #000;background:#ECF0F3;background:#000"></div><div style="position:absolute;left:176px;top:20px;width:50px;height:71px;box-sizing:border-box;border:2px solid #000;background:#ECF0F3;"></div><div style="position:absolute;left:30px;top:102px;font-size:11px;line-height:1;white-space:nowrap;">1:1</div><div style="position:absolute;left:30px;top:116px;font-size:11px;line-height:1;white-space:nowrap;opacity:.6">Post</div><div style="position:absolute;left:112px;top:102px;font-size:11px;line-height:1;white-space:nowrap;">9:16</div><div style="position:absolute;left:112px;top:116px;font-size:11px;line-height:1;white-space:nowrap;opacity:.6">Story</div><div style="position:absolute;left:176px;top:102px;font-size:11px;line-height:1;white-space:nowrap;">A4</div><div style="position:absolute;left:176px;top:116px;font-size:11px;line-height:1;white-space:nowrap;opacity:.6">Print</div></div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Breaks when</div><div>Doesn't know what 4:5 means.</div></div>
+        <div style="border-top:2px solid #000;padding-top:15px;display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Refinement</div><div style="font-size:15px">Each ratio segment names its destination under the number: Post, Story, A4, Banner. Hovering a segment previews the hub at that ratio.</div></div>
+      </div>
+      <div id="5b" style="box-sizing:border-box;border:2px solid #000;border-radius:19px;background:#ECF0F3;padding:20px;display:flex;flex-direction:column;gap:15px;font-size:13px;line-height:1.45;text-wrap:pretty">
+        <div style="display:flex;align-items:center;gap:10px"><span style="border:2px solid #000;border-radius:999px;padding:1px 10px">5b</span><span style="opacity:.6">Society making the tenth poster in a series</span></div>
+        <div style="position:relative;height:150px;box-sizing:border-box;border:2px solid #000;border-radius:13px;background:#ECF0F3;overflow:hidden"><div style="position:absolute;left:78px;top:6px;width:100px;height:100px;box-sizing:border-box;border:2px solid #000;border-radius:999px"><div style="position:absolute;left:26px;top:30px;width:44px;height:7px;box-sizing:border-box;background:#000"></div><div style="position:absolute;left:26px;top:41px;width:30px;height:7px;box-sizing:border-box;background:#000"></div><div style="position:absolute;left:26px;top:58px;width:44px;height:3px;box-sizing:border-box;background:#000;opacity:0.55"></div><div style="position:absolute;left:26px;top:66px;width:36px;height:3px;box-sizing:border-box;background:#000;opacity:0.55"></div></div><div style="position:absolute;left:0;right:0;top:118px;display:flex;justify-content:center;align-items:center;gap:6px;font-size:11px;line-height:1"><span style="border:2px solid #000;border-radius:999px;padding:3px 10px;font-size:11px;line-height:1;white-space:nowrap;background:#000;color:#fff">Same as last &nbsp;→</span></div></div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Breaks when</div><div>Re-dials the same four rings every time.</div></div>
+        <div style="border-top:2px solid #000;padding-top:15px;display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Refinement</div><div style="font-size:15px">The dial opens on the last setting. One tap on the hub goes straight to the canvas.</div></div>
+      </div>
+      <div id="5c" style="box-sizing:border-box;border:2px solid #000;border-radius:19px;background:#ECF0F3;padding:20px;display:flex;flex-direction:column;gap:15px;font-size:13px;line-height:1.45;text-wrap:pretty">
+        <div style="display:flex;align-items:center;gap:10px"><span style="border:2px solid #000;border-radius:999px;padding:1px 10px">5c</span><span style="opacity:.6">Anyone trying a tall ratio</span></div>
+        <div style="position:relative;height:150px;box-sizing:border-box;border:2px solid #000;border-radius:13px;background:#ECF0F3;overflow:hidden"><div style="position:absolute;left:40px;top:14px;width:45px;height:80px;box-sizing:border-box;border:2px solid #000;background:#ECF0F3;"><div style="position:absolute;left:6px;top:8px;width:30px;height:7px;box-sizing:border-box;background:#000"></div><div style="position:absolute;left:6px;top:19px;width:21px;height:7px;box-sizing:border-box;background:#000"></div><div style="position:absolute;left:6px;top:34px;width:30px;height:3px;box-sizing:border-box;background:#000;opacity:0.55"></div><div style="position:absolute;left:6px;top:42px;width:25px;height:3px;box-sizing:border-box;background:#000;opacity:0.55"></div><div style="position:absolute;left:6px;top:50px;width:28px;height:3px;box-sizing:border-box;background:#000;opacity:0.55"></div><div style="position:absolute;left:6px;top:58px;width:18px;height:3px;box-sizing:border-box;background:#000;opacity:0.55"></div></div><div style="position:absolute;left:106px;top:14px;width:45px;height:80px;box-sizing:border-box;border:2px solid #000;background:#ECF0F3;opacity:.23"><div style="position:absolute;left:5px;top:8px;width:15px;height:64px;box-sizing:border-box;background:#000;opacity:.55"></div><div style="position:absolute;left:23px;top:8px;width:15px;height:64px;box-sizing:border-box;background:#000;opacity:.55"></div></div><div style="position:absolute;left:172px;top:14px;width:45px;height:80px;box-sizing:border-box;border:2px solid #000;background:#ECF0F3;"><div style="position:absolute;left:0px;top:0px;width:41px;height:30px;box-sizing:border-box;background:#000"></div><div style="position:absolute;left:6px;top:40px;width:30px;height:3px;box-sizing:border-box;background:#000;opacity:0.55"></div><div style="position:absolute;left:6px;top:48px;width:25px;height:3px;box-sizing:border-box;background:#000;opacity:0.55"></div><div style="position:absolute;left:6px;top:56px;width:28px;height:3px;box-sizing:border-box;background:#000;opacity:0.55"></div></div><div style="position:absolute;left:0;right:0;top:108px;display:flex;justify-content:center;align-items:center;gap:6px;font-size:11px;line-height:1"><span style="border:2px solid #000;border-radius:999px;padding:3px 10px;font-size:11px;line-height:1;white-space:nowrap;background:#ECF0F3">Columns too narrow at 9:16</span></div></div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Breaks when</div><div>Two-column composition on 9:16 gives cramped columns.</div></div>
+        <div style="border-top:2px solid #000;padding-top:15px;display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Refinement</div><div style="font-size:15px">Compositions that don't suit the ratio dim on the ring, with the reason on hover, instead of producing a squashed layout.</div></div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:180px repeat(4,300px);gap:20px;align-items:stretch">
+      <div style="display:flex;flex-direction:column;gap:6px;padding-top:20px"><div style="font-size:20px;letter-spacing:-0.045em">Canvas</div><div style="font-size:13px;opacity:.6">First open, filling, starting over</div></div>
+      <div id="5d" style="box-sizing:border-box;border:2px solid #000;border-radius:19px;background:#ECF0F3;padding:20px;display:flex;flex-direction:column;gap:15px;font-size:13px;line-height:1.45;text-wrap:pretty">
+        <div style="display:flex;align-items:center;gap:10px"><span style="border:2px solid #000;border-radius:999px;padding:1px 10px">5d</span><span style="opacity:.6">First-time user</span></div>
+        <div style="position:relative;height:150px;box-sizing:border-box;border:2px solid #000;border-radius:13px;background:#ECF0F3;overflow:hidden"><div style="position:absolute;left:20px;top:12px;width:216px;height:124px;box-sizing:border-box;border:2px solid #000;background:#ECF0F3;overflow:hidden"><div style="position:absolute;left:18px;top:18px;width:50px;height:60px;box-sizing:border-box;background:#000"></div><div style="position:absolute;left:86px;top:14px;width:100px;height:26px;box-sizing:border-box;border:2px dashed rgba(0,0,0,.25)"></div><div style="position:absolute;left:86px;top:10px;width:100px;height:26px;box-sizing:border-box;"><div style="position:absolute;left:0px;top:0px;width:100px;height:7px;box-sizing:border-box;background:#000"></div><div style="position:absolute;left:0px;top:11px;width:70px;height:7px;box-sizing:border-box;background:#000"></div></div><div style="position:absolute;left:86px;top:58px;width:90px;height:3px;box-sizing:border-box;background:#000;opacity:0.55"></div><div style="position:absolute;left:86px;top:66px;width:74px;height:3px;box-sizing:border-box;background:#000;opacity:0.55"></div><div style="position:absolute;left:86px;top:74px;width:83px;height:3px;box-sizing:border-box;background:#000;opacity:0.55"></div><div style="position:absolute;left:86px;top:82px;width:54px;height:3px;box-sizing:border-box;background:#000;opacity:0.55"></div></div></div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Breaks when</div><div>Doesn't realise each block is its own object.</div></div>
+        <div style="border-top:2px solid #000;padding-top:15px;display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Refinement</div><div style="font-size:15px">On first open, blocks lift 2px one after another, once. No tour, no tooltip.</div></div>
+      </div>
+      <div id="5e" style="box-sizing:border-box;border:2px solid #000;border-radius:19px;background:#ECF0F3;padding:20px;display:flex;flex-direction:column;gap:15px;font-size:13px;line-height:1.45;text-wrap:pretty">
+        <div style="display:flex;align-items:center;gap:10px"><span style="border:2px solid #000;border-radius:999px;padding:1px 10px">5e</span><span style="opacity:.6">Anyone tapping empty ground to deselect</span></div>
+        <div style="position:relative;height:150px;box-sizing:border-box;border:2px solid #000;border-radius:13px;background:#ECF0F3;overflow:hidden"><div style="position:absolute;left:20px;top:12px;width:216px;height:124px;box-sizing:border-box;border:2px solid #000;background:#ECF0F3;overflow:hidden"><div style="position:absolute;left:18px;top:18px;width:60px;height:60px;box-sizing:border-box;background:#9CABC2"></div><div style="position:absolute;left:96px;top:18px;width:90px;height:7px;box-sizing:border-box;background:#000"></div><div style="position:absolute;left:96px;top:29px;width:62.99999999999999px;height:7px;box-sizing:border-box;background:#000"></div><div style="position:absolute;left:96px;top:54px;width:80px;height:3px;box-sizing:border-box;background:#000;opacity:0.55"></div><div style="position:absolute;left:96px;top:62px;width:66px;height:3px;box-sizing:border-box;background:#000;opacity:0.55"></div><div style="position:absolute;left:96px;top:70px;width:74px;height:3px;box-sizing:border-box;background:#000;opacity:0.55"></div><div style="position:absolute;left:150px;top:74px;width:24px;height:24px;box-sizing:border-box;border:2px solid #000;border-radius:999px;background:#9CABC2"></div></div><div style="position:absolute;left:0;right:0;top:118px;display:flex;justify-content:center;align-items:center;gap:6px;font-size:11px;line-height:1"><span style="border:2px solid #000;border-radius:6px;padding:2px 6px;font-size:11px;line-height:1;background:#ECF0F3">Esc</span><span>disarm</span></div></div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Breaks when</div><div>The tap fills the ground instead.</div></div>
+        <div style="border-top:2px solid #000;padding-top:15px;display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Refinement</div><div style="font-size:15px">Tap fills only while a swatch is armed (shown as a ring on the cursor). Esc disarms. With nothing armed, tapping ground deselects.</div></div>
+      </div>
+      <div id="5f" style="box-sizing:border-box;border:2px solid #000;border-radius:19px;background:#ECF0F3;padding:20px;display:flex;flex-direction:column;gap:15px;font-size:13px;line-height:1.45;text-wrap:pretty">
+        <div style="display:flex;align-items:center;gap:10px"><span style="border:2px solid #000;border-radius:999px;padding:1px 10px">5f</span><span style="opacity:.6">User who wants a different composition halfway through</span></div>
+        <div style="position:relative;height:150px;box-sizing:border-box;border:2px solid #000;border-radius:13px;background:#ECF0F3;overflow:hidden"><div style="position:absolute;left:20px;top:22px;font-size:11px;line-height:1;white-space:nowrap;font-size:16px;letter-spacing:-0.045em">Kura8</div><div style="position:absolute;left:84px;top:22px;font-size:11px;line-height:1;white-space:nowrap;font-size:16px">→</div><div style="position:absolute;left:130px;top:8px;width:100px;height:100px;box-sizing:border-box;border:2px solid #000;border-radius:999px"><div style="position:absolute;left:25px;top:25px;width:50px;height:50px;box-sizing:border-box;border:2px solid #000;background:#ECF0F3;"><div style="position:absolute;left:4px;top:4px;width:16px;height:38px;box-sizing:border-box;background:#000"></div><div style="position:absolute;left:24px;top:6px;width:20px;height:3px;box-sizing:border-box;background:#000;opacity:0.55"></div><div style="position:absolute;left:24px;top:14px;width:16px;height:3px;box-sizing:border-box;background:#000;opacity:0.55"></div><div style="position:absolute;left:24px;top:22px;width:18px;height:3px;box-sizing:border-box;background:#000;opacity:0.55"></div><div style="position:absolute;left:24px;top:30px;width:12px;height:3px;box-sizing:border-box;background:#000;opacity:0.55"></div></div></div><div style="position:absolute;left:0;right:0;top:122px;display:flex;justify-content:center;align-items:center;gap:6px;font-size:11px;line-height:1"><span style="opacity:.6">Content kept, geometry changes</span></div></div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Breaks when</div><div>Going back to the dial would lose their text and images.</div></div>
+        <div style="border-top:2px solid #000;padding-top:15px;display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Refinement</div><div style="font-size:15px">The Kura8 wordmark returns to the dial with the current canvas in the hub. Go re-lays the same content on the new geometry.</div></div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:180px repeat(4,300px);gap:20px;align-items:stretch">
+      <div style="display:flex;flex-direction:column;gap:6px;padding-top:20px"><div style="font-size:20px;letter-spacing:-0.045em">Colour</div><div style="font-size:13px;opacity:.6">Roles, shades, grounds</div></div>
+      <div id="5g" style="box-sizing:border-box;border:2px solid #000;border-radius:19px;background:#ECF0F3;padding:20px;display:flex;flex-direction:column;gap:15px;font-size:13px;line-height:1.45;text-wrap:pretty">
+        <div style="display:flex;align-items:center;gap:10px"><span style="border:2px solid #000;border-radius:999px;padding:1px 10px">5g</span><span style="opacity:.6">Small business with a brand hex</span></div>
+        <div style="position:relative;height:150px;box-sizing:border-box;border:2px solid #000;border-radius:13px;background:#ECF0F3;overflow:hidden"><div style="position:absolute;left:20px;top:18px;width:120px;height:30px;box-sizing:border-box;border:2px solid #000;border-radius:9px;display:flex;align-items:center;gap:8px;padding:0 8px;font-size:11px"><span style="width:16px;height:16px;border-radius:999px;border:2px solid #000;box-sizing:border-box;background:#9CABC2"></span>#9CABC2</div><div style="position:absolute;left:148px;top:18px;width:88px;height:30px;box-sizing:border-box;background:#000;color:#fff;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:11px">+ Add as hue</div><div style="position:absolute;left:23px;top:73px;width:10px;height:10px;box-sizing:border-box;border-radius:999px;background:rgba(0,0,0,.18)"></div><div style="position:absolute;left:38.5px;top:73px;width:10px;height:10px;box-sizing:border-box;border-radius:999px;background:rgba(0,0,0,.18)"></div><div style="position:absolute;left:54px;top:73px;width:10px;height:10px;box-sizing:border-box;border-radius:999px;background:rgba(0,0,0,.18)"></div><div style="position:absolute;left:69.5px;top:73px;width:10px;height:10px;box-sizing:border-box;border-radius:999px;background:rgba(0,0,0,.18)"></div><div style="position:absolute;left:85px;top:73px;width:10px;height:10px;box-sizing:border-box;border-radius:999px;background:rgba(0,0,0,.18)"></div><div style="position:absolute;left:100.5px;top:73px;width:10px;height:10px;box-sizing:border-box;border-radius:999px;background:rgba(0,0,0,.18)"></div><div style="position:absolute;left:116px;top:73px;width:10px;height:10px;box-sizing:border-box;border-radius:999px;background:rgba(0,0,0,.18)"></div><div style="position:absolute;left:131.5px;top:73px;width:10px;height:10px;box-sizing:border-box;border-radius:999px;background:rgba(0,0,0,.18)"></div><div style="position:absolute;left:147px;top:73px;width:10px;height:10px;box-sizing:border-box;border-radius:999px;background:rgba(0,0,0,.18)"></div><div style="position:absolute;left:162.5px;top:73px;width:10px;height:10px;box-sizing:border-box;border-radius:999px;background:rgba(0,0,0,.18)"></div><div style="position:absolute;left:178px;top:73px;width:10px;height:10px;box-sizing:border-box;border-radius:999px;background:rgba(0,0,0,.18)"></div><div style="position:absolute;left:193.5px;top:73px;width:10px;height:10px;box-sizing:border-box;border-radius:999px;background:rgba(0,0,0,.18)"></div><div style="position:absolute;left:209px;top:73px;width:10px;height:10px;box-sizing:border-box;border-radius:999px;background:rgba(0,0,0,.18)"></div><div style="position:absolute;left:222.5px;top:71px;width:14px;height:14px;box-sizing:border-box;border-radius:999px;background:#9CABC2"></div><div style="position:absolute;left:220.5px;top:69px;width:18px;height:18px;box-sizing:border-box;border:2px solid #000;border-radius:999px"></div><div style="position:absolute;left:20px;top:98px;width:28px;height:26px;box-sizing:border-box;border-radius:7px;background:rgba(156,171,194,0.20)"></div><div style="position:absolute;left:51.5px;top:98px;width:28px;height:26px;box-sizing:border-box;border-radius:7px;background:rgba(156,171,194,0.33)"></div><div style="position:absolute;left:83px;top:98px;width:28px;height:26px;box-sizing:border-box;border-radius:7px;background:rgba(156,171,194,0.46)"></div><div style="position:absolute;left:114.5px;top:98px;width:28px;height:26px;box-sizing:border-box;border-radius:7px;background:rgba(156,171,194,0.59)"></div><div style="position:absolute;left:146px;top:98px;width:28px;height:26px;box-sizing:border-box;border-radius:7px;background:rgba(156,171,194,0.72)"></div><div style="position:absolute;left:177.5px;top:98px;width:28px;height:26px;box-sizing:border-box;border-radius:7px;background:rgba(156,171,194,0.85)"></div><div style="position:absolute;left:209px;top:98px;width:28px;height:26px;box-sizing:border-box;border-radius:7px;background:rgba(156,171,194,0.98)"></div></div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Breaks when</div><div>The pasted hex isn't one of the 13 hues.</div></div>
+        <div style="border-top:2px solid #000;padding-top:15px;display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Refinement</div><div style="font-size:15px">A pasted hex becomes a 14th hue for this file. Its shade row is built the same way as the others.</div></div>
+      </div>
+      <div id="5h" style="box-sizing:border-box;border:2px solid #000;border-radius:19px;background:#ECF0F3;padding:20px;display:flex;flex-direction:column;gap:15px;font-size:13px;line-height:1.45;text-wrap:pretty">
+        <div style="display:flex;align-items:center;gap:10px"><span style="border:2px solid #000;border-radius:999px;padding:1px 10px">5h</span><span style="opacity:.6">Anyone choosing a fill near the ground colour</span></div>
+        <div style="position:relative;height:150px;box-sizing:border-box;border:2px solid #000;border-radius:13px;background:#ECF0F3;overflow:hidden"><div style="position:absolute;left:20px;top:12px;width:110px;height:124px;box-sizing:border-box;border:2px solid #000;background:#ECF0F3;"><div style="position:absolute;left:12px;top:16px;width:80px;height:7px;box-sizing:border-box;background:rgba(156,171,194,.55)"></div><div style="position:absolute;left:12px;top:27px;width:56px;height:7px;box-sizing:border-box;background:rgba(156,171,194,.55)"></div><div style="position:absolute;left:12px;top:52px;width:80px;height:3px;box-sizing:border-box;background:#9CABC2;opacity:0.6"></div><div style="position:absolute;left:12px;top:60px;width:66px;height:3px;box-sizing:border-box;background:#9CABC2;opacity:0.6"></div><div style="position:absolute;left:12px;top:68px;width:74px;height:3px;box-sizing:border-box;background:#9CABC2;opacity:0.6"></div><div style="position:absolute;left:12px;top:76px;width:48px;height:3px;box-sizing:border-box;background:#9CABC2;opacity:0.6"></div></div><div style="position:absolute;left:142px;top:18px;font-size:11px;line-height:1;white-space:nowrap;opacity:.6">Contrast</div><div style="position:absolute;left:142px;top:32px;width:94px;height:28px;box-sizing:border-box;border:2px solid #000;border-radius:9px;display:flex;align-items:center;padding:0 8px;font-size:11px">2.1 : 1 &nbsp;fails</div><div style="position:absolute;left:142px;top:74px;font-size:11px;line-height:1;white-space:nowrap;opacity:.6">Nearest pass</div><div style="position:absolute;left:142px;top:88px;width:94px;height:28px;box-sizing:border-box;background:#000;color:#fff;border-radius:9px;display:flex;align-items:center;padding:0 8px;font-size:11px">4.6 : 1 &nbsp;use</div></div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Breaks when</div><div>Headline becomes unreadable.</div></div>
+        <div style="border-top:2px solid #000;padding-top:15px;display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Refinement</div><div style="font-size:15px">When text falls below 4.5:1, the hex field shows the ratio and offers the nearest passing shade from the same row.</div></div>
+      </div>
+      <div id="5i" style="box-sizing:border-box;border:2px solid #000;border-radius:19px;background:#ECF0F3;padding:20px;display:flex;flex-direction:column;gap:15px;font-size:13px;line-height:1.45;text-wrap:pretty">
+        <div style="display:flex;align-items:center;gap:10px"><span style="border:2px solid #000;border-radius:999px;padding:1px 10px">5i</span><span style="opacity:.6">User switching to dark ground after colouring</span></div>
+        <div style="position:relative;height:150px;box-sizing:border-box;border:2px solid #000;border-radius:13px;background:#ECF0F3;overflow:hidden"><div style="position:absolute;left:28px;top:12px;width:92px;height:100px;box-sizing:border-box;border:2px solid #000;background:#ECF0F3;"><div style="position:absolute;left:10px;top:12px;width:64px;height:7px;box-sizing:border-box;background:#000"></div><div style="position:absolute;left:10px;top:23px;width:44.8px;height:7px;box-sizing:border-box;background:#000"></div><div style="position:absolute;left:10px;top:48px;width:60px;height:3px;box-sizing:border-box;background:#000;opacity:0.55"></div><div style="position:absolute;left:10px;top:56px;width:49px;height:3px;box-sizing:border-box;background:#000;opacity:0.55"></div><div style="position:absolute;left:10px;top:64px;width:55px;height:3px;box-sizing:border-box;background:#000;opacity:0.55"></div><div style="position:absolute;left:10px;top:72px;width:36px;height:3px;box-sizing:border-box;background:#000;opacity:0.55"></div></div><div style="position:absolute;left:136px;top:12px;width:92px;height:100px;box-sizing:border-box;border:2px solid #000;background:#ECF0F3;background:#000"><div style="position:absolute;left:10px;top:12px;width:64px;height:7px;box-sizing:border-box;background:#ECF0F3"></div><div style="position:absolute;left:10px;top:23px;width:44.8px;height:7px;box-sizing:border-box;background:#ECF0F3"></div><div style="position:absolute;left:10px;top:48px;width:60px;height:3px;box-sizing:border-box;background:#ECF0F3;opacity:0.7"></div><div style="position:absolute;left:10px;top:56px;width:49px;height:3px;box-sizing:border-box;background:#ECF0F3;opacity:0.7"></div><div style="position:absolute;left:10px;top:64px;width:55px;height:3px;box-sizing:border-box;background:#ECF0F3;opacity:0.7"></div><div style="position:absolute;left:10px;top:72px;width:36px;height:3px;box-sizing:border-box;background:#ECF0F3;opacity:0.7"></div></div><div style="position:absolute;left:0;right:0;top:124px;display:flex;justify-content:center;align-items:center;gap:6px;font-size:11px;line-height:1"><span>Hold</span><span style="width:16px;height:16px;border-radius:999px;border:2px solid #000;background:#ECF0F3;box-sizing:border-box"></span><span style="width:16px;height:16px;border-radius:999px;border:2px solid #000;background:#000;box-sizing:border-box"></span></div></div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Breaks when</div><div>Roles shift in ways that are hard to predict.</div></div>
+        <div style="border-top:2px solid #000;padding-top:15px;display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Refinement</div><div style="font-size:15px">Roles keep their names and mirror on the 7-step scale. Holding the ground toggle previews the other ground.</div></div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:180px repeat(4,300px);gap:20px;align-items:stretch">
+      <div style="display:flex;flex-direction:column;gap:6px;padding-top:20px"><div style="font-size:20px;letter-spacing:-0.045em">Move and snap</div><div style="font-size:13px;opacity:.6">Dragging, nudging, rotating</div></div>
+      <div id="5j" style="box-sizing:border-box;border:2px solid #000;border-radius:19px;background:#ECF0F3;padding:20px;display:flex;flex-direction:column;gap:15px;font-size:13px;line-height:1.45;text-wrap:pretty">
+        <div style="display:flex;align-items:center;gap:10px"><span style="border:2px solid #000;border-radius:999px;padding:1px 10px">5j</span><span style="opacity:.6">Designer placing one block deliberately off-grid</span></div>
+        <div style="position:relative;height:150px;box-sizing:border-box;border:2px solid #000;border-radius:13px;background:#ECF0F3;overflow:hidden"><div style="position:absolute;left:20px;top:12px;width:216px;height:124px;box-sizing:border-box;border:2px solid #000;background:#ECF0F3;overflow:hidden"><div style="position:absolute;left:72px;top:0px;width:1px;height:124px;box-sizing:border-box;background:#000;opacity:.2"></div><div style="position:absolute;left:144px;top:0px;width:1px;height:124px;box-sizing:border-box;background:#000;opacity:.2"></div><div style="position:absolute;left:0px;top:62px;width:216px;height:1px;box-sizing:border-box;background:#000;opacity:.2"></div><div style="position:absolute;left:92px;top:30px;width:60px;height:40px;box-sizing:border-box;background:#9CABC2;border:2px solid #000"></div><div style="position:absolute;left:150px;top:66px;width:10px;height:10px;box-sizing:border-box;border-left:2px solid #000;border-top:2px solid #000;transform:rotate(-20deg)"></div></div><div style="position:absolute;left:0;right:0;top:110px;display:flex;justify-content:center;align-items:center;gap:6px;font-size:11px;line-height:1"><span style="border:2px solid #000;border-radius:6px;padding:2px 6px;font-size:11px;line-height:1;background:#ECF0F3">Alt</span><span>held, snap off</span></div></div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Breaks when</div><div>Snapping pulls it back every time.</div></div>
+        <div style="border-top:2px solid #000;padding-top:15px;display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Refinement</div><div style="font-size:15px">Hold Alt to drag without snapping. Release Alt and snapping returns.</div></div>
+      </div>
+      <div id="5k" style="box-sizing:border-box;border:2px solid #000;border-radius:19px;background:#ECF0F3;padding:20px;display:flex;flex-direction:column;gap:15px;font-size:13px;line-height:1.45;text-wrap:pretty">
+        <div style="display:flex;align-items:center;gap:10px"><span style="border:2px solid #000;border-radius:999px;padding:1px 10px">5k</span><span style="opacity:.6">Anyone moving small objects in a busy layout</span></div>
+        <div style="position:relative;height:150px;box-sizing:border-box;border:2px solid #000;border-radius:13px;background:#ECF0F3;overflow:hidden"><div style="position:absolute;left:20px;top:12px;width:216px;height:124px;box-sizing:border-box;border:2px solid #000;background:#ECF0F3;overflow:hidden"><div style="position:absolute;left:40px;top:0px;width:1px;height:124px;box-sizing:border-box;border-left:1px dashed rgba(0,0,0,.25)"></div><div style="position:absolute;left:96px;top:0px;width:1px;height:124px;box-sizing:border-box;border-left:1px dashed rgba(0,0,0,.25)"></div><div style="position:absolute;left:0px;top:40px;width:216px;height:1px;box-sizing:border-box;border-top:1px dashed rgba(0,0,0,.25)"></div><div style="position:absolute;left:132px;top:0px;width:1px;height:124px;box-sizing:border-box;background:#000"></div><div style="position:absolute;left:24px;top:24px;width:16px;height:16px;box-sizing:border-box;background:#000"></div><div style="position:absolute;left:80px;top:54px;width:16px;height:16px;box-sizing:border-box;border:2px solid #000"></div><div style="position:absolute;left:112px;top:20px;width:20px;height:20px;box-sizing:border-box;border:2px solid #000"></div><div style="position:absolute;left:132px;top:70px;width:18px;height:18px;box-sizing:border-box;background:#9CABC2;border:2px solid #000"></div><div style="position:absolute;left:138px;top:8px;font-size:11px;line-height:1;white-space:nowrap;">guide</div></div></div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Breaks when</div><div>Many nearby targets make the drag jitter.</div></div>
+        <div style="border-top:2px solid #000;padding-top:15px;display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Refinement</div><div style="font-size:15px">Snap radius scales with zoom. Targets rank guide, then canvas edge, then other objects, and only the winning line draws.</div></div>
+      </div>
+      <div id="5l" style="box-sizing:border-box;border:2px solid #000;border-radius:19px;background:#ECF0F3;padding:20px;display:flex;flex-direction:column;gap:15px;font-size:13px;line-height:1.45;text-wrap:pretty">
+        <div style="display:flex;align-items:center;gap:10px"><span style="border:2px solid #000;border-radius:999px;padding:1px 10px">5l</span><span style="opacity:.6">Keyboard user</span></div>
+        <div style="position:relative;height:150px;box-sizing:border-box;border:2px solid #000;border-radius:13px;background:#ECF0F3;overflow:hidden"><div style="position:absolute;left:20px;top:12px;width:216px;height:124px;box-sizing:border-box;border:2px solid #000;background:#ECF0F3;overflow:hidden"><div style="position:absolute;left:0px;top:0px;width:1px;height:124px;box-sizing:border-box;background:#000;opacity:.12"></div><div style="position:absolute;left:27px;top:0px;width:1px;height:124px;box-sizing:border-box;background:#000;opacity:.12"></div><div style="position:absolute;left:54px;top:0px;width:1px;height:124px;box-sizing:border-box;background:#000;opacity:.12"></div><div style="position:absolute;left:81px;top:0px;width:1px;height:124px;box-sizing:border-box;background:#000;opacity:.12"></div><div style="position:absolute;left:108px;top:0px;width:1px;height:124px;box-sizing:border-box;background:#000;opacity:.12"></div><div style="position:absolute;left:135px;top:0px;width:1px;height:124px;box-sizing:border-box;background:#000;opacity:.12"></div><div style="position:absolute;left:162px;top:0px;width:1px;height:124px;box-sizing:border-box;background:#000;opacity:.12"></div><div style="position:absolute;left:189px;top:0px;width:1px;height:124px;box-sizing:border-box;background:#000;opacity:.12"></div><div style="position:absolute;left:0px;top:0px;width:216px;height:1px;box-sizing:border-box;background:#000;opacity:.12"></div><div style="position:absolute;left:0px;top:27px;width:216px;height:1px;box-sizing:border-box;background:#000;opacity:.12"></div><div style="position:absolute;left:0px;top:54px;width:216px;height:1px;box-sizing:border-box;background:#000;opacity:.12"></div><div style="position:absolute;left:0px;top:81px;width:216px;height:1px;box-sizing:border-box;background:#000;opacity:.12"></div><div style="position:absolute;left:0px;top:108px;width:216px;height:1px;box-sizing:border-box;background:#000;opacity:.12"></div><div style="position:absolute;left:54px;top:27px;width:54px;height:27px;box-sizing:border-box;border:2px dashed rgba(0,0,0,.3)"></div><div style="position:absolute;left:81px;top:27px;width:54px;height:27px;box-sizing:border-box;background:#000"></div><div style="position:absolute;left:112px;top:62px;font-size:11px;line-height:1;white-space:nowrap;">+1 cell</div></div><div style="position:absolute;left:0;right:0;top:110px;display:flex;justify-content:center;align-items:center;gap:6px;font-size:11px;line-height:1"><span style="border:2px solid #000;border-radius:6px;padding:2px 6px;font-size:11px;line-height:1;background:#ECF0F3">Shift</span><span style="border:2px solid #000;border-radius:6px;padding:2px 6px;font-size:11px;line-height:1;background:#ECF0F3">→</span></div></div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Breaks when</div><div>Arrow keys move the object while a text field has focus.</div></div>
+        <div style="border-top:2px solid #000;padding-top:15px;display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Refinement</div><div style="font-size:15px">Arrows move objects only when no field is focused. Shift+arrow moves one grid cell.</div></div>
+      </div>
+      <div id="5m" style="box-sizing:border-box;border:2px solid #000;border-radius:19px;background:#ECF0F3;padding:20px;display:flex;flex-direction:column;gap:15px;font-size:13px;line-height:1.45;text-wrap:pretty">
+        <div style="display:flex;align-items:center;gap:10px"><span style="border:2px solid #000;border-radius:999px;padding:1px 10px">5m</span><span style="opacity:.6">Anyone rotating a text block</span></div>
+        <div style="position:relative;height:150px;box-sizing:border-box;border:2px solid #000;border-radius:13px;background:#ECF0F3;overflow:hidden"><div style="position:absolute;left:20px;top:12px;width:216px;height:124px;box-sizing:border-box;border:2px solid #000;background:#ECF0F3;overflow:hidden"><div style="position:absolute;left:0px;top:0px;width:216px;height:124px;box-sizing:border-box;transform:rotate(-14deg)"><div style="position:absolute;left:64px;top:30px;width:88px;height:46px;box-sizing:border-box;border:2px solid #000;background:#ECF0F3"><div style="position:absolute;left:8px;top:8px;width:60px;height:7px;box-sizing:border-box;background:#000"></div><div style="position:absolute;left:8px;top:19px;width:42px;height:7px;box-sizing:border-box;background:#000"></div></div><div style="position:absolute;left:-40px;top:76px;width:296px;height:1px;box-sizing:border-box;background:#000"></div><div style="position:absolute;left:61px;top:73px;width:6px;height:6px;box-sizing:border-box;border-radius:999px;background:#000"></div><div style="position:absolute;left:149px;top:73px;width:6px;height:6px;box-sizing:border-box;border-radius:999px;background:#000"></div></div></div></div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Breaks when</div><div>Snaps use the unrotated bounding box and look misaligned.</div></div>
+        <div style="border-top:2px solid #000;padding-top:15px;display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Refinement</div><div style="font-size:15px">Rotated objects snap on their own edges and corners.</div></div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:180px repeat(4,300px);gap:20px;align-items:stretch">
+      <div style="display:flex;flex-direction:column;gap:6px;padding-top:20px"><div style="font-size:20px;letter-spacing:-0.045em">Images</div><div style="font-size:13px;opacity:.6">Dropping, cutting out, placing</div></div>
+      <div id="5n" style="box-sizing:border-box;border:2px solid #000;border-radius:19px;background:#ECF0F3;padding:20px;display:flex;flex-direction:column;gap:15px;font-size:13px;line-height:1.45;text-wrap:pretty">
+        <div style="display:flex;align-items:center;gap:10px"><span style="border:2px solid #000;border-radius:999px;padding:1px 10px">5n</span><span style="opacity:.6">Photographer dropping a 6000px photo</span></div>
+        <div style="position:relative;height:150px;box-sizing:border-box;border:2px solid #000;border-radius:13px;background:#ECF0F3;overflow:hidden"><div style="position:absolute;left:20px;top:14px;width:120px;height:100px;box-sizing:border-box;background:rgba(156,171,194,.35);border:2px solid #9CABC2"></div><div style="position:absolute;left:156px;top:30px;font-size:11px;line-height:1;white-space:nowrap;opacity:.6;text-decoration:line-through">6000 px</div><div style="position:absolute;left:156px;top:50px;font-size:11px;line-height:1;white-space:nowrap;font-size:13px">2160 px</div><div style="position:absolute;left:156px;top:76px;font-size:11px;line-height:1;white-space:nowrap;opacity:.6">original kept</div><div style="position:absolute;left:156px;top:90px;font-size:11px;line-height:1;white-space:nowrap;opacity:.6">for full-res export</div></div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Breaks when</div><div>Canvas slows down and exports get heavy.</div></div>
+        <div style="border-top:2px solid #000;padding-top:15px;display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Refinement</div><div style="font-size:15px">Downscale on drop to twice the export size. Keep the original, used only for a full-resolution export.</div></div>
+      </div>
+      <div id="5o" style="box-sizing:border-box;border:2px solid #000;border-radius:19px;background:#ECF0F3;padding:20px;display:flex;flex-direction:column;gap:15px;font-size:13px;line-height:1.45;text-wrap:pretty">
+        <div style="display:flex;align-items:center;gap:10px"><span style="border:2px solid #000;border-radius:999px;padding:1px 10px">5o</span><span style="opacity:.6">Anyone removing a background from a busy photo</span></div>
+        <div style="position:relative;height:150px;box-sizing:border-box;border:2px solid #000;border-radius:13px;background:#ECF0F3;overflow:hidden"><div style="position:absolute;left:20px;top:10px;width:216px;height:98px;box-sizing:border-box;background:rgba(156,171,194,.35);border:2px solid #9CABC2"><div style="position:absolute;left:84px;top:14px;width:40px;height:40px;box-sizing:border-box;border-radius:999px;background:#9CABC2"></div><div style="position:absolute;left:70px;top:58px;width:68px;height:36px;box-sizing:border-box;border-radius:20px 20px 0 0;background:#9CABC2"></div></div><div style="position:absolute;left:0;right:0;top:120px;display:flex;justify-content:center;align-items:center;gap:6px;font-size:11px;line-height:1"><span style="display:flex;border:2px solid #000;border-radius:9px;overflow:hidden"><span style="padding:4px 12px">Before</span><span style="padding:4px 12px;background:#000;color:#fff">After</span></span></div></div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Breaks when</div><div>The cut-out is wrong and the original is gone.</div></div>
+        <div style="border-top:2px solid #000;padding-top:15px;display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Refinement</div><div style="font-size:15px">Remove background adds a before/after toggle on the object. The original is never replaced.</div></div>
+      </div>
+      <div id="5p" style="box-sizing:border-box;border:2px solid #000;border-radius:19px;background:#ECF0F3;padding:20px;display:flex;flex-direction:column;gap:15px;font-size:13px;line-height:1.45;text-wrap:pretty">
+        <div style="display:flex;align-items:center;gap:10px"><span style="border:2px solid #000;border-radius:999px;padding:1px 10px">5p</span><span style="opacity:.6">User dropping an image onto the canvas</span></div>
+        <div style="position:relative;height:150px;box-sizing:border-box;border:2px solid #000;border-radius:13px;background:#ECF0F3;overflow:hidden"><div style="position:absolute;left:20px;top:12px;width:216px;height:124px;box-sizing:border-box;border:2px solid #000;background:#ECF0F3;overflow:hidden"><div style="position:absolute;left:16px;top:20px;width:80px;height:84px;box-sizing:border-box;background:rgba(156,171,194,.35);border:2px solid #9CABC2"></div><div style="position:absolute;left:12px;top:16px;width:88px;height:92px;box-sizing:border-box;border:2px dashed #000"></div><div style="position:absolute;left:40px;top:56px;font-size:11px;line-height:1;white-space:nowrap;font-size:11px">fill</div><div style="position:absolute;left:120px;top:28px;width:4px;height:4px;box-sizing:border-box;border-radius:999px;background:rgba(0,0,0,.3)"></div><div style="position:absolute;left:120px;top:60px;width:4px;height:4px;box-sizing:border-box;border-radius:999px;background:rgba(0,0,0,.3)"></div><div style="position:absolute;left:120px;top:92px;width:4px;height:4px;box-sizing:border-box;border-radius:999px;background:rgba(0,0,0,.3)"></div><div style="position:absolute;left:146px;top:28px;width:4px;height:4px;box-sizing:border-box;border-radius:999px;background:rgba(0,0,0,.3)"></div><div style="position:absolute;left:146px;top:60px;width:4px;height:4px;box-sizing:border-box;border-radius:999px;background:rgba(0,0,0,.3)"></div><div style="position:absolute;left:146px;top:92px;width:4px;height:4px;box-sizing:border-box;border-radius:999px;background:rgba(0,0,0,.3)"></div><div style="position:absolute;left:172px;top:28px;width:4px;height:4px;box-sizing:border-box;border-radius:999px;background:rgba(0,0,0,.3)"></div><div style="position:absolute;left:172px;top:60px;width:4px;height:4px;box-sizing:border-box;border-radius:999px;background:rgba(0,0,0,.3)"></div><div style="position:absolute;left:172px;top:92px;width:4px;height:4px;box-sizing:border-box;border-radius:999px;background:rgba(0,0,0,.3)"></div><div style="position:absolute;left:198px;top:28px;width:4px;height:4px;box-sizing:border-box;border-radius:999px;background:rgba(0,0,0,.3)"></div><div style="position:absolute;left:198px;top:60px;width:4px;height:4px;box-sizing:border-box;border-radius:999px;background:rgba(0,0,0,.3)"></div><div style="position:absolute;left:198px;top:92px;width:4px;height:4px;box-sizing:border-box;border-radius:999px;background:rgba(0,0,0,.3)"></div><div style="position:absolute;left:148px;top:30px;width:52px;height:32px;box-sizing:border-box;border:2px dashed #000"></div><div style="position:absolute;left:158px;top:42px;font-size:11px;line-height:1;white-space:nowrap;">new</div><div style="position:absolute;left:64px;top:66px;width:34px;height:26px;box-sizing:border-box;background:rgba(156,171,194,.35);border:2px solid #9CABC2"></div></div></div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Breaks when</div><div>Unclear whether it replaces a block or adds a new one.</div></div>
+        <div style="border-top:2px solid #000;padding-top:15px;display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Refinement</div><div style="font-size:15px">Dropping on an image block fills it, cropped to cover. Dropping elsewhere adds a new object at the nearest cell.</div></div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:180px repeat(4,300px);gap:20px;align-items:stretch">
+      <div style="display:flex;flex-direction:column;gap:6px;padding-top:20px"><div style="font-size:20px;letter-spacing:-0.045em">Text</div><div style="font-size:13px;opacity:.6">Long copy, other scripts</div></div>
+      <div id="5q" style="box-sizing:border-box;border:2px solid #000;border-radius:19px;background:#ECF0F3;padding:20px;display:flex;flex-direction:column;gap:15px;font-size:13px;line-height:1.45;text-wrap:pretty">
+        <div style="display:flex;align-items:center;gap:10px"><span style="border:2px solid #000;border-radius:999px;padding:1px 10px">5q</span><span style="opacity:.6">Event organiser pasting a long title</span></div>
+        <div style="position:relative;height:150px;box-sizing:border-box;border:2px solid #000;border-radius:13px;background:#ECF0F3;overflow:hidden"><div style="position:absolute;left:20px;top:12px;width:150px;height:124px;box-sizing:border-box;border:2px solid #000;background:#ECF0F3;overflow:hidden"><div style="position:absolute;left:10px;top:10px;width:124px;height:7px;box-sizing:border-box;background:#000"></div><div style="position:absolute;left:10px;top:21px;width:86.8px;height:7px;box-sizing:border-box;background:#000"></div><div style="position:absolute;left:10px;top:32px;width:124px;height:7px;box-sizing:border-box;background:#000"></div><div style="position:absolute;left:10px;top:43px;width:90px;height:7px;box-sizing:border-box;background:#000"></div><div style="position:absolute;left:0px;top:62px;width:150px;height:1px;box-sizing:border-box;background:#000;opacity:.25"></div><div style="position:absolute;left:132px;top:52px;width:10px;height:2px;box-sizing:border-box;background:#000"></div><div style="position:absolute;left:10px;top:78px;width:110px;height:3px;box-sizing:border-box;background:#000;opacity:0.55"></div><div style="position:absolute;left:10px;top:86px;width:90px;height:3px;box-sizing:border-box;background:#000;opacity:0.55"></div><div style="position:absolute;left:10px;top:94px;width:101px;height:3px;box-sizing:border-box;background:#000;opacity:0.55"></div><div style="position:absolute;left:10px;top:102px;width:66px;height:3px;box-sizing:border-box;background:#000;opacity:0.55"></div></div><div style="position:absolute;left:186px;top:24px;font-size:11px;line-height:1;white-space:nowrap;opacity:.6;text-decoration:line-through">64</div><div style="position:absolute;left:186px;top:44px;font-size:11px;line-height:1;white-space:nowrap;opacity:.6;text-decoration:line-through">48</div><div style="position:absolute;left:186px;top:64px;font-size:11px;line-height:1;white-space:nowrap;font-size:13px">40</div><div style="position:absolute;left:186px;top:92px;font-size:11px;line-height:1;white-space:nowrap;opacity:.6">body floor</div></div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Breaks when</div><div>Headline overflows its block.</div></div>
+        <div style="border-top:2px solid #000;padding-top:15px;display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Refinement</div><div style="font-size:15px">Size steps down the type scale until it fits, stopping at body size. Past that the block grows and marks where it crosses the guide.</div></div>
+      </div>
+      <div id="5r" style="box-sizing:border-box;border:2px solid #000;border-radius:19px;background:#ECF0F3;padding:20px;display:flex;flex-direction:column;gap:15px;font-size:13px;line-height:1.45;text-wrap:pretty">
+        <div style="display:flex;align-items:center;gap:10px"><span style="border:2px solid #000;border-radius:999px;padding:1px 10px">5r</span><span style="opacity:.6">Arabic or Japanese copy</span></div>
+        <div style="position:relative;height:150px;box-sizing:border-box;border:2px solid #000;border-radius:13px;background:#ECF0F3;overflow:hidden"><div style="position:absolute;left:20px;top:12px;width:216px;height:124px;box-sizing:border-box;border:2px solid #000;background:#ECF0F3;overflow:hidden"><div style="position:absolute;right:16px;top:16px;font-size:20px;line-height:1.2;direction:rtl">مساحة بين</div><div style="position:absolute;left:70px;top:58px;width:128px;height:3px;box-sizing:border-box;background:#000;opacity:0.55"></div><div style="position:absolute;left:93px;top:66px;width:105px;height:3px;box-sizing:border-box;background:#000;opacity:0.55"></div><div style="position:absolute;left:80px;top:74px;width:118px;height:3px;box-sizing:border-box;background:#000;opacity:0.55"></div><div style="position:absolute;left:121px;top:82px;width:77px;height:3px;box-sizing:border-box;background:#000;opacity:0.55"></div></div><div style="position:absolute;left:0;right:0;top:110px;display:flex;justify-content:center;align-items:center;gap:6px;font-size:11px;line-height:1"><span style="border:2px solid #000;border-radius:999px;padding:3px 10px;font-size:11px;line-height:1;white-space:nowrap;background:#ECF0F3">Align start</span></div></div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Breaks when</div><div>Fallback font looks wrong; left-align is wrong for right-to-left.</div></div>
+        <div style="border-top:2px solid #000;padding-top:15px;display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Refinement</div><div style="font-size:15px">Fallback font chosen per script. Align-left becomes align-start, so right-to-left text aligns right.</div></div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:180px repeat(4,300px);gap:20px;align-items:stretch">
+      <div style="display:flex;flex-direction:column;gap:6px;padding-top:20px"><div style="font-size:20px;letter-spacing:-0.045em">Shapes and icons</div><div style="font-size:13px;opacity:.6">Free icon library as reusable shapes</div></div>
+      <div id="5s" style="box-sizing:border-box;border:2px solid #000;border-radius:19px;background:#ECF0F3;padding:20px;display:flex;flex-direction:column;gap:15px;font-size:13px;line-height:1.45;text-wrap:pretty">
+        <div style="display:flex;align-items:center;gap:10px"><span style="border:2px solid #000;border-radius:999px;padding:1px 10px">5s</span><span style="opacity:.6">Anyone searching the library</span></div>
+        <div style="position:relative;height:150px;box-sizing:border-box;border:2px solid #000;border-radius:13px;background:#ECF0F3;overflow:hidden"><div style="position:absolute;left:20px;top:12px;width:216px;height:30px;box-sizing:border-box;border:2px solid #000;border-radius:9px;display:flex;align-items:center;padding:0 10px;font-size:11px">coffee</div><div style="position:absolute;left:20px;top:52px;width:60px;height:50px;box-sizing:border-box;border:2px solid #000;background:#ECF0F3;border-radius:9px"><div style="position:absolute;left:18px;top:14px;width:18px;height:20px;box-sizing:border-box;border:2px solid #000;border-top:none;border-radius:0 0 6px 6px"></div><div style="position:absolute;left:35px;top:18px;width:8px;height:10px;box-sizing:border-box;border:2px solid #000;border-left:none;border-radius:0 6px 6px 0"></div></div><div style="position:absolute;left:20px;top:112px;font-size:11px;line-height:1;white-space:nowrap;">cup</div><div style="position:absolute;left:98px;top:52px;width:60px;height:50px;box-sizing:border-box;border:2px solid #000;background:#ECF0F3;border-radius:9px"><div style="position:absolute;left:18px;top:14px;width:18px;height:20px;box-sizing:border-box;border:2px solid #000;border-top:none;border-radius:0 0 6px 6px"></div><div style="position:absolute;left:35px;top:18px;width:8px;height:10px;box-sizing:border-box;border:2px solid #000;border-left:none;border-radius:0 6px 6px 0"></div></div><div style="position:absolute;left:98px;top:112px;font-size:11px;line-height:1;white-space:nowrap;">mug</div><div style="position:absolute;left:176px;top:52px;width:60px;height:50px;box-sizing:border-box;border:2px solid #000;background:#ECF0F3;border-radius:9px"><div style="position:absolute;left:18px;top:14px;width:18px;height:20px;box-sizing:border-box;border:2px solid #000;border-top:none;border-radius:0 0 6px 6px"></div><div style="position:absolute;left:35px;top:18px;width:8px;height:10px;box-sizing:border-box;border:2px solid #000;border-left:none;border-radius:0 6px 6px 0"></div></div><div style="position:absolute;left:176px;top:112px;font-size:11px;line-height:1;white-space:nowrap;">café</div></div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Breaks when</div><div>“Coffee” returns nothing.</div></div>
+        <div style="border-top:2px solid #000;padding-top:15px;display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Refinement</div><div style="font-size:15px">Search matches synonyms. An empty result shows the nearest category instead of a blank panel.</div></div>
+      </div>
+      <div id="5t" style="box-sizing:border-box;border:2px solid #000;border-radius:19px;background:#ECF0F3;padding:20px;display:flex;flex-direction:column;gap:15px;font-size:13px;line-height:1.45;text-wrap:pretty">
+        <div style="display:flex;align-items:center;gap:10px"><span style="border:2px solid #000;border-radius:999px;padding:1px 10px">5t</span><span style="opacity:.6">User recolouring a placed icon</span></div>
+        <div style="position:relative;height:150px;box-sizing:border-box;border:2px solid #000;border-radius:13px;background:#ECF0F3;overflow:hidden"><div style="position:absolute;left:30px;top:18px;width:64px;height:64px;box-sizing:border-box;border-radius:999px;background:#9CABC2"><div style="position:absolute;left:18px;top:18px;width:28px;height:28px;box-sizing:border-box;background:#000"></div></div><div style="position:absolute;left:112px;top:44px;font-size:11px;line-height:1;white-space:nowrap;font-size:16px">→</div><div style="position:absolute;left:150px;top:18px;width:64px;height:64px;box-sizing:border-box;border-radius:999px;border:2px solid #000"><div style="position:absolute;left:16px;top:16px;width:28px;height:28px;box-sizing:border-box;background:#000"></div></div><div style="position:absolute;left:0;right:0;top:112px;display:flex;justify-content:center;align-items:center;gap:6px;font-size:11px;line-height:1"><span style="opacity:.6">Flattened to one ink</span></div></div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Breaks when</div><div>Multi-colour icons don't take a single fill.</div></div>
+        <div style="border-top:2px solid #000;padding-top:15px;display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Refinement</div><div style="font-size:15px">Icons import single-ink, so one fill tap recolours them. Multi-colour sources are flattened on import with a short note.</div></div>
+      </div>
+      <div id="5u" style="box-sizing:border-box;border:2px solid #000;border-radius:19px;background:#ECF0F3;padding:20px;display:flex;flex-direction:column;gap:15px;font-size:13px;line-height:1.45;text-wrap:pretty">
+        <div style="display:flex;align-items:center;gap:10px"><span style="border:2px solid #000;border-radius:999px;padding:1px 10px">5u</span><span style="opacity:.6">Anyone publishing commercially</span></div>
+        <div style="position:relative;height:150px;box-sizing:border-box;border:2px solid #000;border-radius:13px;background:#ECF0F3;overflow:hidden"><div style="position:absolute;left:20px;top:12px;width:216px;height:84px;box-sizing:border-box;border:2px solid #000;border-radius:9px;padding:10px;display:flex;flex-direction:column;gap:6px;font-size:11px;line-height:1"><span style="opacity:.6">&lt;metadata&gt;</span><span>&nbsp;&nbsp;licence &nbsp;CC0</span><span>&nbsp;&nbsp;source &nbsp;icon set</span><span style="opacity:.6">&lt;/metadata&gt;</span></div><div style="position:absolute;left:0;right:0;top:112px;display:flex;justify-content:center;align-items:center;gap:6px;font-size:11px;line-height:1"><span style="border:2px solid #000;border-radius:999px;padding:3px 10px;font-size:11px;line-height:1;white-space:nowrap;background:#ECF0F3">Openly licensed sets only</span></div></div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Breaks when</div><div>Unsure whether an icon can be used.</div></div>
+        <div style="border-top:2px solid #000;padding-top:15px;display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Refinement</div><div style="font-size:15px">The library lists only openly licensed sets. Each icon's licence travels into the SVG export metadata.</div></div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:180px repeat(4,300px);gap:20px;align-items:stretch">
+      <div style="display:flex;flex-direction:column;gap:6px;padding-top:20px"><div style="font-size:20px;letter-spacing:-0.045em">Re-ratio</div><div style="font-size:13px;opacity:.6">One design, several sizes</div></div>
+      <div id="5v" style="box-sizing:border-box;border:2px solid #000;border-radius:19px;background:#ECF0F3;padding:20px;display:flex;flex-direction:column;gap:15px;font-size:13px;line-height:1.45;text-wrap:pretty">
+        <div style="display:flex;align-items:center;gap:10px"><span style="border:2px solid #000;border-radius:999px;padding:1px 10px">5v</span><span style="opacity:.6">Club needing the same poster as post, story and banner</span></div>
+        <div style="position:relative;height:150px;box-sizing:border-box;border:2px solid #000;border-radius:13px;background:#ECF0F3;overflow:hidden"><div style="position:absolute;left:20px;top:34px;width:60px;height:60px;box-sizing:border-box;border:2px solid #000;background:#ECF0F3;overflow:visible"><div style="position:absolute;left:20px;top:0px;width:1px;height:56px;box-sizing:border-box;background:#000;opacity:.25"></div><div style="position:absolute;left:0px;top:20px;width:56px;height:1px;box-sizing:border-box;background:#000;opacity:.25"></div><div style="position:absolute;left:17px;top:17px;width:6px;height:6px;box-sizing:border-box;border-radius:999px;background:#000"></div><div style="position:absolute;left:20px;top:20px;width:30px;height:24px;box-sizing:border-box;background:#9CABC2"></div></div><div style="position:absolute;left:98px;top:22px;width:40px;height:72px;box-sizing:border-box;border:2px solid #000;background:#ECF0F3;overflow:visible"><div style="position:absolute;left:13.333333333333334px;top:0px;width:1px;height:68px;box-sizing:border-box;background:#000;opacity:.25"></div><div style="position:absolute;left:0px;top:24px;width:36px;height:1px;box-sizing:border-box;background:#000;opacity:.25"></div><div style="position:absolute;left:10.333333333333334px;top:21px;width:6px;height:6px;box-sizing:border-box;border-radius:999px;background:#000"></div><div style="position:absolute;left:13.333333333333334px;top:24px;width:20px;height:28.8px;box-sizing:border-box;background:#9CABC2"></div></div><div style="position:absolute;left:156px;top:40px;width:82px;height:36px;box-sizing:border-box;border:2px solid #000;background:#ECF0F3;overflow:visible"><div style="position:absolute;left:27.333333333333332px;top:0px;width:1px;height:32px;box-sizing:border-box;background:#000;opacity:.25"></div><div style="position:absolute;left:0px;top:12px;width:78px;height:1px;box-sizing:border-box;background:#000;opacity:.25"></div><div style="position:absolute;left:24.333333333333332px;top:9px;width:6px;height:6px;box-sizing:border-box;border-radius:999px;background:#000"></div><div style="position:absolute;left:27.333333333333332px;top:12px;width:36.9px;height:19.8px;box-sizing:border-box;background:#9CABC2"></div></div><div style="position:absolute;left:228px;top:30px;width:16px;height:16px;box-sizing:border-box;border-radius:999px;background:#000;color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center">!</div><div style="position:absolute;left:0;right:0;top:116px;display:flex;justify-content:center;align-items:center;gap:6px;font-size:11px;line-height:1"><span style="opacity:.6">Anchored to the same intersection</span></div></div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Breaks when</div><div>Re-ratio pushes blocks off the guides.</div></div>
+        <div style="border-top:2px solid #000;padding-top:15px;display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Refinement</div><div style="font-size:15px">Blocks re-anchor to the same guide intersection in the new ratio. Anything that can't fit is flagged, not cropped.</div></div>
+      </div>
+      <div id="5w" style="box-sizing:border-box;border:2px solid #000;border-radius:19px;background:#ECF0F3;padding:20px;display:flex;flex-direction:column;gap:15px;font-size:13px;line-height:1.45;text-wrap:pretty">
+        <div style="display:flex;align-items:center;gap:10px"><span style="border:2px solid #000;border-radius:999px;padding:1px 10px">5w</span><span style="opacity:.6">User editing one size after making the others</span></div>
+        <div style="position:relative;height:150px;box-sizing:border-box;border:2px solid #000;border-radius:13px;background:#ECF0F3;overflow:hidden"><div style="position:absolute;left:28px;top:18px;width:72px;height:72px;box-sizing:border-box;border:2px solid #000;background:#ECF0F3;"><div style="position:absolute;left:8px;top:8px;width:50px;height:7px;box-sizing:border-box;background:#000"></div><div style="position:absolute;left:8px;top:19px;width:35px;height:7px;box-sizing:border-box;background:#000"></div><div style="position:absolute;left:8px;top:40px;width:50px;height:3px;box-sizing:border-box;background:#000;opacity:0.55"></div><div style="position:absolute;left:8px;top:48px;width:41px;height:3px;box-sizing:border-box;background:#000;opacity:0.55"></div><div style="position:absolute;left:8px;top:56px;width:46px;height:3px;box-sizing:border-box;background:#000;opacity:0.55"></div></div><div style="position:absolute;left:162px;top:10px;width:50px;height:88px;box-sizing:border-box;border:2px solid #000;background:#ECF0F3;"><div style="position:absolute;left:6px;top:8px;width:34px;height:7px;box-sizing:border-box;background:#000"></div><div style="position:absolute;left:6px;top:19px;width:23.799999999999997px;height:7px;box-sizing:border-box;background:#000"></div><div style="position:absolute;left:6px;top:40px;width:34px;height:3px;box-sizing:border-box;background:#000;opacity:0.55"></div><div style="position:absolute;left:6px;top:48px;width:28px;height:3px;box-sizing:border-box;background:#000;opacity:0.55"></div><div style="position:absolute;left:6px;top:56px;width:31px;height:3px;box-sizing:border-box;background:#000;opacity:0.55"></div><div style="position:absolute;left:6px;top:64px;width:20px;height:3px;box-sizing:border-box;background:#000;opacity:0.55"></div></div><div style="position:absolute;left:100px;top:54px;width:62px;height:1px;box-sizing:border-box;border-top:2px dashed #000"></div><div style="position:absolute;left:0;right:0;top:116px;display:flex;justify-content:center;align-items:center;gap:6px;font-size:11px;line-height:1"><span style="border:2px solid #000;border-radius:999px;padding:3px 10px;font-size:11px;line-height:1;white-space:nowrap;background:#ECF0F3">Text + colour linked</span><span style="opacity:.6">position local</span></div></div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Breaks when</div><div>The other sizes go out of date.</div></div>
+        <div style="border-top:2px solid #000;padding-top:15px;display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Refinement</div><div style="font-size:15px">Sizes are linked. Text and colour changes carry across; position changes stay local.</div></div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:180px repeat(4,300px);gap:20px;align-items:stretch">
+      <div style="display:flex;flex-direction:column;gap:6px;padding-top:20px"><div style="font-size:20px;letter-spacing:-0.045em">Export</div><div style="font-size:13px;opacity:.6">PNG, SVG, print</div></div>
+      <div id="5x" style="box-sizing:border-box;border:2px solid #000;border-radius:19px;background:#ECF0F3;padding:20px;display:flex;flex-direction:column;gap:15px;font-size:13px;line-height:1.45;text-wrap:pretty">
+        <div style="display:flex;align-items:center;gap:10px"><span style="border:2px solid #000;border-radius:999px;padding:1px 10px">5x</span><span style="opacity:.6">Student printing at a copy shop</span></div>
+        <div style="position:relative;height:150px;box-sizing:border-box;border:2px solid #000;border-radius:13px;background:#ECF0F3;overflow:hidden"><div style="position:absolute;left:20px;top:10px;width:216px;height:128px;box-sizing:border-box;border:2px solid #000;border-radius:13px;padding:8px;display:flex;flex-direction:column;gap:4px;font-size:11px;line-height:1"><div style="height:32px;border-radius:7px;display:flex;align-items:center;padding:0 10px;">PNG · 1080 px</div><div style="height:32px;border-radius:7px;display:flex;align-items:center;padding:0 10px;">SVG</div><div style="height:32px;border-radius:7px;display:flex;align-items:center;padding:0 10px;background:#000;color:#fff">PDF · A4 · 300 dpi</div></div></div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Breaks when</div><div>Screen-resolution PNG prints soft.</div></div>
+        <div style="border-top:2px solid #000;padding-top:15px;display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Refinement</div><div style="font-size:15px">Export size follows the ratio: A-sizes default to 300 dpi, social ratios to 1080 px wide.</div></div>
+      </div>
+      <div id="5y" style="box-sizing:border-box;border:2px solid #000;border-radius:19px;background:#ECF0F3;padding:20px;display:flex;flex-direction:column;gap:15px;font-size:13px;line-height:1.45;text-wrap:pretty">
+        <div style="display:flex;align-items:center;gap:10px"><span style="border:2px solid #000;border-radius:999px;padding:1px 10px">5y</span><span style="opacity:.6">Anyone with hidden objects</span></div>
+        <div style="position:relative;height:150px;box-sizing:border-box;border:2px solid #000;border-radius:13px;background:#ECF0F3;overflow:hidden"><div style="position:absolute;left:20px;top:10px;width:216px;height:128px;box-sizing:border-box;border:2px solid #000;border-radius:13px;padding:8px;display:flex;flex-direction:column;gap:4px;font-size:11px;line-height:1"><div style="height:32px;border-radius:7px;display:flex;align-items:center;padding:0 10px;background:#000;color:#fff">PNG · 1080 px</div><div style="height:32px;border-radius:7px;display:flex;align-items:center;padding:0 10px;">SVG</div><div style="margin-top:auto;border-top:2px solid #000;padding:10px 10px 4px;opacity:.6">2 hidden objects not included</div></div></div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Breaks when</div><div>Something they expected is missing from the file.</div></div>
+        <div style="border-top:2px solid #000;padding-top:15px;display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Refinement</div><div style="font-size:15px">Hidden objects stay excluded, and the export sheet says how many were left out.</div></div>
+      </div>
+      <div id="5z" style="box-sizing:border-box;border:2px solid #000;border-radius:19px;background:#ECF0F3;padding:20px;display:flex;flex-direction:column;gap:15px;font-size:13px;line-height:1.45;text-wrap:pretty">
+        <div style="display:flex;align-items:center;gap:10px"><span style="border:2px solid #000;border-radius:999px;padding:1px 10px">5z</span><span style="opacity:.6">User making a sticker or logo</span></div>
+        <div style="position:relative;height:150px;box-sizing:border-box;border:2px solid #000;border-radius:13px;background:#ECF0F3;overflow:hidden"><div style="position:absolute;left:20px;top:12px;width:130px;height:124px;box-sizing:border-box;border:2px solid #000;background:repeating-conic-gradient(rgba(0,0,0,.08) 0 25%,transparent 0 50%) 0 0/16px 16px"><div style="position:absolute;left:35px;top:32px;width:56px;height:56px;box-sizing:border-box;border-radius:999px;background:#000"></div></div><div style="position:absolute;left:164px;top:30px;font-size:11px;line-height:1;white-space:nowrap;">No ground</div><div style="position:absolute;left:164px;top:48px;width:40px;height:22px;box-sizing:border-box;border-radius:999px;background:#000"><div style="position:absolute;left:20px;top:3px;width:16px;height:16px;box-sizing:border-box;border-radius:999px;background:#ECF0F3"></div></div><div style="position:absolute;left:164px;top:86px;font-size:11px;line-height:1;white-space:nowrap;opacity:.6">PNG only</div></div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Breaks when</div><div>Wants a transparent background.</div></div>
+        <div style="border-top:2px solid #000;padding-top:15px;display:flex;flex-direction:column;gap:4px"><div style="font-size:11px;opacity:.6">Refinement</div><div style="font-size:15px">PNG offers “No ground” whenever the ground hasn't been filled.</div></div>
+      </div>
+    </div>
+</section>
+
+<section style="display:flex;flex-wrap:wrap;gap:60px;padding:60px;align-items:flex-start">
+
+  <div id="4a" data-screen-label="4a Dial" style="display:flex;flex-direction:column;gap:15px">
+    <div style="display:flex;align-items:center;gap:10px;font-size:13px">
+      <span style="border:2px solid #000;border-radius:999px;padding:1px 10px">4a</span>
+      <span style="opacity:.6">Dial. Four rings: ratio, composition, guide, hue. The hub is the canvas you get. Four taps, no template.</span>
+    </div>
+    <div style="width:1280px;height:800px;box-sizing:border-box;border:2px solid #000;border-radius:29px;background:#ECF0F3;position:relative;overflow:hidden">
+      <div style="position:absolute;left:40px;top:30px;font-size:20px;letter-spacing:-0.045em">Kura8</div>
+      <svg width="640" height="640" viewBox="0 0 640 640" style="position:absolute;left:320px;top:50px;overflow:visible">
+        <sc-for list="{{ ratioW4 }}" as="s" hint-placeholder-count="5">
+          <g onClick="{{ s.pick }}" style="cursor:pointer">
+            <path d="{{ s.d }}" fill="{{ s.fill }}" stroke="#000" stroke-width="2"></path>
+            <rect x="{{ s.rx }}" y="{{ s.ry }}" width="{{ s.rw }}" height="{{ s.rh }}" fill="none" stroke="{{ s.ink }}" stroke-width="2"></rect>
+          </g>
+        </sc-for>
+        <sc-for list="{{ compW }}" as="s" hint-placeholder-count="6">
+          <g onClick="{{ s.pick }}" style="cursor:pointer">
+            <path d="{{ s.d }}" fill="{{ s.fill }}" stroke="#000" stroke-width="2"></path>
+            <sc-for list="{{ s.prims }}" as="p" hint-placeholder-count="8">
+              <rect x="{{ p.x }}" y="{{ p.y }}" width="{{ p.w }}" height="{{ p.h }}" fill="{{ p.fill }}" fill-opacity="{{ p.fo }}" stroke="{{ p.stroke }}" stroke-width="{{ p.sw }}"></rect>
+            </sc-for>
+          </g>
+        </sc-for>
+        <sc-for list="{{ guideW4 }}" as="g" hint-placeholder-count="3">
+          <g onClick="{{ g.pick }}" style="cursor:pointer">
+            <path d="{{ g.d }}" fill="{{ g.fill }}" stroke="#000" stroke-width="2"></path>
+            <rect x="{{ g.gx }}" y="{{ g.gy }}" width="20" height="20" fill="none" stroke="{{ g.ink }}" stroke-width="1.5"></rect>
+            <sc-for list="{{ g.lines }}" as="l" hint-placeholder-count="4">
+              <line x1="{{ l.x1 }}" y1="{{ l.y1 }}" x2="{{ l.x2 }}" y2="{{ l.y2 }}" stroke="{{ g.ink }}" stroke-width="1"></line>
+            </sc-for>
+          </g>
+        </sc-for>
+        <sc-for list="{{ hueW4 }}" as="h" hint-placeholder-count="12">
+          <path d="{{ h.d }}" fill="{{ h.fill }}" stroke="#ECF0F3" stroke-width="2" onClick="{{ h.pick }}" style="cursor:pointer"></path>
+        </sc-for>
+        <circle cx="320" cy="320" r="140" fill="none" stroke="#000" stroke-width="2" style="pointer-events:none"></circle>
+        <circle cx="320" cy="320" r="110" fill="none" stroke="#000" stroke-width="2" style="pointer-events:none"></circle>
+        <sc-if value="{{ hueSel4 }}" hint-placeholder-val="{{ false }}">
+          <path d="{{ hueSel4 }}" fill="none" stroke="#000" stroke-width="2" style="pointer-events:none"></path>
+        </sc-if>
+        <g style="cursor:pointer">
+          <circle cx="320" cy="320" r="106" fill="#ECF0F3" stroke="#000" stroke-width="2"></circle>
+          <sc-for list="{{ hubPrims }}" as="p" hint-placeholder-count="10">
+            <rect x="{{ p.x }}" y="{{ p.y }}" width="{{ p.w }}" height="{{ p.h }}" fill="{{ p.fill }}" fill-opacity="{{ p.fo }}" stroke="{{ p.stroke }}" stroke-width="{{ p.sw }}"></rect>
+          </sc-for>
+          <circle cx="320" cy="392" r="15" fill="#000"></circle>
+          <path d="M312 392H328M323 387L328 392L323 397" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+        </g>
+      </svg>
+      <sc-for list="{{ labels4 }}" as="t" hint-placeholder-count="14">
+        <div style="position:absolute;left:{{ t.x }}px;top:{{ t.y }}px;transform:translate(-50%,-50%);font-size:{{ t.fs }}px;line-height:1;color:{{ t.ink }};pointer-events:none;white-space:nowrap">{{ t.label }}</div>
+      </sc-for>
+      <div style="position:absolute;left:0;right:0;top:722px;display:flex;justify-content:center;gap:25px">
+        <div onClick="{{ setLight }}" style="width:22px;height:22px;border-radius:999px;background:#ECF0F3;border:2px solid #000;box-sizing:border-box;cursor:pointer;outline:{{ lightOutline }};outline-offset:3px"></div>
+        <div onClick="{{ setDark }}" style="width:22px;height:22px;border-radius:999px;background:#000;border:2px solid #000;box-sizing:border-box;cursor:pointer;outline:{{ darkOutline }};outline-offset:3px"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="4b" data-screen-label="4b Go" style="display:flex;flex-direction:column;gap:15px">
+    <div style="display:flex;align-items:center;gap:10px;font-size:13px">
+      <span style="border:2px solid #000;border-radius:999px;padding:1px 10px">4b</span>
+      <span style="opacity:.6">Go. The canvas opens laid out on the grid, every block its own object. Pick a swatch, tap anything to fill it. Everything moves.</span>
+    </div>
+    <div style="width:1280px;height:800px;box-sizing:border-box;border:2px solid #000;border-radius:29px;background:#ECF0F3;position:relative;overflow:hidden">
+      <div style="position:absolute;left:40px;top:30px;font-size:20px;letter-spacing:-0.045em">Kura8</div>
+      <div style="position:absolute;left:50%;top:20px;transform:translateX(-50%);display:flex;align-items:center;gap:5px;padding:5px 10px;border:2px solid #000;border-radius:39px;background:#ECF0F3">
+        <div title="Add text" style="width:40px;height:40px;border-radius:9px;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:0 10px;box-sizing:border-box;cursor:pointer" style-hover="background:rgba(156,171,194,.15)">
+          <div style="height:3px;width:20px;background:#000;border-radius:2px"></div>
+          <div style="height:3px;width:14px;background:#000;border-radius:2px"></div>
+        </div>
+        <div title="Shape library" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:rgba(156,171,194,.15)">
+          <x-import component-from-global-scope="PaperWireframeDesignSystem_72d81a.Icon" name="venn" size="22" hint-size="22px,22px"></x-import>
+        </div>
+        <div title="Add image" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:rgba(156,171,194,.15)">
+          <div style="width:20px;height:16px;border:2px solid #9CABC2;background:rgba(156,171,194,.35);border-radius:4px"></div>
+        </div>
+        <div style="width:2px;height:24px;background:rgba(0,0,0,.15);margin:0 5px"></div>
+        <div title="Colour" style="display:flex;align-items:center;gap:5px;height:40px;padding:0 5px;background:#000;border-radius:9px;color:#fff;cursor:pointer">
+          <div style="width:22px;height:22px;border-radius:999px;border:2px solid #fff;box-sizing:border-box;background:{{ roleHex }}"></div>
+          <div style="height:30px;width:80px;box-sizing:border-box;border:2px solid #fff;border-radius:9px;display:flex;align-items:center;padding:0 10px;font-size:13px">{{ roleHex }}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;opacity:.23">
+          <div title="Angle" style="height:30px;width:50px;box-sizing:border-box;border:2px solid #000;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:13px">—</div>
+          <div title="Font size" style="height:30px;width:50px;box-sizing:border-box;border:2px solid #000;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:13px">{{ fontSize4 }}</div>
+          <div title="Bold" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700">B</div>
+          <div title="Align left" style="width:40px;height:40px;border-radius:9px;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:4px;padding:0 10px;box-sizing:border-box">
+            <div style="height:2px;width:20px;background:#000"></div><div style="height:2px;width:12px;background:#000"></div><div style="height:2px;width:16px;background:#000"></div>
+          </div>
+        </div>
+        <div style="width:2px;height:24px;background:rgba(0,0,0,.15);margin:0 5px"></div>
+        <div style="display:flex;align-items:center;gap:5px;opacity:.23">
+          <div title="Remove background" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center">
+            <x-import component-from-global-scope="PaperWireframeDesignSystem_72d81a.Icon" name="blob-two" size="22" hint-size="22px,22px"></x-import>
+          </div>
+          <div title="Duplicate" style="width:40px;height:40px;border-radius:9px;position:relative">
+            <div style="position:absolute;left:10px;top:10px;width:13px;height:13px;border:2px solid #000;border-radius:3px"></div>
+            <div style="position:absolute;left:16px;top:16px;width:13px;height:13px;border:2px solid #000;border-radius:3px;background:#ECF0F3"></div>
+          </div>
+          <div title="Lock" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center">
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="14" height="10" rx="2"></rect><path d="M7 10V7a4 4 0 0 1 8 0v3"></path></svg>
+          </div>
+          <div title="Delete" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center">
+            <x-import component-from-global-scope="PaperWireframeDesignSystem_72d81a.Icon" name="x-circle" size="22" hint-size="22px,22px"></x-import>
+          </div>
+        </div>
+        <div style="width:2px;height:24px;background:rgba(0,0,0,.15);margin:0 5px"></div>
+        <div title="Export" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:#000;cursor:pointer">
+          <x-import component-from-global-scope="PaperWireframeDesignSystem_72d81a.Icon" name="arrow-right" size="20" color="#fff" hint-size="20px,20px"></x-import>
+        </div>
+      </div>
+      <div style="position:absolute;left:0;right:0;top:100px;bottom:30px;display:flex;align-items:center;justify-content:center">
+        <div onClick="{{ fillGround }}" style="position:relative;width:{{ E4.cw }}px;height:{{ E4.ch }}px;outline:2px solid #000;background:{{ ground }};cursor:pointer">
+          <sc-if value="{{ E4.img }}" hint-placeholder-val="{{ true }}">
+            <div style="position:absolute;left:{{ E4.img.x }}px;top:{{ E4.img.y }}px;width:{{ E4.img.w }}px;height:{{ E4.img.h }}px;box-sizing:border-box;background:rgba(156,171,194,.35);border:2px solid #9CABC2;pointer-events:none"></div>
+          </sc-if>
+          <div onClick="{{ fillShape }}" style="position:absolute;left:{{ E4.acc.x }}px;top:{{ E4.acc.y }}px;width:{{ E4.acc.w }}px;height:{{ E4.acc.h }}px;background:{{ shapeFill }};cursor:pointer">
+            <div style="position:absolute;right:-12px;bottom:-12px;width:24px;height:24px;border-radius:999px;box-sizing:border-box;border:2px solid #000;background:{{ roleHex }}"></div>
+          </div>
+          <div onClick="{{ fillHead }}" style="position:absolute;left:{{ E4.head.x }}px;top:{{ E4.head.y }}px;width:{{ E4.head.w }}px;font-size:{{ E4.fs }}px;line-height:1.02;font-weight:700;letter-spacing:-0.01em;color:{{ headCol }};cursor:pointer">SPACE BETWEEN</div>
+          <div onClick="{{ fillBody }}" style="position:absolute;left:{{ E4.body.x }}px;top:{{ E4.body.y }}px;width:{{ E4.body.w }}px;display:flex;flex-direction:column;gap:11px;cursor:pointer">
+            <sc-for list="{{ paraBars }}" as="b" hint-placeholder-count="4">
+              <div style="height:3px;background:{{ bodyCol }};opacity:.55;width:{{ b.w }}"></div>
+            </sc-for>
+          </div>
+          <sc-if value="{{ showGuides }}" hint-placeholder-val="{{ true }}">
+            <sc-for list="{{ E4.vLines }}" as="v" hint-placeholder-count="2">
+              <div style="position:absolute;top:0;bottom:0;left:{{ v.x }}px;width:1px;background:{{ inkCol }};opacity:.35;pointer-events:none"></div>
+            </sc-for>
+            <sc-for list="{{ E4.hLines }}" as="h" hint-placeholder-count="2">
+              <div style="position:absolute;left:0;right:0;top:{{ h.y }}px;height:1px;background:{{ inkCol }};opacity:.35;pointer-events:none"></div>
+            </sc-for>
+            <sc-for list="{{ E4.points }}" as="p" hint-placeholder-count="4">
+              <div style="position:absolute;left:{{ p.x }}px;top:{{ p.y }}px;width:6px;height:6px;margin:-3px 0 0 -3px;border-radius:999px;background:{{ inkCol }};opacity:.5;pointer-events:none"></div>
+            </sc-for>
+          </sc-if>
+        </div>
+      </div>
+      <div style="position:absolute;left:40px;top:92px;width:300px;box-sizing:border-box;padding:15px;border:2px solid #000;border-radius:19px;background:#ECF0F3;display:flex;flex-direction:column;gap:15px">
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px">
+          <sc-for list="{{ roles }}" as="r" hint-placeholder-count="3">
+            <div onClick="{{ r.pick }}" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 0;border-radius:9px;cursor:pointer;background:{{ r.bg }};color:{{ r.fg }}">
+              <div style="width:36px;height:36px;border-radius:999px;box-sizing:border-box;background:{{ r.hex }};border:2px solid {{ r.ring }}"></div>
+              <div style="font-size:11px">{{ r.name }}</div>
+              <div style="font-size:11px;opacity:.6">{{ r.hex }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:5px">
+          <sc-for list="{{ shades }}" as="s" hint-placeholder-count="7">
+            <div onClick="{{ s.pick }}" style="flex:1;height:30px;border-radius:9px;box-sizing:border-box;background:{{ s.hex }};border:2px solid {{ s.ring }};cursor:pointer"></div>
+          </sc-for>
+        </div>
+        <div style="display:flex;justify-content:space-between">
+          <sc-for list="{{ hues }}" as="h" hint-placeholder-count="13">
+            <div onClick="{{ h.pick }}" style="width:16px;height:16px;border-radius:999px;box-sizing:border-box;background:{{ h.hex }};border:2px solid {{ h.ring }};cursor:pointer"></div>
+          </sc-for>
+        </div>
+        <div style="height:36px;border:2px solid #000;border-radius:9px;display:flex;align-items:center;padding:0 12px;font-size:13px;box-sizing:border-box">{{ roleHex }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="4c" data-screen-label="4c What the dial sets" style="display:flex;flex-direction:column;gap:15px;width:560px">
+    <div style="display:flex;align-items:center;gap:10px;font-size:13px">
+      <span style="border:2px solid #000;border-radius:999px;padding:1px 10px">4c</span>
+      <span style="opacity:.6">What the dial sets. All of it from geometry; none of it from a library.</span>
+    </div>
+    <div style="box-sizing:border-box;border:2px solid #000;border-radius:29px;background:#ECF0F3;padding:30px;display:flex;flex-direction:column;gap:30px">
+      <div style="display:grid;grid-template-columns:70px minmax(0,1fr);gap:20px;align-items:center">
+        <div style="width:70px;height:70px;display:flex;align-items:center;justify-content:center"><div style="width:{{ c.rw }}px;height:{{ c.rh }}px;border:2px solid #000;box-sizing:border-box"></div></div>
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:13px"><div>{{ c.ratio }}</div><div style="opacity:.6">{{ c.export }}</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:70px minmax(0,1fr);gap:20px;align-items:center">
+        <div style="width:70px;height:70px;display:flex;align-items:center;justify-content:center">
+          <svg width="48" height="48" viewBox="0 0 48 48" style="overflow:visible">
+            <sc-for list="{{ cThumb }}" as="p" hint-placeholder-count="8">
+              <rect x="{{ p.x }}" y="{{ p.y }}" width="{{ p.w }}" height="{{ p.h }}" fill="{{ p.fill }}" fill-opacity="{{ p.fo }}" stroke="{{ p.stroke }}" stroke-width="{{ p.sw }}"></rect>
+            </sc-for>
+          </svg>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:13px"><div>{{ compName }}</div><div style="opacity:.6">{{ compDesc }}</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:70px minmax(0,1fr);gap:20px;align-items:center">
+        <div style="width:70px;height:70px;display:flex;align-items:center;justify-content:center">
+          <svg width="44" height="44" viewBox="0 0 44 44">
+            <rect x="1" y="1" width="42" height="42" fill="none" stroke="#000" stroke-width="2"></rect>
+            <sc-for list="{{ c.glines }}" as="l" hint-placeholder-count="4">
+              <line x1="{{ l.x1 }}" y1="{{ l.y1 }}" x2="{{ l.x2 }}" y2="{{ l.y2 }}" stroke="#000" stroke-width="1"></line>
+            </sc-for>
+          </svg>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:13px"><div>{{ c.guide }}</div><div style="opacity:.6">{{ c.lines }}</div><div style="opacity:.6">{{ c.type }}</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:70px minmax(0,1fr);gap:20px;align-items:center">
+        <div style="width:70px;height:70px;display:flex;align-items:center;justify-content:center;gap:4px">
+          <sc-for list="{{ roles }}" as="r" hint-placeholder-count="3">
+            <div style="width:18px;height:18px;border-radius:999px;box-sizing:border-box;background:{{ r.hex }};border:2px solid #000"></div>
+          </sc-for>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:13px"><div>{{ c.hue }}</div><div style="opacity:.6">{{ c.palette }}</div></div>
+      </div>
+      <div style="border-top:2px solid #000;padding-top:20px;display:flex;flex-direction:column;gap:6px;font-size:13px">
+        <div>5 ratios × 6 compositions × 3 guides × 13 hues × 2 grounds</div>
+        <div style="opacity:.6">2,340 starting points. No template library. Nothing generated.</div>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<section style="display:flex;flex-wrap:wrap;gap:60px;padding:60px;align-items:flex-start">
+
+  <div id="3a" data-screen-label="3a Rotate" style="display:flex;flex-direction:column;gap:15px">
+    <div style="display:flex;align-items:center;gap:10px;font-size:13px">
+      <span style="border:2px solid #000;border-radius:999px;padding:1px 10px">3a</span>
+      <span style="opacity:.6">Rotate. The handle snaps to 45°, 90°, the canvas diagonal and the cell diagonals. The line it caught goes black; the angle sits in the toolbar.</span>
+    </div>
+    <div style="width:1280px;height:800px;box-sizing:border-box;border:2px solid #000;border-radius:29px;background:#ECF0F3;position:relative;overflow:hidden">
+      <div style="position:absolute;left:40px;top:30px;font-size:20px;letter-spacing:-0.045em">Kura8</div>
+      <div style="position:absolute;left:50%;top:20px;transform:translateX(-50%);display:flex;align-items:center;gap:5px;padding:5px 10px;border:2px solid #000;border-radius:39px;background:#ECF0F3">
+        <div title="Add text" style="width:40px;height:40px;border-radius:9px;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:0 10px;box-sizing:border-box;cursor:pointer" style-hover="background:rgba(156,171,194,.15)">
+          <div style="height:3px;width:20px;background:#000;border-radius:2px"></div>
+          <div style="height:3px;width:14px;background:#000;border-radius:2px"></div>
+        </div>
+        <div title="Shape library" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:rgba(156,171,194,.15)">
+          <x-import component-from-global-scope="PaperWireframeDesignSystem_72d81a.Icon" name="venn" size="22" hint-size="22px,22px"></x-import>
+        </div>
+        <div title="Add image" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:rgba(156,171,194,.15)">
+          <div style="width:20px;height:16px;border:2px solid #9CABC2;background:rgba(156,171,194,.35);border-radius:4px"></div>
+        </div>
+        <div style="width:2px;height:24px;background:rgba(0,0,0,.15);margin:0 5px"></div>
+        <div title="Colour" style="display:flex;align-items:center;gap:5px;height:40px;padding:0 5px;cursor:pointer">
+          <div style="width:22px;height:22px;border-radius:999px;border:2px solid #000;box-sizing:border-box;background:{{ shapeFill }}"></div>
+          <div style="height:30px;width:80px;box-sizing:border-box;border:2px solid #000;border-radius:9px;display:flex;align-items:center;padding:0 10px;font-size:13px">{{ shapeFill }}</div>
+        </div>
+        <div title="Angle" style="height:30px;width:50px;box-sizing:border-box;border:2px solid #000;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:13px">{{ rot.label }}</div>
+        <div style="display:flex;align-items:center;gap:5px;opacity:.23">
+          <div title="Font size" style="height:30px;width:50px;box-sizing:border-box;border:2px solid #000;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:13px">—</div>
+          <div title="Bold" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700">B</div>
+          <div title="Align left" style="width:40px;height:40px;border-radius:9px;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:4px;padding:0 10px;box-sizing:border-box">
+            <div style="height:2px;width:20px;background:#000"></div><div style="height:2px;width:12px;background:#000"></div><div style="height:2px;width:16px;background:#000"></div>
+          </div>
+        </div>
+        <div style="width:2px;height:24px;background:rgba(0,0,0,.15);margin:0 5px"></div>
+        <div title="Remove background" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;opacity:.23">
+          <x-import component-from-global-scope="PaperWireframeDesignSystem_72d81a.Icon" name="blob-two" size="22" hint-size="22px,22px"></x-import>
+        </div>
+        <div title="Duplicate" style="width:40px;height:40px;border-radius:9px;position:relative;cursor:pointer" style-hover="background:rgba(156,171,194,.15)">
+          <div style="position:absolute;left:10px;top:10px;width:13px;height:13px;border:2px solid #000;border-radius:3px"></div>
+          <div style="position:absolute;left:16px;top:16px;width:13px;height:13px;border:2px solid #000;border-radius:3px;background:#ECF0F3"></div>
+        </div>
+        <div title="Lock" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:rgba(156,171,194,.15)">
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="14" height="10" rx="2"></rect><path d="M7 10V7a4 4 0 0 1 8 0v3"></path></svg>
+        </div>
+        <div title="Delete" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:rgba(156,171,194,.15)">
+          <x-import component-from-global-scope="PaperWireframeDesignSystem_72d81a.Icon" name="x-circle" size="22" hint-size="22px,22px"></x-import>
+        </div>
+        <div style="width:2px;height:24px;background:rgba(0,0,0,.15);margin:0 5px"></div>
+        <div title="Export" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:#000;cursor:pointer">
+          <x-import component-from-global-scope="PaperWireframeDesignSystem_72d81a.Icon" name="arrow-right" size="20" color="#fff" hint-size="20px,20px"></x-import>
+        </div>
+      </div>
+      <div style="position:absolute;left:0;right:0;top:100px;bottom:30px;display:flex;align-items:center;justify-content:center">
+        <div style="position:relative;width:{{ cw }}px;height:{{ ch }}px;outline:2px solid #000;background:{{ ground }}">
+          <div style="position:absolute;left:0;top:0;width:100%;height:{{ photoH }}px;box-sizing:border-box;background:rgba(156,171,194,.35);border:2px solid #9CABC2"></div>
+          <div style="position:absolute;left:{{ textX }}px;top:{{ headY }}px;width:{{ textW }}px;font-size:{{ fs }}px;line-height:1.02;font-weight:700;letter-spacing:-0.01em;color:{{ headCol }}">SPACE BETWEEN</div>
+          <div style="position:absolute;left:{{ textX }}px;top:{{ paraY }}px;width:{{ textW }}px;display:flex;flex-direction:column;gap:11px">
+            <sc-for list="{{ paraBars }}" as="b" hint-placeholder-count="4">
+              <div style="height:3px;background:{{ bodyCol }};opacity:.55;width:{{ b.w }}"></div>
+            </sc-for>
+          </div>
+          <sc-if value="{{ showGuides }}" hint-placeholder-val="{{ true }}">
+            <sc-for list="{{ vLines }}" as="v" hint-placeholder-count="2">
+              <div style="position:absolute;top:0;bottom:0;left:{{ v.x }}px;width:1px;background:{{ inkCol }};opacity:.35;pointer-events:none"></div>
+            </sc-for>
+            <sc-for list="{{ hLines }}" as="h" hint-placeholder-count="2">
+              <div style="position:absolute;left:0;right:0;top:{{ h.y }}px;height:1px;background:{{ inkCol }};opacity:.35;pointer-events:none"></div>
+            </sc-for>
+          </sc-if>
+          <div style="position:absolute;left:0;top:{{ ch }}px;width:{{ rot.hyp }}px;height:2px;margin-top:-1px;background:#000;transform-origin:0 50%;transform:{{ rot.tf }};pointer-events:none"></div>
+          <div style="position:absolute;left:{{ rot.x }}px;top:{{ rot.y }}px;width:{{ rot.w }}px;height:{{ rot.h }}px;transform:{{ rot.tf }}">
+            <div style="position:absolute;left:0;top:0;width:100%;height:100%;background:{{ shapeFill }};outline:2px solid #000"></div>
+            <sc-for list="{{ rot.handles }}" as="h" hint-placeholder-count="8">
+              <div style="position:absolute;left:{{ h.x }}px;top:{{ h.y }}px;width:10px;height:10px;box-sizing:border-box;background:#ECF0F3;border:2px solid #000;border-radius:2.5px"></div>
+            </sc-for>
+            <div style="position:absolute;left:50%;top:-24px;width:2px;height:16px;margin-left:-1px;background:#000"></div>
+            <div style="position:absolute;left:50%;top:-38px;width:14px;height:14px;margin-left:-7px;box-sizing:border-box;border-radius:999px;background:#ECF0F3;border:2px solid #000"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="3b" data-screen-label="3b Remove background" style="display:flex;flex-direction:column;gap:15px">
+    <div style="display:flex;align-items:center;gap:10px;font-size:13px">
+      <span style="border:2px solid #000;border-radius:999px;padding:1px 10px">3b</span>
+      <span style="opacity:.6">Remove background. One tap, runs on your machine, nothing uploaded, no credits. The cut-out keeps its bounds and handles.</span>
+    </div>
+    <div style="width:1280px;height:800px;box-sizing:border-box;border:2px solid #000;border-radius:29px;background:#ECF0F3;position:relative;overflow:hidden">
+      <div style="position:absolute;left:40px;top:30px;font-size:20px;letter-spacing:-0.045em">Kura8</div>
+      <div style="position:absolute;left:50%;top:20px;transform:translateX(-50%);display:flex;align-items:center;gap:5px;padding:5px 10px;border:2px solid #000;border-radius:39px;background:#ECF0F3">
+        <div title="Add text" style="width:40px;height:40px;border-radius:9px;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:0 10px;box-sizing:border-box;cursor:pointer" style-hover="background:rgba(156,171,194,.15)">
+          <div style="height:3px;width:20px;background:#000;border-radius:2px"></div>
+          <div style="height:3px;width:14px;background:#000;border-radius:2px"></div>
+        </div>
+        <div title="Shape library" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:rgba(156,171,194,.15)">
+          <x-import component-from-global-scope="PaperWireframeDesignSystem_72d81a.Icon" name="venn" size="22" hint-size="22px,22px"></x-import>
+        </div>
+        <div title="Add image" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:rgba(156,171,194,.15)">
+          <div style="width:20px;height:16px;border:2px solid #9CABC2;background:rgba(156,171,194,.35);border-radius:4px"></div>
+        </div>
+        <div style="width:2px;height:24px;background:rgba(0,0,0,.15);margin:0 5px"></div>
+        <div style="display:flex;align-items:center;gap:5px;opacity:.23">
+          <div title="Colour" style="display:flex;align-items:center;gap:5px;height:40px;padding:0 5px">
+            <div style="width:22px;height:22px;border-radius:999px;border:2px solid #000;box-sizing:border-box"></div>
+            <div style="height:30px;width:80px;box-sizing:border-box;border:2px solid #000;border-radius:9px;display:flex;align-items:center;padding:0 10px;font-size:13px">—</div>
+          </div>
+        </div>
+        <div title="Angle" style="height:30px;width:50px;box-sizing:border-box;border:2px solid #000;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:13px">0°</div>
+        <div style="display:flex;align-items:center;gap:5px;opacity:.23">
+          <div title="Font size" style="height:30px;width:50px;box-sizing:border-box;border:2px solid #000;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:13px">—</div>
+          <div title="Bold" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700">B</div>
+          <div title="Align left" style="width:40px;height:40px;border-radius:9px;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:4px;padding:0 10px;box-sizing:border-box">
+            <div style="height:2px;width:20px;background:#000"></div><div style="height:2px;width:12px;background:#000"></div><div style="height:2px;width:16px;background:#000"></div>
+          </div>
+        </div>
+        <div style="width:2px;height:24px;background:rgba(0,0,0,.15);margin:0 5px"></div>
+        <div title="Remove background" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:#000;cursor:pointer">
+          <x-import component-from-global-scope="PaperWireframeDesignSystem_72d81a.Icon" name="blob-two" size="22" color="#fff" hint-size="22px,22px"></x-import>
+        </div>
+        <div title="Duplicate" style="width:40px;height:40px;border-radius:9px;position:relative;cursor:pointer" style-hover="background:rgba(156,171,194,.15)">
+          <div style="position:absolute;left:10px;top:10px;width:13px;height:13px;border:2px solid #000;border-radius:3px"></div>
+          <div style="position:absolute;left:16px;top:16px;width:13px;height:13px;border:2px solid #000;border-radius:3px;background:#ECF0F3"></div>
+        </div>
+        <div title="Lock" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:rgba(156,171,194,.15)">
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="14" height="10" rx="2"></rect><path d="M7 10V7a4 4 0 0 1 8 0v3"></path></svg>
+        </div>
+        <div title="Delete" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:rgba(156,171,194,.15)">
+          <x-import component-from-global-scope="PaperWireframeDesignSystem_72d81a.Icon" name="x-circle" size="22" hint-size="22px,22px"></x-import>
+        </div>
+        <div style="width:2px;height:24px;background:rgba(0,0,0,.15);margin:0 5px"></div>
+        <div title="Export" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:#000;cursor:pointer">
+          <x-import component-from-global-scope="PaperWireframeDesignSystem_72d81a.Icon" name="arrow-right" size="20" color="#fff" hint-size="20px,20px"></x-import>
+        </div>
+      </div>
+      <div style="position:absolute;left:0;right:0;top:100px;bottom:30px;display:flex;align-items:center;justify-content:center">
+        <div style="position:relative;width:{{ cw }}px;height:{{ ch }}px;outline:2px solid #000;background:{{ ground }}">
+          <div style="position:absolute;left:{{ shapeR.x }}px;top:{{ shapeR.y }}px;width:{{ shapeR.w }}px;height:{{ shapeR.h }}px;background:{{ shapeFill }}"></div>
+          <div style="position:absolute;left:{{ textX }}px;top:{{ headY }}px;width:{{ textW }}px;font-size:{{ fs }}px;line-height:1.02;font-weight:700;letter-spacing:-0.01em;color:{{ headCol }}">SPACE BETWEEN</div>
+          <div style="position:absolute;left:{{ textX }}px;top:{{ paraY }}px;width:{{ textW }}px;display:flex;flex-direction:column;gap:11px">
+            <sc-for list="{{ paraBars }}" as="b" hint-placeholder-count="4">
+              <div style="height:3px;background:{{ bodyCol }};opacity:.55;width:{{ b.w }}"></div>
+            </sc-for>
+          </div>
+          <sc-if value="{{ showGuides }}" hint-placeholder-val="{{ true }}">
+            <sc-for list="{{ vLines }}" as="v" hint-placeholder-count="2">
+              <div style="position:absolute;top:0;bottom:0;left:{{ v.x }}px;width:1px;background:{{ inkCol }};opacity:.35;pointer-events:none"></div>
+            </sc-for>
+            <sc-for list="{{ hLines }}" as="h" hint-placeholder-count="2">
+              <div style="position:absolute;left:0;right:0;top:{{ h.y }}px;height:1px;background:{{ inkCol }};opacity:.35;pointer-events:none"></div>
+            </sc-for>
+          </sc-if>
+          <div style="position:absolute;left:0;top:0;width:{{ img.w }}px;height:{{ img.h }}px;outline:2px solid #000">
+            <div style="position:absolute;left:{{ img.bx }}px;top:{{ img.by }}px;width:{{ img.bw }}px;height:{{ img.bh }}px;box-sizing:border-box;background:#D0D8E2;border:2px solid #9CABC2;border-radius:48% 52% 45% 55% / 55% 45% 55% 45%"></div>
+            <sc-for list="{{ img.handles }}" as="h" hint-placeholder-count="4">
+              <div style="position:absolute;left:{{ h.x }}px;top:{{ h.y }}px;width:10px;height:10px;box-sizing:border-box;background:#ECF0F3;border:2px solid #000;border-radius:2.5px"></div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="3c" data-screen-label="3c Re-ratio" style="display:flex;flex-direction:column;gap:15px">
+    <div style="display:flex;align-items:center;gap:10px;font-size:13px">
+      <span style="border:2px solid #000;border-radius:999px;padding:1px 10px">3c</span>
+      <span style="opacity:.6">Re-ratio. Pick another ratio from the readout; every object keeps its guide anchors, so the layout survives.</span>
+    </div>
+    <div style="width:1280px;height:800px;box-sizing:border-box;border:2px solid #000;border-radius:29px;background:#ECF0F3;position:relative;overflow:hidden">
+      <div style="position:absolute;left:40px;top:30px;font-size:20px;letter-spacing:-0.045em">Kura8</div>
+      <div style="position:absolute;left:50%;top:20px;transform:translateX(-50%);display:flex;align-items:center;gap:5px;padding:5px 10px;border:2px solid #000;border-radius:39px;background:#ECF0F3">
+        <div title="Add text" style="width:40px;height:40px;border-radius:9px;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:0 10px;box-sizing:border-box;cursor:pointer" style-hover="background:rgba(156,171,194,.15)">
+          <div style="height:3px;width:20px;background:#000;border-radius:2px"></div>
+          <div style="height:3px;width:14px;background:#000;border-radius:2px"></div>
+        </div>
+        <div title="Shape library" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:rgba(156,171,194,.15)">
+          <x-import component-from-global-scope="PaperWireframeDesignSystem_72d81a.Icon" name="venn" size="22" hint-size="22px,22px"></x-import>
+        </div>
+        <div title="Add image" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:rgba(156,171,194,.15)">
+          <div style="width:20px;height:16px;border:2px solid #9CABC2;background:rgba(156,171,194,.35);border-radius:4px"></div>
+        </div>
+        <div style="width:2px;height:24px;background:rgba(0,0,0,.15);margin:0 5px"></div>
+        <div style="display:flex;align-items:center;gap:5px;opacity:.23">
+          <div title="Colour" style="display:flex;align-items:center;gap:5px;height:40px;padding:0 5px">
+            <div style="width:22px;height:22px;border-radius:999px;border:2px solid #000;box-sizing:border-box"></div>
+            <div style="height:30px;width:80px;box-sizing:border-box;border:2px solid #000;border-radius:9px;display:flex;align-items:center;padding:0 10px;font-size:13px">—</div>
+          </div>
+          <div title="Angle" style="height:30px;width:50px;box-sizing:border-box;border:2px solid #000;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:13px">—</div>
+          <div title="Font size" style="height:30px;width:50px;box-sizing:border-box;border:2px solid #000;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:13px">—</div>
+          <div title="Bold" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700">B</div>
+          <div title="Align left" style="width:40px;height:40px;border-radius:9px;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:4px;padding:0 10px;box-sizing:border-box">
+            <div style="height:2px;width:20px;background:#000"></div><div style="height:2px;width:12px;background:#000"></div><div style="height:2px;width:16px;background:#000"></div>
+          </div>
+        </div>
+        <div style="width:2px;height:24px;background:rgba(0,0,0,.15);margin:0 5px"></div>
+        <div style="display:flex;align-items:center;gap:5px;opacity:.23">
+          <div title="Remove background" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center">
+            <x-import component-from-global-scope="PaperWireframeDesignSystem_72d81a.Icon" name="blob-two" size="22" hint-size="22px,22px"></x-import>
+          </div>
+          <div title="Duplicate" style="width:40px;height:40px;border-radius:9px;position:relative">
+            <div style="position:absolute;left:10px;top:10px;width:13px;height:13px;border:2px solid #000;border-radius:3px"></div>
+            <div style="position:absolute;left:16px;top:16px;width:13px;height:13px;border:2px solid #000;border-radius:3px;background:#ECF0F3"></div>
+          </div>
+          <div title="Lock" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center">
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="14" height="10" rx="2"></rect><path d="M7 10V7a4 4 0 0 1 8 0v3"></path></svg>
+          </div>
+          <div title="Delete" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center">
+            <x-import component-from-global-scope="PaperWireframeDesignSystem_72d81a.Icon" name="x-circle" size="22" hint-size="22px,22px"></x-import>
+          </div>
+        </div>
+        <div style="width:2px;height:24px;background:rgba(0,0,0,.15);margin:0 5px"></div>
+        <div title="Export" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:#000;cursor:pointer">
+          <x-import component-from-global-scope="PaperWireframeDesignSystem_72d81a.Icon" name="arrow-right" size="20" color="#fff" hint-size="20px,20px"></x-import>
+        </div>
+      </div>
+      <div style="position:absolute;left:0;right:0;top:100px;bottom:30px;display:flex;align-items:center;justify-content:center">
+        <div style="position:relative;width:{{ T.cw }}px;height:{{ T.ch }}px;outline:2px solid #000;background:{{ ground }}">
+          <div style="position:absolute;left:0;top:0;width:100%;height:{{ T.photoH }}px;box-sizing:border-box;background:rgba(156,171,194,.35);border:2px solid #9CABC2"></div>
+          <div style="position:absolute;left:{{ T.shapeR.x }}px;top:{{ T.shapeR.y }}px;width:{{ T.shapeR.w }}px;height:{{ T.shapeR.h }}px;background:{{ shapeFill }}"></div>
+          <div style="position:absolute;left:{{ T.textX }}px;top:{{ T.headY }}px;width:{{ T.textW }}px;font-size:{{ T.fs }}px;line-height:1.02;font-weight:700;letter-spacing:-0.01em;color:{{ headCol }}">SPACE BETWEEN</div>
+          <div style="position:absolute;left:{{ T.textX }}px;top:{{ T.paraY }}px;width:{{ T.textW }}px;display:flex;flex-direction:column;gap:11px">
+            <sc-for list="{{ paraBars }}" as="b" hint-placeholder-count="4">
+              <div style="height:3px;background:{{ bodyCol }};opacity:.55;width:{{ b.w }}"></div>
+            </sc-for>
+          </div>
+          <sc-if value="{{ showGuides }}" hint-placeholder-val="{{ true }}">
+            <sc-for list="{{ T.vLines }}" as="v" hint-placeholder-count="2">
+              <div style="position:absolute;top:0;bottom:0;left:{{ v.x }}px;width:1px;background:{{ inkCol }};opacity:.35;pointer-events:none"></div>
+            </sc-for>
+            <sc-for list="{{ T.hLines }}" as="h" hint-placeholder-count="2">
+              <div style="position:absolute;left:0;right:0;top:{{ h.y }}px;height:1px;background:{{ inkCol }};opacity:.35;pointer-events:none"></div>
+            </sc-for>
+            <sc-for list="{{ T.points }}" as="p" hint-placeholder-count="4">
+              <div style="position:absolute;left:{{ p.x }}px;top:{{ p.y }}px;width:6px;height:6px;margin:-3px 0 0 -3px;border-radius:999px;background:{{ inkCol }};opacity:.5;pointer-events:none"></div>
+            </sc-for>
+          </sc-if>
+        </div>
+      </div>
+      <div style="position:absolute;right:40px;top:25px;display:flex;flex-direction:column;align-items:flex-end;gap:12px">
+        <div style="height:36px;padding:0 15px;box-sizing:border-box;border:2px solid #000;border-radius:999px;background:#000;color:#fff;display:flex;align-items:center;font-size:13px;cursor:pointer">{{ currentLabel }}</div>
+        <div style="padding:10px;border:2px solid #000;border-radius:19px;background:#ECF0F3;position:relative">
+          <svg width="260" height="260" viewBox="0 0 260 260" style="display:block">
+            <sc-for list="{{ ringW }}" as="s" hint-placeholder-count="5">
+              <g onClick="{{ s.pick }}" style="cursor:pointer">
+                <path d="{{ s.d }}" fill="{{ s.fill }}" stroke="#000" stroke-width="2"></path>
+                <rect x="{{ s.rx }}" y="{{ s.ry }}" width="{{ s.rw }}" height="{{ s.rh }}" fill="none" stroke="{{ s.ink }}" stroke-width="2"></rect>
+              </g>
+            </sc-for>
+            <circle cx="130" cy="130" r="80" fill="#ECF0F3" stroke="#000" stroke-width="2"></circle>
+          </svg>
+          <div style="position:absolute;left:10px;top:10px;width:260px;height:260px;display:flex;align-items:center;justify-content:center;font-size:15px;pointer-events:none">{{ targetLabel }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<section style="display:flex;flex-wrap:wrap;gap:60px;padding:60px;align-items:flex-start">
+
+  <div id="2a" data-screen-label="2a Dial" style="display:flex;flex-direction:column;gap:15px">
+    <div style="display:flex;align-items:center;gap:10px;font-size:13px">
+      <span style="border:2px solid #000;border-radius:999px;padding:1px 10px">2a</span>
+      <span style="opacity:.6">Dial. Ratio, guide and colour on one wheel; the hub shows the canvas you get. Three taps, then go.</span>
+    </div>
+    <div style="width:1280px;height:800px;box-sizing:border-box;border:2px solid #000;border-radius:29px;background:#ECF0F3;position:relative;overflow:hidden">
+      <div style="position:absolute;left:40px;top:30px;font-size:20px;letter-spacing:-0.045em">Kura8</div>
+      <svg width="620" height="620" viewBox="0 0 600 600" style="position:absolute;left:330px;top:45px;overflow:visible">
+        <sc-for list="{{ ratioW }}" as="s" hint-placeholder-count="5">
+          <g onClick="{{ s.pick }}" style="cursor:pointer">
+            <path d="{{ s.d }}" fill="{{ s.fill }}" stroke="#000" stroke-width="2"></path>
+            <rect x="{{ s.rx }}" y="{{ s.ry }}" width="{{ s.rw }}" height="{{ s.rh }}" fill="none" stroke="{{ s.ink }}" stroke-width="2"></rect>
+          </g>
+        </sc-for>
+        <sc-for list="{{ guideW }}" as="g" hint-placeholder-count="3">
+          <g onClick="{{ g.pick }}" style="cursor:pointer">
+            <path d="{{ g.d }}" fill="{{ g.fill }}" stroke="#000" stroke-width="2"></path>
+            <rect x="{{ g.gx }}" y="{{ g.gy }}" width="26" height="26" fill="none" stroke="{{ g.ink }}" stroke-width="2"></rect>
+            <sc-for list="{{ g.lines }}" as="l" hint-placeholder-count="4">
+              <line x1="{{ l.x1 }}" y1="{{ l.y1 }}" x2="{{ l.x2 }}" y2="{{ l.y2 }}" stroke="{{ g.ink }}" stroke-width="1"></line>
+            </sc-for>
+          </g>
+        </sc-for>
+        <sc-for list="{{ hueW }}" as="h" hint-placeholder-count="12">
+          <path d="{{ h.d }}" fill="{{ h.fill }}" stroke="#ECF0F3" stroke-width="2" onClick="{{ h.pick }}" style="cursor:pointer"></path>
+        </sc-for>
+        <circle cx="300" cy="300" r="154" fill="none" stroke="#000" stroke-width="2" style="pointer-events:none"></circle>
+        <circle cx="300" cy="300" r="118" fill="none" stroke="#000" stroke-width="2" style="pointer-events:none"></circle>
+        <sc-if value="{{ hueSelD }}" hint-placeholder-val="{{ false }}">
+          <path d="{{ hueSelD }}" fill="none" stroke="#000" stroke-width="2" style="pointer-events:none"></path>
+        </sc-if>
+        <g style="cursor:pointer">
+          <circle cx="300" cy="300" r="112" fill="#ECF0F3" stroke="#000" stroke-width="2"></circle>
+          <rect x="{{ hub.x }}" y="{{ hub.y }}" width="{{ hub.w }}" height="{{ hub.h }}" fill="{{ hub.ground }}" stroke="#000" stroke-width="2"></rect>
+          <sc-for list="{{ hubLines }}" as="l" hint-placeholder-count="4">
+            <line x1="{{ l.x1 }}" y1="{{ l.y1 }}" x2="{{ l.x2 }}" y2="{{ l.y2 }}" stroke="{{ hub.ink }}" stroke-width="1" opacity=".4"></line>
+          </sc-for>
+          <circle cx="300" cy="388" r="15" fill="#000"></circle>
+          <path d="M292 388H308M303 383L308 388L303 393" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+        </g>
+      </svg>
+      <sc-for list="{{ labels2 }}" as="t" hint-placeholder-count="8">
+        <div style="position:absolute;left:{{ t.x }}px;top:{{ t.y }}px;transform:translate(-50%,-50%);font-size:{{ t.fs }}px;line-height:1;color:{{ t.ink }};pointer-events:none;white-space:nowrap">{{ t.label }}</div>
+      </sc-for>
+      <div style="position:absolute;left:0;right:0;top:705px;display:flex;justify-content:center;gap:25px">
+        <div onClick="{{ setLight }}" style="width:22px;height:22px;border-radius:999px;background:#ECF0F3;border:2px solid #000;box-sizing:border-box;cursor:pointer;outline:{{ lightOutline }};outline-offset:3px"></div>
+        <div onClick="{{ setDark }}" style="width:22px;height:22px;border-radius:999px;background:#000;border:2px solid #000;box-sizing:border-box;cursor:pointer;outline:{{ darkOutline }};outline-offset:3px"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="2b" data-screen-label="2b Editor" style="display:flex;flex-direction:column;gap:15px">
+    <div style="display:flex;align-items:center;gap:10px;font-size:13px">
+      <span style="border:2px solid #000;border-radius:999px;padding:1px 10px">2b</span>
+      <span style="opacity:.6">Editor, colour panel open. Tap anything on the canvas, including the ground, to fill it with the current swatch.</span>
+    </div>
+    <div style="width:1280px;height:800px;box-sizing:border-box;border:2px solid #000;border-radius:29px;background:#ECF0F3;position:relative;overflow:hidden">
+      <div style="position:absolute;left:40px;top:30px;font-size:20px;letter-spacing:-0.045em">Kura8</div>
+
+      <div style="position:absolute;left:50%;top:20px;transform:translateX(-50%);display:flex;align-items:center;gap:5px;padding:5px 10px;border:2px solid #000;border-radius:39px;background:#ECF0F3">
+        <div title="Add text" style="width:40px;height:40px;border-radius:9px;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:0 10px;box-sizing:border-box;cursor:pointer" style-hover="background:rgba(156,171,194,.15)">
+          <div style="height:3px;width:20px;background:#000;border-radius:2px"></div>
+          <div style="height:3px;width:14px;background:#000;border-radius:2px"></div>
+        </div>
+        <div title="Shape library" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:rgba(156,171,194,.15)">
+          <x-import component-from-global-scope="PaperWireframeDesignSystem_72d81a.Icon" name="venn" size="22" hint-size="22px,22px"></x-import>
+        </div>
+        <div title="Add image" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:rgba(156,171,194,.15)">
+          <div style="width:20px;height:16px;border:2px solid #9CABC2;background:rgba(156,171,194,.35);border-radius:4px"></div>
+        </div>
+        <div style="width:2px;height:24px;background:rgba(0,0,0,.15);margin:0 5px"></div>
+        <div title="Colour" style="display:flex;align-items:center;gap:5px;height:40px;padding:0 5px;background:#000;border-radius:9px;color:#fff;cursor:pointer">
+          <div style="width:22px;height:22px;border-radius:999px;border:2px solid #fff;box-sizing:border-box;background:{{ roleHex }}"></div>
+          <div style="height:30px;width:80px;box-sizing:border-box;border:2px solid #fff;border-radius:9px;display:flex;align-items:center;padding:0 10px;font-size:13px">{{ roleHex }}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;opacity:.23">
+          <div title="Font size" style="height:30px;width:50px;box-sizing:border-box;border:2px solid #000;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:13px">{{ fontSizeLabel }}</div>
+          <div title="Bold" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700">B</div>
+          <div title="Align left" style="width:40px;height:40px;border-radius:9px;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:4px;padding:0 10px;box-sizing:border-box">
+            <div style="height:2px;width:20px;background:#000"></div><div style="height:2px;width:12px;background:#000"></div><div style="height:2px;width:16px;background:#000"></div>
+          </div>
+        </div>
+        <div style="width:2px;height:24px;background:rgba(0,0,0,.15);margin:0 5px"></div>
+        <div style="display:flex;align-items:center;gap:5px;opacity:.23">
+          <div title="Remove background" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center">
+            <x-import component-from-global-scope="PaperWireframeDesignSystem_72d81a.Icon" name="blob-two" size="22" hint-size="22px,22px"></x-import>
+          </div>
+          <div title="Duplicate" style="width:40px;height:40px;border-radius:9px;position:relative">
+            <div style="position:absolute;left:10px;top:10px;width:13px;height:13px;border:2px solid #000;border-radius:3px"></div>
+            <div style="position:absolute;left:16px;top:16px;width:13px;height:13px;border:2px solid #000;border-radius:3px;background:#ECF0F3"></div>
+          </div>
+          <div title="Lock" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center">
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="14" height="10" rx="2"></rect><path d="M7 10V7a4 4 0 0 1 8 0v3"></path></svg>
+          </div>
+          <div title="Delete" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center">
+            <x-import component-from-global-scope="PaperWireframeDesignSystem_72d81a.Icon" name="x-circle" size="22" hint-size="22px,22px"></x-import>
+          </div>
+        </div>
+        <div style="width:2px;height:24px;background:rgba(0,0,0,.15);margin:0 5px"></div>
+        <div title="Keyboard shortcuts" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:rgba(156,171,194,.15)">
+          <div style="width:22px;height:15px;border:2px solid #000;border-radius:3px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:3px;box-sizing:border-box"><div style="width:10px;height:2px;background:#000"></div></div>
+        </div>
+        <div title="Export" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:#000;cursor:pointer">
+          <x-import component-from-global-scope="PaperWireframeDesignSystem_72d81a.Icon" name="arrow-right" size="20" color="#fff" hint-size="20px,20px"></x-import>
+        </div>
+      </div>
+
+      <div style="position:absolute;left:0;right:0;top:100px;bottom:30px;display:flex;align-items:center;justify-content:center">
+        <div onClick="{{ fillGround }}" style="position:relative;width:{{ cw }}px;height:{{ ch }}px;outline:2px solid #000;background:{{ ground }};cursor:pointer">
+          <div style="position:absolute;left:0;top:0;width:100%;height:{{ photoH }}px;box-sizing:border-box;background:rgba(156,171,194,.35);border:2px solid #9CABC2;pointer-events:none"></div>
+          <div onClick="{{ fillShape }}" style="position:absolute;left:{{ shapeR.x }}px;top:{{ shapeR.y }}px;width:{{ shapeR.w }}px;height:{{ shapeR.h }}px;background:{{ shapeFill }};outline:2px solid #000;cursor:pointer">
+            <div style="position:absolute;right:-12px;bottom:-12px;width:24px;height:24px;border-radius:999px;box-sizing:border-box;border:2px solid #000;background:{{ roleHex }}"></div>
+          </div>
+          <div onClick="{{ fillHead }}" style="position:absolute;left:{{ textX }}px;top:{{ headY }}px;width:{{ textW }}px;font-size:{{ fs }}px;line-height:1.02;font-weight:700;letter-spacing:-0.01em;color:{{ headCol }};cursor:pointer">SPACE BETWEEN</div>
+          <div onClick="{{ fillBody }}" style="position:absolute;left:{{ textX }}px;top:{{ paraY }}px;width:{{ textW }}px;display:flex;flex-direction:column;gap:11px;cursor:pointer">
+            <sc-for list="{{ paraBars }}" as="b" hint-placeholder-count="4">
+              <div style="height:3px;background:{{ bodyCol }};opacity:.55;width:{{ b.w }}"></div>
+            </sc-for>
+          </div>
+          <sc-if value="{{ showGuides }}" hint-placeholder-val="{{ true }}">
+            <sc-for list="{{ vLines }}" as="v" hint-placeholder-count="2">
+              <div style="position:absolute;top:0;bottom:0;left:{{ v.x }}px;width:1px;background:{{ inkCol }};opacity:.35;pointer-events:none"></div>
+            </sc-for>
+            <sc-for list="{{ hLines }}" as="h" hint-placeholder-count="2">
+              <div style="position:absolute;left:0;right:0;top:{{ h.y }}px;height:1px;background:{{ inkCol }};opacity:.35;pointer-events:none"></div>
+            </sc-for>
+            <sc-for list="{{ points }}" as="p" hint-placeholder-count="4">
+              <div style="position:absolute;left:{{ p.x }}px;top:{{ p.y }}px;width:6px;height:6px;margin:-3px 0 0 -3px;border-radius:999px;background:{{ inkCol }};opacity:.5;pointer-events:none"></div>
+            </sc-for>
+          </sc-if>
+        </div>
+      </div>
+
+      <div style="position:absolute;left:calc(50% - 250px);top:92px;width:300px;box-sizing:border-box;padding:15px;border:2px solid #000;border-radius:19px;background:#ECF0F3;display:flex;flex-direction:column;gap:15px">
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px">
+          <sc-for list="{{ roles }}" as="r" hint-placeholder-count="3">
+            <div onClick="{{ r.pick }}" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 0;border-radius:9px;cursor:pointer;background:{{ r.bg }};color:{{ r.fg }}">
+              <div style="width:36px;height:36px;border-radius:999px;box-sizing:border-box;background:{{ r.hex }};border:2px solid {{ r.ring }}"></div>
+              <div style="font-size:11px">{{ r.name }}</div>
+              <div style="font-size:11px;opacity:.6">{{ r.hex }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:5px">
+          <sc-for list="{{ shades }}" as="s" hint-placeholder-count="7">
+            <div onClick="{{ s.pick }}" style="flex:1;height:30px;border-radius:9px;box-sizing:border-box;background:{{ s.hex }};border:2px solid {{ s.ring }};cursor:pointer"></div>
+          </sc-for>
+        </div>
+        <div style="display:flex;justify-content:space-between">
+          <sc-for list="{{ hues }}" as="h" hint-placeholder-count="13">
+            <div onClick="{{ h.pick }}" style="width:16px;height:16px;border-radius:999px;box-sizing:border-box;background:{{ h.hex }};border:2px solid {{ h.ring }};cursor:pointer"></div>
+          </sc-for>
+        </div>
+        <div style="height:36px;border:2px solid #000;border-radius:9px;display:flex;align-items:center;padding:0 12px;font-size:13px;box-sizing:border-box">{{ roleHex }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="2c" data-screen-label="2c What the dial sets" style="display:flex;flex-direction:column;gap:15px;width:560px">
+    <div style="display:flex;align-items:center;gap:10px;font-size:13px">
+      <span style="border:2px solid #000;border-radius:999px;padding:1px 10px">2c</span>
+      <span style="opacity:.6">What the dial sets. Size, structure and colour come from geometry; the content is yours.</span>
+    </div>
+    <div style="box-sizing:border-box;border:2px solid #000;border-radius:29px;background:#ECF0F3;padding:30px;display:flex;flex-direction:column;gap:30px">
+      <div style="display:grid;grid-template-columns:70px minmax(0,1fr);gap:20px;align-items:center">
+        <div style="width:70px;height:70px;display:flex;align-items:center;justify-content:center"><div style="width:{{ c.rw }}px;height:{{ c.rh }}px;border:2px solid #000;box-sizing:border-box"></div></div>
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:13px"><div>{{ c.ratio }}</div><div style="opacity:.6">{{ c.export }}</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:70px minmax(0,1fr);gap:20px;align-items:center">
+        <div style="width:70px;height:70px;display:flex;align-items:center;justify-content:center">
+          <svg width="44" height="44" viewBox="0 0 44 44">
+            <rect x="1" y="1" width="42" height="42" fill="none" stroke="#000" stroke-width="2"></rect>
+            <sc-for list="{{ c.glines }}" as="l" hint-placeholder-count="4">
+              <line x1="{{ l.x1 }}" y1="{{ l.y1 }}" x2="{{ l.x2 }}" y2="{{ l.y2 }}" stroke="#000" stroke-width="1"></line>
+            </sc-for>
+          </svg>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:13px"><div>{{ c.guide }}</div><div style="opacity:.6">{{ c.lines }}</div><div style="opacity:.6">{{ c.type }}</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:70px minmax(0,1fr);gap:20px;align-items:center">
+        <div style="width:70px;height:70px;display:flex;align-items:center;justify-content:center;gap:4px">
+          <sc-for list="{{ roles }}" as="r" hint-placeholder-count="3">
+            <div style="width:18px;height:18px;border-radius:999px;box-sizing:border-box;background:{{ r.hex }};border:2px solid #000"></div>
+          </sc-for>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:13px"><div>{{ c.hue }}</div><div style="opacity:.6">{{ c.palette }}</div></div>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<section style="display:flex;flex-wrap:wrap;gap:60px;padding:60px;align-items:flex-start">
+
+  <div data-screen-label="01 Canvas shape" style="display:flex;flex-direction:column;gap:15px">
+    <div style="font-size:13px;opacity:.6">01 Canvas shape</div>
+    <div style="width:1280px;height:800px;box-sizing:border-box;border:2px solid #000;border-radius:29px;background:#ECF0F3;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center">
+      <div style="position:absolute;left:40px;top:30px;font-size:20px;letter-spacing:-0.045em">Kura8</div>
+      <svg width="520" height="520" viewBox="0 0 520 520" style="overflow:visible">
+        <sc-for list="{{ shapeSegs }}" as="s" hint-placeholder-count="5">
+          <g onClick="{{ s.pick }}" style="cursor:pointer">
+            <path d="{{ s.d }}" fill="{{ s.fill }}" stroke="#000" stroke-width="2"></path>
+            <rect x="{{ s.rx }}" y="{{ s.ry }}" width="{{ s.rw }}" height="{{ s.rh }}" rx="3" fill="none" stroke="{{ s.ink }}" stroke-width="2"></rect>
+          </g>
+        </sc-for>
+        <g onClick="{{ pickSquare }}" style="cursor:pointer">
+          <circle cx="260" cy="260" r="85" fill="{{ centreFill }}" stroke="#000" stroke-width="2"></circle>
+          <rect x="235" y="235" width="50" height="50" rx="3" fill="none" stroke="{{ centreInk }}" stroke-width="2"></rect>
+        </g>
+      </svg>
+    </div>
+  </div>
+
+  <div data-screen-label="02 Guide" style="display:flex;flex-direction:column;gap:15px">
+    <div style="font-size:13px;opacity:.6">02 Guide</div>
+    <div style="width:1280px;height:800px;box-sizing:border-box;border:2px solid #000;border-radius:29px;background:#ECF0F3;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center">
+      <div style="position:absolute;left:40px;top:30px;font-size:20px;letter-spacing:-0.045em">Kura8</div>
+      <svg width="520" height="520" viewBox="0 0 520 520" style="overflow:visible">
+        <sc-for list="{{ guideSegs }}" as="g" hint-placeholder-count="3">
+          <g onClick="{{ g.pick }}" style="cursor:pointer">
+            <path d="{{ g.d }}" fill="{{ g.fill }}" stroke="#000" stroke-width="2"></path>
+            <rect x="{{ g.rx }}" y="{{ g.ry }}" width="{{ g.rw }}" height="{{ g.rh }}" rx="3" fill="none" stroke="{{ g.ink }}" stroke-width="2"></rect>
+            <sc-for list="{{ g.lines }}" as="l" hint-placeholder-count="4">
+              <line x1="{{ l.x1 }}" y1="{{ l.y1 }}" x2="{{ l.x2 }}" y2="{{ l.y2 }}" stroke="{{ g.ink }}" stroke-width="1"></line>
+            </sc-for>
+          </g>
+        </sc-for>
+        <circle cx="260" cy="260" r="85" fill="none" stroke="#000" stroke-width="2"></circle>
+        <rect x="{{ mini.x }}" y="{{ mini.y }}" width="{{ mini.w }}" height="{{ mini.h }}" rx="3" fill="rgba(156,171,194,.35)" stroke="#9CABC2" stroke-width="2"></rect>
+      </svg>
+    </div>
+  </div>
+
+  <div data-screen-label="03 Editor" style="display:flex;flex-direction:column;gap:15px">
+    <div style="font-size:13px;opacity:.6">03 Editor — headline selected, left edge snapped</div>
+    <div style="width:1280px;height:800px;box-sizing:border-box;border:2px solid #000;border-radius:29px;background:#ECF0F3;position:relative;overflow:hidden">
+      <div style="position:absolute;left:40px;top:30px;font-size:20px;letter-spacing:-0.045em">Kura8</div>
+
+      <div style="position:absolute;left:50%;top:20px;transform:translateX(-50%);display:flex;align-items:center;gap:5px;padding:5px 10px;border:2px solid #000;border-radius:39px;background:#ECF0F3">
+        <div title="Add text" style="width:40px;height:40px;border-radius:9px;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:0 10px;box-sizing:border-box;cursor:pointer" style-hover="background:rgba(156,171,194,.15)">
+          <div style="height:3px;width:20px;background:#000;border-radius:2px"></div>
+          <div style="height:3px;width:14px;background:#000;border-radius:2px"></div>
+        </div>
+        <div title="Add rectangle" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:rgba(156,171,194,.15)">
+          <div style="width:20px;height:14px;border:2px solid #000;border-radius:2px"></div>
+        </div>
+        <div title="Shape library" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:rgba(156,171,194,.15)">
+          <x-import component-from-global-scope="PaperWireframeDesignSystem_72d81a.Icon" name="venn" size="22" hint-size="22px,22px"></x-import>
+        </div>
+        <div title="Add image" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:rgba(156,171,194,.15)">
+          <div style="width:20px;height:16px;border:2px solid #9CABC2;background:rgba(156,171,194,.35);border-radius:4px"></div>
+        </div>
+        <div style="width:2px;height:24px;background:rgba(0,0,0,.15);margin:0 5px"></div>
+        <div title="Colour" style="display:flex;align-items:center;gap:5px;height:40px;padding:0 5px">
+          <div style="width:22px;height:22px;border-radius:999px;border:2px solid #000;background:{{ swatch }}"></div>
+          <div style="height:30px;width:80px;box-sizing:border-box;border:2px solid #000;border-radius:9px;display:flex;align-items:center;padding:0 10px;font-size:13px">{{ hex }}</div>
+        </div>
+        <div title="Font size" style="height:30px;width:50px;box-sizing:border-box;border:2px solid #000;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:13px">{{ fontSizeLabel }}</div>
+        <div title="Bold" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:#000;color:#fff;font-size:16px;font-weight:700">B</div>
+        <div title="Align left" style="width:40px;height:40px;border-radius:9px;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:4px;padding:0 10px;box-sizing:border-box;background:#000">
+          <div style="height:2px;width:20px;background:#fff"></div><div style="height:2px;width:12px;background:#fff"></div><div style="height:2px;width:16px;background:#fff"></div>
+        </div>
+        <div title="Align centre" style="width:40px;height:40px;border-radius:9px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;cursor:pointer" style-hover="background:rgba(156,171,194,.15)">
+          <div style="height:2px;width:20px;background:#000"></div><div style="height:2px;width:12px;background:#000"></div><div style="height:2px;width:16px;background:#000"></div>
+        </div>
+        <div title="Align right" style="width:40px;height:40px;border-radius:9px;display:flex;flex-direction:column;justify-content:center;align-items:flex-end;gap:4px;padding:0 10px;box-sizing:border-box;cursor:pointer" style-hover="background:rgba(156,171,194,.15)">
+          <div style="height:2px;width:20px;background:#000"></div><div style="height:2px;width:12px;background:#000"></div><div style="height:2px;width:16px;background:#000"></div>
+        </div>
+        <div style="width:2px;height:24px;background:rgba(0,0,0,.15);margin:0 5px"></div>
+        <div title="Remove background" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:rgba(156,171,194,.15)">
+          <x-import component-from-global-scope="PaperWireframeDesignSystem_72d81a.Icon" name="blob-two" size="22" hint-size="22px,22px"></x-import>
+        </div>
+        <div title="Duplicate" style="width:40px;height:40px;border-radius:9px;position:relative;cursor:pointer" style-hover="background:rgba(156,171,194,.15)">
+          <div style="position:absolute;left:10px;top:10px;width:13px;height:13px;border:2px solid #000;border-radius:3px"></div>
+          <div style="position:absolute;left:16px;top:16px;width:13px;height:13px;border:2px solid #000;border-radius:3px;background:#ECF0F3"></div>
+        </div>
+        <div title="Lock" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:rgba(156,171,194,.15)">
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="14" height="10" rx="2"></rect><path d="M7 10V7a4 4 0 0 1 8 0v3"></path></svg>
+        </div>
+        <div title="Delete" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:rgba(156,171,194,.15)">
+          <x-import component-from-global-scope="PaperWireframeDesignSystem_72d81a.Icon" name="x-circle" size="22" hint-size="22px,22px"></x-import>
+        </div>
+        <div style="width:2px;height:24px;background:rgba(0,0,0,.15);margin:0 5px"></div>
+        <div title="Keyboard shortcuts" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:rgba(156,171,194,.15)">
+          <div style="width:22px;height:15px;border:2px solid #000;border-radius:3px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:3px;box-sizing:border-box"><div style="width:10px;height:2px;background:#000"></div></div>
+        </div>
+        <div title="Export" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:#000;cursor:pointer">
+          <x-import component-from-global-scope="PaperWireframeDesignSystem_72d81a.Icon" name="arrow-right" size="20" color="#fff" hint-size="20px,20px"></x-import>
+        </div>
+      </div>
+
+      <div style="position:absolute;left:0;right:0;top:100px;bottom:30px;display:flex;align-items:center;justify-content:center">
+        <div style="position:relative;width:{{ cw }}px;height:{{ ch }}px;outline:2px solid #000;background:#ECF0F3;overflow:visible">
+          <div style="position:absolute;left:0;top:0;width:100%;height:{{ photoH }}px;box-sizing:border-box;background:rgba(156,171,194,.35);border:2px solid #9CABC2"></div>
+          <div style="position:absolute;left:{{ textX }}px;top:{{ headY }}px;width:{{ textW }}px;font-size:{{ fs }}px;line-height:1.02;font-weight:700;letter-spacing:-0.01em">SPACE BETWEEN</div>
+          <div style="position:absolute;left:{{ textX }}px;top:{{ paraY }}px;width:{{ textW }}px;display:flex;flex-direction:column;gap:11px">
+            <sc-for list="{{ paraBars }}" as="b" hint-placeholder-count="4">
+              <div style="height:3px;background:#9CABC2;width:{{ b.w }}"></div>
+            </sc-for>
+          </div>
+
+          <sc-if value="{{ showGuides }}" hint-placeholder-val="{{ true }}">
+            <sc-for list="{{ vLines }}" as="v" hint-placeholder-count="2">
+              <div style="position:absolute;top:0;bottom:0;left:{{ v.x }}px;width:1px;background:rgba(0,0,0,.35);pointer-events:none"></div>
+            </sc-for>
+            <sc-for list="{{ hLines }}" as="h" hint-placeholder-count="2">
+              <div style="position:absolute;left:0;right:0;top:{{ h.y }}px;height:1px;background:rgba(0,0,0,.35);pointer-events:none"></div>
+            </sc-for>
+            <sc-for list="{{ points }}" as="p" hint-placeholder-count="4">
+              <div style="position:absolute;left:{{ p.x }}px;top:{{ p.y }}px;width:6px;height:6px;margin:-3px 0 0 -3px;border-radius:999px;background:rgba(0,0,0,.5);pointer-events:none"></div>
+            </sc-for>
+            <div style="position:absolute;top:-10px;bottom:-10px;left:{{ flashX }}px;width:2px;margin-left:-1px;background:#000;pointer-events:none"></div>
+          </sc-if>
+
+          <div style="position:absolute;left:{{ selX }}px;top:{{ selY }}px;width:{{ selW }}px;height:{{ selH }}px;border:2px solid #000;pointer-events:none">
+            <div style="position:absolute;left:-7px;top:50%;width:10px;height:10px;margin-top:-6px;background:#ECF0F3;border:2px solid #000;border-radius:2.5px"></div>
+            <div style="position:absolute;right:-7px;top:50%;width:10px;height:10px;margin-top:-6px;background:#ECF0F3;border:2px solid #000;border-radius:2.5px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;shape&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;square&quot;,&quot;portrait&quot;,&quot;landscape&quot;,&quot;story&quot;,&quot;banner&quot;],&quot;default&quot;:&quot;portrait&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;composition&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;cover&quot;,&quot;split&quot;,&quot;stack&quot;,&quot;poster&quot;,&quot;frame&quot;,&quot;band&quot;],&quot;default&quot;:&quot;cover&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;guide&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;thirds&quot;,&quot;golden&quot;,&quot;divisions&quot;],&quot;default&quot;:&quot;golden&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;hue&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:210,&quot;min&quot;:0,&quot;max&quot;:330,&quot;step&quot;:30,&quot;unit&quot;:&quot;°&quot;,&quot;tsType&quot;:&quot;number&quot;},&quot;darkGround&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;showGuides&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;blankVersion&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  state = { shape: null, guide: null, hue: undefined, dark: null, target: null, comp: null, role: 'ink', over: {}, fills: { ground: 'ground', shape: 'accent', head: 'ink', body: 'ink' } };
+  renderVals() {
+    const P = this.props, S = this.state, set = (p) => this.setState(p);
+    const blank = !!P.blankVersion;
+    const PHI = (1 + Math.sqrt(5)) / 2;
+    const RATIOS = [['square', 'Square', 1, 1, 1080, 1080], ['portrait', 'Portrait', 4, 5, 1080, 1350], ['landscape', 'Landscape', 16, 9, 1920, 1080], ['story', 'Story', 9, 16, 1080, 1920], ['banner', 'Banner', 3, 1, 1500, 500]];
+    const GUIDES = [['thirds', 'Thirds', [1 / 3, 2 / 3], 1.5], ['golden', 'Golden', [1 - 1 / PHI, 1 / PHI], PHI], ['divisions', 'Quarters', [.25, .5, .75], Math.SQRT2]];
+    const SH = Object.fromEntries(RATIOS.map(r => [r[0], [r[2], r[3]]]));
+    const GL = Object.fromEntries(GUIDES.map(g => [g[0], g[2]]));
+    const shape = blank ? 'square' : (S.shape || (SH[P.shape] ? P.shape : 'portrait'));
+    const guide = S.guide || (GL[P.guide] ? P.guide : 'golden');
+    const hue = S.hue !== undefined ? S.hue : (P.hue ?? 210);
+    const dark = S.dark ?? !!P.darkGround;
+    const R = RATIOS.find(r => r[0] === shape), G = GUIDES.find(g => g[0] === guide), L = G[2], TS = G[3];
+
+    const hsl = (h, s, l) => { s /= 100; l /= 100; const a = s * Math.min(l, 1 - l); const f = n => { const k = (n + h / 30) % 12; return Math.round((l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1))) * 255).toString(16).padStart(2, '0'); }; return ('#' + f(0) + f(8) + f(4)).toUpperCase(); };
+    const neutral = hue === null;
+    const h0 = hue || 0, comp = (h0 + 180) % 360;
+    const roleHS = { ground: [h0, neutral ? 0 : 40], ink: [h0, neutral ? 0 : 30], accent: [comp, neutral ? 0 : 55] };
+    const derived = neutral
+      ? (dark ? { ground: '#111111', ink: '#FFFFFF', accent: '#FFFFFF' } : { ground: '#FFFFFF', ink: '#111111', accent: '#111111' })
+      : (dark ? { ground: hsl(h0, 30, 12), ink: hsl(h0, 40, 92), accent: hsl(comp, 55, 50) } : { ground: hsl(h0, 40, 92), ink: hsl(h0, 30, 12), accent: hsl(comp, 55, 50) });
+    const col = (r) => S.over[r] || derived[r];
+    const roleHex = col(S.role);
+
+    const pol = (cx, cy, r, a) => [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+    const ring = (cx, cy, Ro, Ri, i, n) => {
+      const step = 2 * Math.PI / n, a0 = -Math.PI / 2 - step / 2 + i * step, a1 = a0 + step;
+      const [x0, y0] = pol(cx, cy, Ro, a0), [x1, y1] = pol(cx, cy, Ro, a1), [x2, y2] = pol(cx, cy, Ri, a1), [x3, y3] = pol(cx, cy, Ri, a0);
+      return { d: `M${x0} ${y0}A${Ro} ${Ro} 0 0 1 ${x1} ${y1}L${x2} ${y2}A${Ri} ${Ri} 0 0 0 ${x3} ${y3}Z`, c: pol(cx, cy, (Ro + Ri) / 2, (a0 + a1) / 2) };
+    };
+    const fitBox = (w, h, m) => { const s = m / Math.max(w, h); return [w * s, h * s]; };
+    const onOff = (on) => ({ fill: on ? '#000' : 'transparent', ink: on ? '#fff' : '#000' });
+
+    // turn 1 wheels
+    const shapeSegs = RATIOS.map(([k, , w, h], i) => { const { d, c } = ring(260, 260, 240, 95, i, 5), [rw, rh] = fitBox(w, h, k === 'banner' ? 66 : 60); return { d, rx: c[0] - rw / 2, ry: c[1] - rh / 2, rw, rh, ...onOff(k === shape), pick: () => set({ shape: k }) }; });
+    const guideSegs = GUIDES.map(([k, , F], i) => {
+      const { d, c } = ring(260, 260, 240, 95, i, 3), [rw, rh] = fitBox(SH[shape][0], SH[shape][1], 72), rx = c[0] - rw / 2, ry = c[1] - rh / 2;
+      const lines = F.flatMap(f => [{ x1: rx + f * rw, y1: ry, x2: rx + f * rw, y2: ry + rh }, { x1: rx, y1: ry + f * rh, x2: rx + rw, y2: ry + f * rh }]);
+      return { d, rx, ry, rw, rh, lines, ...onOff(k === guide), pick: () => set({ guide: k }) };
+    });
+    const [mw, mh] = fitBox(SH[shape][0], SH[shape][1], 60);
+
+    // turn 2 dial
+    const ratioW = RATIOS.map(([k, , w, h], i) => { const { d, c } = ring(300, 300, 296, 226, i, 5), [rw, rh] = fitBox(w, h, 30); return { d, rx: c[0] - rw / 2, ry: c[1] - 9 - rh / 2, rw, rh, tx: c[0], ty: c[1] + 24, label: `${w}:${h}`, ...onOff(k === shape), pick: () => set({ shape: k }) }; });
+    const guideW = GUIDES.map(([k, name, F], i) => {
+      const { d, c } = ring(300, 300, 220, 160, i, 3), gx = c[0] - 13, gy = c[1] - 25;
+      const lines = F.flatMap(f => [{ x1: gx + 26 * f, y1: gy, x2: gx + 26 * f, y2: gy + 26 }, { x1: gx, y1: gy + 26 * f, x2: gx + 26, y2: gy + 26 * f }]);
+      return { d, gx, gy, lines, tx: c[0], ty: c[1] + 19, label: name, ...onOff(k === guide), pick: () => set({ guide: k }) };
+    });
+    const hueW = Array.from({ length: 12 }, (_, i) => ({ d: ring(300, 300, 154, 118, i, 12).d, fill: hsl(i * 30, 50, 55), pick: () => set({ hue: hue === i * 30 ? null : i * 30, over: {} }) }));
+    const hueSelD = neutral ? false : ring(300, 300, 154, 118, hue / 30, 12).d;
+    const [pw, ph] = fitBox(R[2], R[3], 140);
+    const hub = { x: 300 - pw / 2, y: 283 - ph / 2, w: pw, h: ph, ground: col('ground'), ink: col('ink') };
+    const hubLines = L.flatMap(f => [{ x1: hub.x + f * pw, y1: hub.y, x2: hub.x + f * pw, y2: hub.y + ph }, { x1: hub.x, y1: hub.y + f * ph, x2: hub.x + pw, y2: hub.y + f * ph }]);
+
+    // editor geometry, re-anchored per ratio
+    const a = L[0], b = L[L.length - 1];
+    const layout = (key) => {
+      const [sw, shh] = SH[key], sc = Math.min(1100 / sw, 600 / shh), cw = Math.round(sw * sc), ch = Math.round(shh * sc);
+      const pad = Math.round(cw * 0.04), fs = Math.round(Math.min(28 * TS * TS * cw / 1000, ch * 0.075));
+      const textX = Math.round(a * cw), textW = cw - textX - pad, photoH = Math.round(b * ch), headY = photoH + pad;
+      const headH = Math.round(fs * 1.02 * (textW < fs * 8 ? 2 : 1));
+      return { cw, ch, pad, fs, textX, textW, photoH, headY, headH, paraY: headY + headH + pad,
+        shapeR: { x: pad, y: pad, w: Math.round(a * cw) - 2 * pad, h: Math.round(a * ch * 0.5) },
+        vLines: L.map(f => ({ x: Math.round(f * cw) })), hLines: L.map(f => ({ y: Math.round(f * ch) })),
+        points: L.flatMap(fx => L.map(fy => ({ x: Math.round(fx * cw), y: Math.round(fy * ch) }))) };
+    };
+    const E = layout(shape), target = S.target || (shape === 'landscape' ? 'portrait' : 'landscape'), T = layout(target);
+    const theta = Math.round(Math.atan2(E.ch, E.cw) * 1800 / Math.PI) / 10, hyp = Math.hypot(E.cw, E.ch);
+    const bw = Math.round(hyp * 0.55), bh = Math.round(E.ch * 0.1);
+    const hs = (w, h, all) => (all ? [[-5, -5], [w / 2 - 5, -5], [w - 5, -5], [-5, h / 2 - 5], [w - 5, h / 2 - 5], [-5, h - 5], [w / 2 - 5, h - 5], [w - 5, h - 5]] : [[-5, -5], [w - 5, -5], [-5, h - 5], [w - 5, h - 5]]).map(([x, y]) => ({ x, y }));
+    const rot = { tf: `rotate(-${theta}deg)`, hyp: Math.round(hyp), x: Math.round(E.cw / 2 - bw / 2), y: Math.round(E.ch / 2 - bh / 2), w: bw, h: bh, label: `${Math.round(theta)}°`, handles: hs(bw, bh, true) };
+    const img = { w: E.cw, h: E.photoH, bx: Math.round(E.cw * 0.3), by: Math.round(E.photoH * 0.15), bw: Math.round(E.cw * 0.4), bh: Math.round(E.photoH * 0.7), handles: hs(E.cw, E.photoH, false) };
+    const ringW = RATIOS.map(([k, , w, h], i) => { const { d, c } = ring(130, 130, 126, 86, i, 5), [rw, rh] = fitBox(w, h, 22); return { d, rx: c[0] - rw / 2, ry: c[1] - rh / 2, rw, rh, ...onOff(k === target), pick: () => set({ target: k }) }; });
+    const TR = RATIOS.find(r => r[0] === target), targetLabel = `${TR[2]}:${TR[3]}`, currentLabel = `${R[2]}:${R[3]}`;
+    const fill = (k) => (e) => { if (e && e.stopPropagation) e.stopPropagation(); this.setState(s => ({ fills: { ...s.fills, [k]: s.role } })); };
+
+    // colour panel
+    const roles = [['ground', 'Ground'], ['ink', 'Ink'], ['accent', 'Accent']].map(([k, name]) => { const on = S.role === k; return { key: k, name, hex: col(k), on, bg: on ? '#000' : 'transparent', fg: on ? '#fff' : '#000', ring: on ? '#fff' : '#000', pick: () => set({ role: k }) }; });
+    const [rh0, rs0] = roleHS[S.role];
+    const shades = [92, 78, 64, 50, 36, 22, 10].map(l => { const hex = hsl(rh0, rs0, l), on = hex === roleHex; return { hex, on, ring: on ? '#000' : 'rgba(0,0,0,.15)', pick: () => this.setState(s => ({ over: { ...s.over, [s.role]: hex } })) }; });
+    const hues = [...Array.from({ length: 12 }, (_, i) => ({ hex: hsl(i * 30, 55, 50), on: hue === i * 30, pick: () => set({ hue: i * 30, over: {} }) })), { hex: '#ECF0F3', on: neutral, pick: () => set({ hue: null, over: {} }) }]
+      .map(h => ({ ...h, ring: h.on ? '#000' : 'rgba(0,0,0,.15)' }));
+
+    // 2c
+    const pct = f => String(Math.round(f * 1000) / 10);
+    const [crw, crh] = fitBox(R[2], R[3], 44);
+    const c = {
+      rw: crw, rh: crh, ratio: `${R[1]} ${R[2]}:${R[3]}`, export: `Exports at ${R[4]} × ${R[5]} px`,
+      guide: G[1], lines: `Lines at ${L.map(pct).join(' / ')} %`, type: `Type scale ×${TS.toFixed(3).replace(/0+$/, '')} · 28 · ${Math.round(28 * TS)} · ${Math.round(28 * TS * TS)}`,
+      glines: L.flatMap(f => [{ x1: 1 + 42 * f, y1: 1, x2: 1 + 42 * f, y2: 43 }, { x1: 1, y1: 1 + 42 * f, x2: 43, y2: 1 + 42 * f }]),
+      hue: neutral ? 'No hue' : `Hue ${hue}° · complement ${comp}°`, palette: `Ground ${col('ground')} · Ink ${col('ink')} · Accent ${col('accent')}`,
+    };
+
+    // turn 4: dial that replaces templates
+    const COMPS = [['cover', 'Cover'], ['split', 'Split'], ['stack', 'Stack'], ['poster', 'Poster'], ['frame', 'Frame'], ['band', 'Band']];
+    const compKey = S.comp || (COMPS.some(x => x[0] === P.composition) ? P.composition : 'cover');
+    const build = (sk, ck, maxW, maxH) => {
+      const [sw, shh] = SH[sk], sc = Math.min(maxW / sw, maxH / shh), cw = sw * sc, ch = shh * sc;
+      const pad = Math.min(cw, ch) * 0.045, ax = a * cw, bx = b * cw, ay = a * ch, by = b * ch;
+      let fs = Math.min(28 * TS * TS * cw / 1000, ch * 0.075), img = null, acc, head, body = null, cap = 0;
+      const Rc = (x, y, w, h) => ({ x, y, w, h });
+      if (ck === 'cover') { img = Rc(0, 0, cw, by); acc = Rc(pad, pad, ax - 2 * pad, ay * 0.5); head = { x: ax, y: by + pad, w: cw - ax - pad }; }
+      else if (ck === 'split') { img = Rc(0, 0, ax, ch); acc = Rc(bx, by, cw - bx, ch - by); head = { x: ax + pad, y: ay, w: cw - ax - 2 * pad }; }
+      else if (ck === 'stack') { img = Rc(0, ay, cw, by - ay); acc = Rc(bx + pad, pad, cw - bx - 2 * pad, ay - 2 * pad); head = { x: pad, y: pad, w: bx - 2 * pad }; cap = ay - 2 * pad; body = { x: pad, y: by + pad, w: cw - 2 * pad }; }
+      else if (ck === 'poster') { acc = Rc(0, by, cw, ch - by); head = { x: pad, y: pad, w: cw - 2 * pad }; fs = (cw - 2 * pad) / 4.8; cap = by - 2 * pad; body = { x: pad, y: by + pad, w: cw - 2 * pad }; }
+      else if (ck === 'frame') { img = Rc(ax, ay, bx - ax, by - ay); const s = Math.min(ax, ay) - 2 * pad; acc = Rc(pad, pad, s, s); head = { x: pad, y: by + pad, w: cw - 2 * pad }; body = { x: bx + pad, y: pad, w: cw - bx - 2 * pad }; }
+      else { img = Rc(bx, 0, cw - bx, ch); acc = Rc(pad, ay - pad * 1.8, pad * 3, pad * 0.7); head = { x: pad, y: ay, w: bx - 2 * pad }; }
+      let lines = head.w >= fs * 8.5 ? 1 : 2;
+      if (cap) { fs = Math.min(fs, cap / (1.05 * lines)); lines = head.w >= fs * 8.5 ? 1 : 2; }
+      const headH = fs * 1.02 * lines;
+      if (!body) body = { x: head.x, y: head.y + headH + pad, w: head.w };
+      return { cw, ch, pad, fs, lines, headH, img, acc, head, body, k: cw / 1000, vLines: L.map(f => ({ x: f * cw })), hLines: L.map(f => ({ y: f * ch })), points: L.flatMap(fx => L.map(fy => ({ x: fx * cw, y: fy * ch }))) };
+    };
+    const prims = (B, Cc, bodyN, ox, oy) => {
+      const o = [], r = (x, y, w, h, fill, fo, stroke, sw) => o.push({ x: ox + x, y: oy + y, w, h, fill, fo: fo ?? 1, stroke: stroke || 'none', sw: sw || 0 });
+      if (Cc.frame) r(0, 0, B.cw, B.ch, Cc.ground || 'none', 1, Cc.frame, Cc.frameW || 2);
+      L.forEach(f => { r(f * B.cw - 0.5, 0, 1, B.ch, Cc.ink, .3); r(0, f * B.ch - 0.5, B.cw, 1, Cc.ink, .3); });
+      if (B.img) r(B.img.x, B.img.y, B.img.w, B.img.h, Cc.img, Cc.imgFo, Cc.img, Cc.imgSw);
+      r(B.acc.x, B.acc.y, B.acc.w, B.acc.h, Cc.acc, 1);
+      const lw = [Math.min(B.head.w, B.fs * 8.5), Math.min(B.head.w, B.fs * 4.6)];
+      for (let i = 0; i < B.lines; i++) r(B.head.x, B.head.y + i * B.fs * 1.02 + B.fs * 0.12, lw[i], B.fs * 0.78, Cc.ink, 1);
+      const bh = Math.max(1, 3 * B.k), bg = Math.max(1.5, 11 * B.k), bws = [1, .86, 1, .62];
+      for (let i = 0; i < bodyN; i++) r(B.body.x, B.body.y + i * (bh + bg), B.body.w * bws[i], bh, Cc.ink, .6);
+      return o;
+    };
+    const mono = (ink) => ({ ink, img: ink, imgFo: .2, imgSw: 1, acc: ink, frame: ink, frameW: 1 });
+    const ratioW4 = RATIOS.map(([k, , w, h], i) => { const { d, c } = ring(320, 320, 318, 270, i, 5), [rw, rh] = fitBox(w, h, 16); return { d, rx: c[0] - rw / 2, ry: c[1] - 7 - rh / 2, rw, rh, tx: c[0], ty: c[1] + 17, label: `${w}:${h}`, ...onOff(k === shape), pick: () => set({ shape: k }) }; });
+    const compW = COMPS.map(([k, name], i) => {
+      const { d, c } = ring(320, 320, 266, 190, i, 6), on = k === compKey, ink = on ? '#fff' : '#000', B = build(shape, k, 46, 46);
+      return { d, fill: on ? '#000' : 'transparent', ink, tx: c[0], ty: c[1] + 29, label: name, prims: prims(B, mono(ink), 2, c[0] - B.cw / 2, c[1] - 10 - B.ch / 2), pick: () => set({ comp: k }) };
+    });
+    const guideW4 = GUIDES.map(([k, name, F], i) => {
+      const { d, c } = ring(320, 320, 186, 144, i, 3), gx = c[0] - 10, gy = c[1] - 16;
+      const lines = F.flatMap(f => [{ x1: gx + 20 * f, y1: gy, x2: gx + 20 * f, y2: gy + 20 }, { x1: gx, y1: gy + 20 * f, x2: gx + 20, y2: gy + 20 * f }]);
+      return { d, gx, gy, lines, tx: c[0], ty: c[1] + 15, label: name, ...onOff(k === guide), pick: () => set({ guide: k }) };
+    });
+    const hueW4 = Array.from({ length: 12 }, (_, i) => ({ d: ring(320, 320, 140, 110, i, 12).d, fill: hsl(i * 30, 50, 55), pick: () => set({ hue: hue === i * 30 ? null : i * 30, over: {} }) }));
+    const hueSel4 = neutral ? false : ring(320, 320, 140, 110, hue / 30, 12).d;
+    const HB = build(shape, compKey, 120, 120);
+    const hubPrims = prims(HB, { ground: col('ground'), frame: '#000', frameW: 2, ink: col('ink'), img: '#9CABC2', imgFo: .35, imgSw: 1.5, acc: col('accent') }, 4, 320 - HB.cw / 2, 300 - HB.ch / 2);
+    const E4 = build(shape, compKey, 1100, 600);
+    const CB = build(shape, compKey, 48, 48), cThumb = prims(CB, { ...mono('#000'), frameW: 2 }, 2, 24 - CB.cw / 2, 24 - CB.ch / 2);
+    const DESC = {
+      cover: `Image down to ${pct(b)}%, headline off the ${pct(a)}% column`,
+      split: `Image in the left ${pct(a)}%, text beside it, accent in the bottom-right cell`,
+      stack: `Headline on top, image between ${pct(a)}% and ${pct(b)}%, body under`,
+      poster: `Type across the top, accent band from ${pct(b)}% down`,
+      frame: `Image in the centre cell, headline under it, body top-right`,
+      band: `Image in the right ${pct(1 - b)}%, headline on the ${pct(a)}% line`,
+    };
+
+    const lab = (list, fs, ox, oy, sc) => list.map(s => ({ x: ox + s.tx * sc, y: oy + s.ty * sc - fs * 0.35, fs, ink: s.ink, label: s.label }));
+    const labels4 = [...lab(ratioW4, 11, 320, 50, 1), ...lab(compW, 11, 320, 50, 1), ...lab(guideW4, 10, 320, 50, 1)];
+    const labels2 = [...lab(ratioW, 13, 330, 45, 620 / 600), ...lab(guideW, 12, 330, 45, 620 / 600)];
+
+    return {
+      ratioW4, compW, guideW4, hueW4, hueSel4, hubPrims, E4, cThumb, labels4, labels2, compName: COMPS.find(x => x[0] === compKey)[1], compDesc: DESC[compKey], fontSize4: String(Math.round(E4.fs)),
+      shapeSegs, guideSegs, mini: { x: 260 - mw / 2, y: 260 - mh / 2, w: mw, h: mh },
+      centreFill: shape === 'square' ? '#000' : 'transparent', centreInk: shape === 'square' ? '#fff' : '#000', pickSquare: () => set({ shape: 'square' }),
+      ratioW, guideW, hueW, hueSelD, hub, hubLines,
+      lightOutline: dark ? 'none' : '2px solid #000', darkOutline: dark ? '2px solid #000' : 'none',
+      setLight: () => set({ dark: false, over: {} }), setDark: () => set({ dark: true, over: {} }),
+      swatch: '#000000', hex: '000000', fontSizeLabel: String(E.fs),
+      ...E, T, rot, img, ringW, targetLabel, currentLabel,
+      paraBars: [{ w: '100%' }, { w: '86%' }, { w: '100%' }, { w: '62%' }],
+      showGuides: !blank && (P.showGuides ?? true),
+      flashX: E.textX, selX: E.textX - 6, selY: E.headY - 6, selW: E.textW + 8, selH: E.headH + 8,
+      ground: col(S.fills.ground), shapeFill: col(S.fills.shape), headCol: col(S.fills.head), bodyCol: col(S.fills.body), inkCol: col('ink'),
+      fillGround: fill('ground'), fillShape: fill('shape'), fillHead: fill('head'), fillBody: fill('body'),
+      roles, shades, hues, roleHex, c,
+    };
+  }
+}
+</script>
+</body>
+</html>

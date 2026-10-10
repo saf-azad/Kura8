@@ -1,0 +1,1686 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/paper-wireframe-design-system-72d81a7d-25aa-4885-8fde-e91c1d59ff21/tokens/fonts.css">
+  <link rel="stylesheet" href="_ds/paper-wireframe-design-system-72d81a7d-25aa-4885-8fde-e91c1d59ff21/tokens/colors.css">
+  <link rel="stylesheet" href="_ds/paper-wireframe-design-system-72d81a7d-25aa-4885-8fde-e91c1d59ff21/tokens/typography.css">
+  <link rel="stylesheet" href="_ds/paper-wireframe-design-system-72d81a7d-25aa-4885-8fde-e91c1d59ff21/tokens/spacing.css">
+  <link rel="stylesheet" href="_ds/paper-wireframe-design-system-72d81a7d-25aa-4885-8fde-e91c1d59ff21/tokens/geometry.css">
+  <link rel="stylesheet" href="_ds/paper-wireframe-design-system-72d81a7d-25aa-4885-8fde-e91c1d59ff21/tokens/motion.css">
+  <link rel="stylesheet" href="_ds/paper-wireframe-design-system-72d81a7d-25aa-4885-8fde-e91c1d59ff21/tokens/base.css">
+  <link rel="stylesheet" href="_ds/paper-wireframe-design-system-72d81a7d-25aa-4885-8fde-e91c1d59ff21/styles.css">
+  <script src="_ds/paper-wireframe-design-system-72d81a7d-25aa-4885-8fde-e91c1d59ff21/_ds_bundle.js"></script>
+  <style>body{margin:0;background:#ECF0F3;font-family:'Space Grotesk',system-ui,sans-serif;color:#000;overflow:hidden}a{color:#000}a:hover{color:#9CABC2}textarea::selection,input::selection{background:#9CABC2}</style>
+</helmet>
+<div style="position:fixed;inset:0;overflow:hidden;background:#ECF0F3;user-select:none;-webkit-user-select:none;font-family:'Space Grotesk',system-ui,sans-serif">
+
+<sc-if value="{{ isDial }}" hint-placeholder-val="{{ true }}">
+  <div data-screen-label="01 Dial" style="position:absolute;inset:0">
+    <div style="position:absolute;left:40px;top:30px;font-size:20px;letter-spacing:-0.045em">Kura8</div>
+
+    <div style="position:absolute;left:40px;top:50%;transform:translateY(-50%);width:250px;display:flex;flex-direction:column;gap:8px">
+      <sc-for list="{{ readout }}" as="r" hint-placeholder-count="4">
+        <div onClick="{{ r.focus }}" style="display:flex;flex-direction:column;gap:5px;padding:12px 15px;border-radius:19px;border:2px solid {{ r.border }};cursor:pointer;transition:border-color 140ms">
+          <div style="font-size:11px;opacity:.6">{{ r.name }}</div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:15px">
+            <span style="margin-right:4px">{{ r.value }}</span>
+            <sc-for list="{{ r.dots }}" as="d" hint-placeholder-count="0">
+              <span style="width:12px;height:12px;border-radius:999px;border:2px solid #000;box-sizing:border-box;background:{{ d.hex }};transition:background-color 300ms"></span>
+            </sc-for>
+          </div>
+          <div style="font-size:12px;opacity:.6;line-height:1.35;text-wrap:pretty">{{ r.sub }}</div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="position:absolute;left:50%;top:{{ dial.top }}px;width:640px;height:640px;margin-left:-320px;transform:scale({{ dial.s }});transform-origin:50% 0">
+      <svg ref="{{ dialRef }}" width="640" height="640" viewBox="0 0 640 640" style="position:absolute;left:0;top:0;overflow:visible;touch-action:none">
+        <path d="M312 -16H328L320 -5Z" fill="#000"></path>
+        <sc-for list="{{ rings }}" as="rg" hint-placeholder-count="4">
+          <g onWheel="{{ rg.wheel }}" onPointerEnter="{{ rg.enter }}" onPointerLeave="{{ rg.leave }}" style="transform:rotate({{ rg.rot }}deg);transform-origin:320px 320px;transition:{{ rg.tr }}">
+            <sc-for list="{{ rg.segs }}" as="s" hint-placeholder-count="5">
+              <g onPointerDown="{{ s.down }}" style="cursor:{{ rg.cur }}">
+                <path d="{{ s.d }}" fill="{{ s.fill }}" stroke="{{ s.stroke }}" stroke-width="2" vector-effect="non-scaling-stroke" style="transition:fill 280ms, stroke 280ms" style-hover="fill:{{ s.hover }}"></path>
+                <g style="transform:rotate({{ rg.counter }}deg) scale({{ rg.cs }});transform-origin:{{ s.cx }}px {{ s.cy }}px;opacity:{{ rg.cop }};transition:{{ rg.ctr }};pointer-events:none">
+                  <sc-for list="{{ s.rects }}" as="p" hint-placeholder-count="0">
+                    <rect x="{{ p.x }}" y="{{ p.y }}" width="{{ p.w }}" height="{{ p.h }}" rx="{{ p.rx }}" fill="{{ p.fill }}" fill-opacity="{{ p.op }}" stroke="{{ p.stroke }}" stroke-width="{{ p.sw }}" style="transition:fill 140ms, stroke 140ms"></rect>
+                  </sc-for>
+                  <sc-for list="{{ s.lines }}" as="l" hint-placeholder-count="0">
+                    <line x1="{{ l.x1 }}" y1="{{ l.y1 }}" x2="{{ l.x2 }}" y2="{{ l.y2 }}" stroke="{{ s.ink }}" stroke-width="1"></line>
+                  </sc-for>
+                </g>
+              </g>
+            </sc-for>
+          </g>
+        </sc-for>
+        <path d="{{ hueWindow }}" fill="none" stroke="#000" stroke-width="2" vector-effect="non-scaling-stroke" style="pointer-events:none;opacity:{{ hueWin.op }};transition:opacity 280ms"></path>
+        <circle cx="320" cy="320" r="106" fill="#ECF0F3" stroke="#000" stroke-width="2"></circle>
+      </svg>
+      <sc-for list="{{ rings }}" as="rg" hint-placeholder-count="0">
+        <div style="position:absolute;left:0;top:0;width:640px;height:640px;transform:rotate({{ rg.rot }}deg);transition:{{ rg.tr }};pointer-events:none">
+          <sc-for list="{{ rg.segs }}" as="s" hint-placeholder-count="0">
+            <div style="position:absolute;left:{{ s.cx }}px;top:{{ s.cy }}px;width:0;height:0;transform:rotate({{ rg.counter }}deg) scale({{ rg.cs }});transform-origin:0 0;opacity:{{ rg.cop }};transition:{{ rg.ctr }}">
+              <div style="position:absolute;left:0;top:{{ s.ly }}px;transform:translate(-50%,-50%);font-size:{{ s.fs }}px;line-height:1;white-space:nowrap;color:{{ s.ink }};transition:color 140ms">{{ s.label }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-for>
+      <div onClick="{{ start }}" title="Start (Enter)" style="position:absolute;left:214px;top:214px;width:212px;height:212px;border-radius:999px;cursor:pointer;transition:background 140ms" style-hover="background:rgba(156,171,194,.15)">
+        <sc-for list="{{ hubItems }}" as="p" hint-placeholder-count="15">
+          <div style="position:absolute;left:{{ p.x }}px;top:{{ p.y }}px;width:{{ p.w }}px;height:{{ p.h }}px;box-sizing:border-box;background:{{ p.fill }};opacity:{{ p.op }};border:{{ p.bd }};transition:left 480ms cubic-bezier(.2,0,.2,1), top 480ms cubic-bezier(.2,0,.2,1), width 480ms cubic-bezier(.2,0,.2,1), height 480ms cubic-bezier(.2,0,.2,1), opacity 280ms, background-color 280ms"></div>
+        </sc-for>
+        <div style="position:absolute;left:88px;top:166px;width:36px;height:36px;border-radius:999px;background:#000;display:flex;align-items:center;justify-content:center">
+          <x-import component-from-global-scope="PaperWireframeDesignSystem_72d81a.Icon" name="arrow-right" size="18" color="#fff" hint-size="18px,18px"></x-import>
+        </div>
+      </div>
+    </div>
+
+    <div onPointerDown="{{ stop }}" style="position:absolute;right:40px;top:80px;width:220px;box-sizing:border-box;padding:15px;border:2px solid #000;border-radius:19px;display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div style="font-size:11px;opacity:.6">Any colour</div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:12px"><span style="width:14px;height:14px;border-radius:999px;box-sizing:border-box;border:2px solid #000;background:{{ pk.hex }}"></span>{{ pk.hex }}</div>
+      </div>
+      <div onPointerDown="{{ dialSvDown }}" title="Drag to set the accent to any colour" style="position:relative;height:130px;border-radius:9px;border:2px solid #000;cursor:crosshair;touch-action:none;background:linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, {{ pk.pure }})">
+        <div style="position:absolute;left:{{ pk.x }}%;top:{{ pk.y }}%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:999px;box-sizing:border-box;border:2px solid #fff;outline:2px solid #000;background:{{ pk.hex }};pointer-events:none"></div>
+      </div>
+      <div onPointerDown="{{ dialHueDown }}" title="Drag to change hue" style="position:relative;height:16px;border-radius:999px;border:2px solid #000;cursor:ew-resize;touch-action:none;background:linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)">
+        <div style="position:absolute;left:{{ pk.hx }}%;top:50%;width:8px;height:20px;margin:-10px 0 0 -4px;border-radius:999px;box-sizing:border-box;border:2px solid #000;background:#fff;pointer-events:none"></div>
+      </div>
+      <div style="font-size:11px;opacity:.6;line-height:1.35">Sets the accent. Turning the colour ring resets it.</div>
+    </div>
+
+    <div style="position:absolute;left:0;right:0;bottom:36px;display:flex;justify-content:center;align-items:center;gap:20px">
+      <div style="display:flex;gap:5px;padding:5px;border:2px solid #000;border-radius:999px">
+        <div onClick="{{ setLight }}" title="Light ground" style="width:36px;height:36px;border-radius:999px;background:{{ gnd.lightBg }};display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background 140ms">
+          <div style="width:18px;height:18px;border-radius:999px;box-sizing:border-box;border:2px solid {{ gnd.lightRing }};background:#ECF0F3"></div>
+        </div>
+        <div onClick="{{ setDark }}" title="Dark ground" style="width:36px;height:36px;border-radius:999px;background:{{ gnd.darkBg }};display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background 140ms">
+          <div style="width:18px;height:18px;border-radius:999px;box-sizing:border-box;border:2px solid {{ gnd.darkRing }};background:#000"></div>
+        </div>
+      </div>
+      <div onClick="{{ start }}" style="height:50px;padding:0 22px 0 28px;border-radius:999px;background:#000;color:#fff;display:flex;align-items:center;gap:12px;font-size:15px;cursor:pointer;transition:background 80ms" style-active="background:#92A0A9">
+        <span>Start</span>
+        <x-import component-from-global-scope="PaperWireframeDesignSystem_72d81a.Icon" name="arrow-right" size="18" color="#fff" hint-size="18px,18px"></x-import>
+      </div>
+      <sc-if value="{{ hasDoc }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ resume }}" style="height:50px;padding:0 24px;border-radius:999px;border:2px solid #000;box-sizing:border-box;display:flex;align-items:center;font-size:15px;cursor:pointer" style-hover="background:rgba(156,171,194,.15)">Back to canvas</div>
+      </sc-if>
+    </div>
+
+    <div style="position:absolute;right:40px;bottom:40px;display:flex;flex-direction:column;align-items:flex-end;gap:8px;font-size:12px">
+      <div style="opacity:.6">Drag or scroll a ring to turn it</div>
+      <sc-for list="{{ dialHints }}" as="h" hint-placeholder-count="3">
+        <div style="display:flex;align-items:center;gap:5px">
+          <span style="opacity:.6;margin-right:5px">{{ h.label }}</span>
+          <sc-for list="{{ h.keys }}" as="kk" hint-placeholder-count="1">
+            <span style="min-width:24px;height:24px;padding:0 7px;box-sizing:border-box;border-radius:9px;background:#D0D8E2;display:flex;align-items:center;justify-content:center">{{ kk.k }}</span>
+          </sc-for>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isEditor }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="02 Editor" style="position:absolute;inset:0">
+    <div onPointerDown="{{ stageDown }}" style="position:absolute;inset:0"></div>
+
+    <div style="position:absolute;left:0;right:0;top:100px;bottom:40px;display:flex;align-items:center;justify-content:center;pointer-events:none">
+      <div ref="{{ canvasRef }}" onPointerDown="{{ canvasDown }}" style="pointer-events:auto;position:relative;flex:none;width:{{ cv.w }}px;height:{{ cv.h }}px;outline:2px solid #000;background:{{ cv.ground }};transform:scale({{ cv.s }});transition:{{ cv.tr }};cursor:{{ cv.cur }};touch-action:none">
+        <div style="position:absolute;inset:0;pointer-events:none;z-index:2;opacity:{{ grid.op }};background-image:linear-gradient(to right, {{ grid.c }} 1px, transparent 1px), linear-gradient(to bottom, {{ grid.c }} 1px, transparent 1px);background-size:{{ grid.px }}px {{ grid.px }}px;transition:opacity 140ms"></div>
+        <div style="position:absolute;inset:0;overflow:hidden;pointer-events:none">
+          <sc-for list="{{ items }}" as="o" hint-placeholder-count="0">
+            <div onPointerDown="{{ o.down }}" onDoubleClick="{{ o.dbl }}" style="display:{{ o.disp }};position:absolute;left:{{ o.l }}px;top:{{ o.t }}px;width:{{ o.w }}px;height:{{ o.h }}px;transform:{{ o.tf }};opacity:{{ o.op }};z-index:{{ o.z }};transition:{{ o.tr }};cursor:{{ o.cur }};pointer-events:auto">
+              <sc-if value="{{ o.isBox }}" hint-placeholder-val="{{ false }}">
+                <div style="width:100%;height:100%;box-sizing:border-box;background:{{ o.bg }};border-radius:{{ o.rad }};border:{{ o.bd }};transition:background-color 200ms, border-color 200ms"></div>
+              </sc-if>
+              <sc-if value="{{ o.isPath }}" hint-placeholder-val="{{ false }}">
+                <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" style="display:block;overflow:visible"><path d="{{ o.d }}" fill="{{ o.fill }}" fill-rule="evenodd" style="transition:fill 200ms"></path></svg>
+              </sc-if>
+              <sc-if value="{{ o.isInk }}" hint-placeholder-val="{{ false }}">
+                <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" style="display:block;overflow:visible"><path d="{{ o.d }}" fill="none" stroke="{{ o.fill }}" stroke-width="{{ o.sw }}" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" style="transition:stroke 200ms"></path></svg>
+              </sc-if>
+              <sc-if value="{{ o.isText }}" hint-placeholder-val="{{ false }}">
+                <div style="font-size:{{ o.fs }}px;line-height:1.02;font-weight:{{ o.fw }};letter-spacing:-0.01em;text-align:{{ o.align }};color:{{ o.color }};white-space:pre;transition:color 200ms">
+                  <sc-for list="{{ o.lines }}" as="ln" hint-placeholder-count="0"><div>{{ ln.t }}</div></sc-for>
+                </div>
+              </sc-if>
+              <sc-if value="{{ o.isPara }}" hint-placeholder-val="{{ false }}">
+                <div style="height:100%;display:flex;flex-direction:column;justify-content:space-between">
+                  <sc-for list="{{ o.bars }}" as="b" hint-placeholder-count="0">
+                    <div style="height:{{ b.h }}px;width:{{ b.w }};background:{{ o.color }};opacity:.55;transition:background-color 200ms"></div>
+                  </sc-for>
+                </div>
+              </sc-if>
+              <sc-if value="{{ o.isImg }}" hint-placeholder-val="{{ false }}">
+                <div style="position:relative;width:100%;height:100%;overflow:hidden">
+                  <sc-if value="{{ o.full }}" hint-placeholder-val="{{ false }}">
+                    <div style="position:absolute;inset:0;box-sizing:border-box;background:rgba(156,171,194,.35);border:2px solid #9CABC2"></div>
+                  </sc-if>
+                  <sc-if value="{{ o.cut }}" hint-placeholder-val="{{ false }}">
+                    <div style="position:absolute;left:30%;top:15%;width:40%;height:70%;box-sizing:border-box;background:#D0D8E2;border:2px solid #9CABC2;border-radius:48% 52% 45% 55% / 55% 45% 55% 45%"></div>
+                  </sc-if>
+                  <sc-if value="{{ o.scanning }}" hint-placeholder-val="{{ false }}">
+                    <div style="position:absolute;left:0;right:0;top:{{ o.scanTop }};height:2px;background:#000;transition:top 900ms linear"></div>
+                  </sc-if>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+          <sc-if value="{{ rotLine }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;left:{{ rotLine.l }}px;top:{{ rotLine.t }}px;width:{{ rotLine.w }}px;height:2px;background:#000;transform:{{ rotLine.tf }};z-index:9998"></div>
+          </sc-if>
+        </div>
+
+        <sc-if value="{{ guides.on }}" hint-placeholder-val="{{ true }}">
+          <div style="position:absolute;inset:0;pointer-events:none;z-index:2">
+            <sc-for list="{{ guides.v }}" as="v" hint-placeholder-count="2">
+              <div style="position:absolute;top:0;bottom:0;left:{{ v.x }}px;width:1px;background:{{ guides.ink }};opacity:.35;transition:left 280ms cubic-bezier(.2,0,.2,1)"></div>
+            </sc-for>
+            <sc-for list="{{ guides.h }}" as="h" hint-placeholder-count="2">
+              <div style="position:absolute;left:0;right:0;top:{{ h.y }}px;height:1px;background:{{ guides.ink }};opacity:.35;transition:top 280ms cubic-bezier(.2,0,.2,1)"></div>
+            </sc-for>
+            <sc-for list="{{ guides.pts }}" as="p" hint-placeholder-count="4">
+              <div style="position:absolute;left:{{ p.x }}px;top:{{ p.y }}px;width:6px;height:6px;margin:-3px 0 0 -3px;border-radius:999px;background:{{ guides.ink }};opacity:.5;transition:left 280ms cubic-bezier(.2,0,.2,1), top 280ms cubic-bezier(.2,0,.2,1)"></div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ sk.on }}" hint-placeholder-val="{{ false }}">
+          <div onPointerDown="{{ sk.down }}" onPointerMove="{{ sk.hover }}" onPointerLeave="{{ sk.leave }}" style="position:absolute;inset:0;z-index:3;overflow:hidden;cursor:{{ sk.cur }};touch-action:none">
+            <svg width="100%" height="100%" style="position:absolute;left:0;top:0;pointer-events:none"><path d="{{ sk.hwD }}" fill="none" stroke="{{ sk.ink }}" stroke-width="{{ sk.sw }}" stroke-linecap="round" stroke-linejoin="round" opacity="{{ sk.hwOp }}" style="transition:opacity 200ms"></path><path d="{{ sk.lasso }}" fill="rgba(156,171,194,.15)" stroke="#000" stroke-width="1" stroke-linejoin="round"></path></svg>
+            <sc-if value="{{ sk.live.on }}" hint-placeholder-val="{{ false }}">
+              <svg width="100%" height="100%" style="position:absolute;left:0;top:0;pointer-events:none"><path d="{{ sk.live.d }}" fill="none" stroke="{{ sk.ink }}" stroke-width="{{ sk.sw }}" stroke-linecap="round" stroke-linejoin="round" style="d:{{ sk.live.pd }};transition:{{ sk.live.tr }}"></path></svg>
+            </sc-if>
+            <sc-if value="{{ sk.box }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;left:{{ sk.box.l }}px;top:{{ sk.box.t }}px;width:{{ sk.box.w }}px;height:{{ sk.box.h }}px;box-sizing:border-box;border:2px solid rgba(0,0,0,.35);border-radius:9px;pointer-events:none;transition:left 140ms, top 140ms, width 140ms, height 140ms">
+                <sc-if value="{{ sk.box.reading }}" hint-placeholder-val="{{ false }}">
+                  <div style="position:absolute;left:8px;top:8px;font-size:12px;color:#fff;background:#000;padding:3px 10px;border-radius:999px">Reading</div>
+                </sc-if>
+              </div>
+            </sc-if>
+            <sc-if value="{{ sk.er }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;left:{{ sk.er.x }}px;top:{{ sk.er.y }}px;width:24px;height:24px;margin:-12px 0 0 -12px;box-sizing:border-box;border:2px solid #000;border-radius:999px;background:rgba(156,171,194,.15);pointer-events:none"></div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <div style="position:absolute;inset:0;pointer-events:none;z-index:3">
+          <sc-for list="{{ snapLines }}" as="s" hint-placeholder-count="0">
+            <div style="position:absolute;left:{{ s.l }}px;top:{{ s.t }}px;width:{{ s.w }}px;height:{{ s.h }}px;background:#000;opacity:{{ s.op }}"></div>
+          </sc-for>
+          <sc-if value="{{ marq }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;left:{{ marq.l }}px;top:{{ marq.t }}px;width:{{ marq.w }}px;height:{{ marq.h }}px;box-sizing:border-box;border:1px solid #000;background:rgba(156,171,194,.15)"></div>
+          </sc-if>
+          <sc-for list="{{ selBoxes }}" as="b" hint-placeholder-count="0">
+            <div style="position:absolute;left:{{ b.l }}px;top:{{ b.t }}px;width:{{ b.w }}px;height:{{ b.h }}px;transform:{{ b.tf }};transition:{{ b.tr }}">
+              <div style="position:absolute;inset:-4px;border:2px solid #000">
+                <sc-if value="{{ b.handles }}" hint-placeholder-val="{{ false }}">
+                  <div style="position:absolute;left:50%;top:-30px;width:2px;height:28px;margin-left:-1px;background:#000"></div>
+                  <div onPointerDown="{{ b.rotDown }}" title="Rotate" style="position:absolute;left:50%;top:-44px;width:16px;height:16px;margin-left:-8px;box-sizing:border-box;border-radius:999px;background:#ECF0F3;border:2px solid #000;pointer-events:auto;cursor:grab"></div>
+                  <sc-for list="{{ b.hs }}" as="h" hint-placeholder-count="0">
+                    <div onPointerDown="{{ h.down }}" style="position:absolute;left:{{ h.x }};top:{{ h.y }};width:12px;height:12px;margin:-6px 0 0 -6px;box-sizing:border-box;background:#ECF0F3;border:2px solid #000;border-radius:2.5px;pointer-events:auto;cursor:{{ h.cur }}"></div>
+                  </sc-for>
+                </sc-if>
+                <sc-if value="{{ b.locked }}" hint-placeholder-val="{{ false }}">
+                  <div style="position:absolute;right:-12px;top:-12px;width:22px;height:22px;border-radius:999px;background:#000;display:flex;align-items:center;justify-content:center">
+                    <svg width="12" height="12" viewBox="0 0 22 22" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="14" height="10" rx="2"></rect><path d="M7 10V7a4 4 0 0 1 8 0v3"></path></svg>
+                  </div>
+                </sc-if>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+
+        <sc-if value="{{ ed }}" hint-placeholder-val="{{ false }}">
+          <textarea ref="{{ editRef }}" value="{{ ed.text }}" onChange="{{ onEditChange }}" onBlur="{{ commitEdit }}" onPointerDown="{{ stop }}" style="position:absolute;z-index:4;left:{{ ed.l }}px;top:{{ ed.t }}px;width:{{ ed.w }}px;height:{{ ed.h }}px;transform:{{ ed.tf }};font-family:'Space Grotesk',system-ui,sans-serif;font-size:{{ ed.fs }}px;line-height:1.02;font-weight:{{ ed.fw }};letter-spacing:-0.01em;text-align:{{ ed.align }};color:{{ ed.color }};background:transparent;border:none;outline:none;padding:0;margin:0;resize:none;overflow:hidden;white-space:pre-wrap;user-select:text"></textarea>
+        </sc-if>
+      </div>
+    </div>
+
+    <div onClick="{{ toDial }}" title="Back to the dial" style="position:absolute;left:40px;top:30px;font-size:20px;letter-spacing:-0.045em;cursor:pointer;opacity:{{ chrome.op }};transition:opacity 280ms 180ms" style-hover="color:#9CABC2">Kura8</div>
+
+    <div style="position:absolute;left:50%;top:20px;transform:translateX(-50%) scale({{ tb.scale }});transform-origin:50% 0;opacity:{{ chrome.op }};transition:opacity 280ms 180ms;z-index:5">
+      <div style="display:flex;align-items:center;gap:5px;padding:5px 10px;border:2px solid #000;border-radius:39px;background:#ECF0F3;white-space:nowrap">
+        <div title="{{ tips.text }}" onClick="{{ addText }}" style="width:40px;height:40px;border-radius:9px;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:0 10px;box-sizing:border-box;cursor:pointer;transition:background 140ms" style-hover="background:rgba(156,171,194,.15)">
+          <div style="height:3px;width:20px;background:#000;border-radius:2px"></div>
+          <div style="height:3px;width:14px;background:#000;border-radius:2px"></div>
+        </div>
+        <div title="{{ tips.shapes }}" onClick="{{ toggleShapes }}" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:{{ tb.shapes.bg }};transition:background 140ms" style-hover="background:{{ tb.shapes.hov }}">
+          <x-import component-from-global-scope="PaperWireframeDesignSystem_72d81a.Icon" name="venn" size="22" color="{{ tb.shapes.fg }}" hint-size="22px,22px"></x-import>
+        </div>
+        <div title="{{ tips.image }}" onClick="{{ addImage }}" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background 140ms" style-hover="background:rgba(156,171,194,.15)">
+          <div style="width:20px;height:16px;border:2px solid #9CABC2;background:rgba(156,171,194,.35);border-radius:4px"></div>
+        </div>
+        <div title="{{ tips.pen }}" onClick="{{ togglePen }}" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:{{ tb.pen.bg }};transition:background 140ms" style-hover="background:{{ tb.pen.hov }}">
+          <x-import component-from-global-scope="PaperWireframeDesignSystem_72d81a.Icon" name="note-edit" size="22" color="{{ tb.pen.fg }}" hint-size="22px,22px"></x-import>
+        </div>
+        <sc-if value="{{ tb.sketching }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:5px">
+            <div title="{{ tips.erase }}" onClick="{{ setErase }}" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:{{ tb.erase.bg }};transition:background 140ms" style-hover="background:{{ tb.erase.hov }}">
+              <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="{{ tb.erase.fg }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 18L3.5 13.5a1.5 1.5 0 0 1 0-2.1L11 4a1.5 1.5 0 0 1 2.1 0l5 5a1.5 1.5 0 0 1 0 2.1L11 18H8Z"></path><path d="M7 9.5L12.5 15"></path><path d="M11 18H19"></path></svg>
+            </div>
+            <div title="{{ tips.lasso }}" onClick="{{ setLasso }}" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:{{ tb.lasso.bg }};transition:background 140ms" style-hover="background:{{ tb.lasso.hov }}">
+              <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="{{ tb.lasso.fg }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 15.5C3.8 14.4 2 12.4 2 10C2 6.1 6 3 11 3S20 6.1 20 10S16 17 11 17C10 17 9 16.9 8 16.6"></path><path d="M8 13.5C6 14.5 5.5 17 7.5 19"></path></svg>
+            </div>
+            <div title="{{ tips.write }}" onClick="{{ setWrite }}" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;color:{{ tb.write.fg }};background:{{ tb.write.bg }};transition:background 140ms" style-hover="background:{{ tb.write.hov }}">Aa</div>
+          </div>
+        </sc-if>
+        <div style="width:2px;height:24px;background:rgba(0,0,0,.15);margin:0 5px"></div>
+        <div title="{{ tips.colour }}" onClick="{{ toggleColour }}" style="display:flex;align-items:center;gap:5px;height:40px;padding:0 5px;border-radius:9px;cursor:pointer;background:{{ tb.colour.bg }};color:{{ tb.colour.fg }};transition:background 140ms" style-hover="background:{{ tb.colour.hov }}">
+          <div style="width:22px;height:22px;border-radius:999px;border:2px solid {{ tb.colour.fg }};box-sizing:border-box;background:{{ tb.swatch }};transition:background-color 200ms"></div>
+          <div style="height:30px;width:84px;box-sizing:border-box;border:2px solid {{ tb.colour.fg }};border-radius:9px;display:flex;align-items:center;padding:0 10px;font-size:13px">{{ tb.swatch }}</div>
+        </div>
+        <div title="Angle" style="height:30px;width:52px;box-sizing:border-box;border:2px solid #000;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:13px;opacity:{{ tb.one.op }}">{{ tb.angle }}</div>
+        <div style="display:flex;align-items:center;gap:5px;opacity:{{ tb.text.op }};pointer-events:{{ tb.text.pe }};transition:opacity 140ms">
+          <div title="Smaller" onClick="{{ fontDown }}" style="width:26px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:rgba(156,171,194,.15)"><div style="width:12px;height:2px;background:#000"></div></div>
+          <div title="Font size" style="height:30px;width:46px;box-sizing:border-box;border:2px solid #000;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:13px">{{ tb.fs }}</div>
+          <div title="Larger" onClick="{{ fontUp }}" style="width:26px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative" style-hover="background:rgba(156,171,194,.15)"><div style="width:12px;height:2px;background:#000"></div><div style="position:absolute;width:2px;height:12px;background:#000"></div></div>
+          <div title="{{ tips.bold }}" onClick="{{ toggleBold }}" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;cursor:pointer;background:{{ tb.bold.bg }};color:{{ tb.bold.fg }};transition:background 140ms" style-hover="background:{{ tb.bold.hov }}">B</div>
+          <div title="Align" onClick="{{ cycleAlign }}" style="width:40px;height:40px;border-radius:9px;display:flex;flex-direction:column;justify-content:center;align-items:{{ tb.alignItems }};gap:4px;padding:0 10px;box-sizing:border-box;cursor:pointer" style-hover="background:rgba(156,171,194,.15)">
+            <div style="height:2px;width:20px;background:#000"></div><div style="height:2px;width:12px;background:#000"></div><div style="height:2px;width:16px;background:#000"></div>
+          </div>
+        </div>
+        <div style="width:2px;height:24px;background:rgba(0,0,0,.15);margin:0 5px"></div>
+        <div title="Remove background" onClick="{{ removeBg }}" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:{{ tb.img.op }};pointer-events:{{ tb.img.pe }};transition:opacity 140ms" style-hover="background:rgba(156,171,194,.15)">
+          <x-import component-from-global-scope="PaperWireframeDesignSystem_72d81a.Icon" name="blob-two" size="22" hint-size="22px,22px"></x-import>
+        </div>
+        <div title="{{ tips.dup }}" onClick="{{ duplicate }}" style="width:40px;height:40px;border-radius:9px;position:relative;cursor:pointer;opacity:{{ tb.sel.op }};pointer-events:{{ tb.sel.pe }};transition:opacity 140ms" style-hover="background:rgba(156,171,194,.15)">
+          <div style="position:absolute;left:10px;top:10px;width:13px;height:13px;border:2px solid #000;border-radius:3px"></div>
+          <div style="position:absolute;left:16px;top:16px;width:13px;height:13px;border:2px solid #000;border-radius:3px;background:#ECF0F3"></div>
+        </div>
+        <div title="{{ tips.lock }}" onClick="{{ toggleLock }}" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:{{ tb.sel.op }};pointer-events:{{ tb.sel.pe }};background:{{ tb.lock.bg }};transition:opacity 140ms, background 140ms" style-hover="background:{{ tb.lock.hov }}">
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="{{ tb.lock.fg }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="14" height="10" rx="2"></rect><path d="M7 10V7a4 4 0 0 1 8 0v3"></path></svg>
+        </div>
+        <div title="Delete (Delete)" onClick="{{ remove }}" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:{{ tb.sel.op }};pointer-events:{{ tb.sel.pe }};transition:opacity 140ms" style-hover="background:rgba(156,171,194,.15)">
+          <x-import component-from-global-scope="PaperWireframeDesignSystem_72d81a.Icon" name="x-circle" size="22" hint-size="22px,22px"></x-import>
+        </div>
+        <div style="width:2px;height:24px;background:rgba(0,0,0,.15);margin:0 5px"></div>
+        <div title="{{ tips.undo }}" onClick="{{ undo }}" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:{{ tb.undo.op }};pointer-events:{{ tb.undo.pe }};transition:opacity 140ms" style-hover="background:rgba(156,171,194,.15)">
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5L4 9L8 13"></path><path d="M4 9H13A5 5 0 0 1 13 19H9"></path></svg>
+        </div>
+        <div title="{{ tips.redo }}" onClick="{{ redo }}" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:{{ tb.redo.op }};pointer-events:{{ tb.redo.pe }};transition:opacity 140ms" style-hover="background:rgba(156,171,194,.15)">
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5L18 9L14 13"></path><path d="M18 9H9A5 5 0 0 0 9 19H13"></path></svg>
+        </div>
+        <div style="width:2px;height:24px;background:rgba(0,0,0,.15);margin:0 5px"></div>
+        <div title="Keyboard shortcuts (?)" onClick="{{ toggleKeys }}" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:{{ tb.keys.bg }};transition:background 140ms" style-hover="background:{{ tb.keys.hov }}">
+          <div style="width:22px;height:15px;border:2px solid {{ tb.keys.fg }};border-radius:3px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:3px;box-sizing:border-box"><div style="width:10px;height:2px;background:{{ tb.keys.fg }}"></div></div>
+        </div>
+        <div title="{{ tips.export }}" onClick="{{ openExport }}" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:#000;cursor:pointer;transition:background 80ms" style-active="background:#92A0A9">
+          <x-import component-from-global-scope="PaperWireframeDesignSystem_72d81a.Icon" name="arrow-right" size="20" color="#fff" hint-size="20px,20px"></x-import>
+        </div>
+      </div>
+
+      <div onPointerDown="{{ stop }}" style="position:absolute;top:64px;left:40px;width:392px;max-height:{{ pnl.maxH }}px;overflow:auto;box-sizing:border-box;padding:15px;border:2px solid #000;border-radius:19px;background:#ECF0F3;display:flex;flex-direction:column;gap:12px;opacity:{{ pnl.shapes.op }};pointer-events:{{ pnl.shapes.pe }};transform:{{ pnl.shapes.tf }};transform-origin:10% 0;transition:opacity 140ms, transform 200ms cubic-bezier(.2,0,.2,1)">
+        <input value="{{ iconQ }}" onChange="{{ onIconQ }}" onKeyDown="{{ stopKey }}" placeholder="Search icons" title="Search 1,500+ free Phosphor icons (MIT licence)" style="height:36px;width:100%;flex:none;border:2px solid #000;border-radius:999px;padding:0 15px;font-family:inherit;font-size:13px;box-sizing:border-box;background:transparent;outline:none;color:#000;user-select:text">
+        <sc-for list="{{ shapeGroups }}" as="g" hint-placeholder-count="5">
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div style="font-size:11px;opacity:.6;padding-left:2px">{{ g.name }}</div>
+            <div style="display:grid;grid-template-columns:repeat(8,40px);gap:5px">
+              <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="8">
+                <div onClick="{{ it.add }}" title="{{ it.name }}" style="width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background 140ms" style-hover="background:rgba(156,171,194,.35)" style-active="transform:scale(.94)">
+                  <sc-if value="{{ it.isCss }}" hint-placeholder-val="{{ false }}">
+                    <div style="width:{{ it.pw }}px;height:{{ it.ph }}px;box-sizing:border-box;background:{{ it.bg }};border:{{ it.bd }};border-radius:{{ it.rad }}"></div>
+                  </sc-if>
+                  <sc-if value="{{ it.isPath }}" hint-placeholder-val="{{ false }}">
+                    <svg width="{{ it.pw }}" height="{{ it.ph }}" viewBox="0 0 100 100" preserveAspectRatio="none" style="display:block;overflow:visible"><path d="{{ it.d }}" fill="#000" fill-rule="evenodd"></path></svg>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div onPointerDown="{{ stop }}" style="position:absolute;top:64px;left:150px;width:300px;box-sizing:border-box;padding:15px;border:2px solid #000;border-radius:19px;background:#ECF0F3;display:flex;flex-direction:column;gap:15px;opacity:{{ pnl.colour.op }};pointer-events:{{ pnl.colour.pe }};transform:{{ pnl.colour.tf }};transform-origin:20% 0;transition:opacity 140ms, transform 200ms cubic-bezier(.2,0,.2,1)">
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px">
+          <sc-for list="{{ roles }}" as="r" hint-placeholder-count="3">
+            <div onClick="{{ r.pick }}" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 0;border-radius:9px;cursor:pointer;background:{{ r.bg }};color:{{ r.fg }};transition:background 140ms" style-hover="background:{{ r.hov }}">
+              <div style="width:36px;height:36px;border-radius:999px;box-sizing:border-box;background:{{ r.hex }};border:2px solid {{ r.ring }};transition:background-color 200ms"></div>
+              <div style="font-size:11px">{{ r.name }}</div>
+              <div style="font-size:11px;opacity:.6">{{ r.hex }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:5px">
+          <sc-for list="{{ shades }}" as="s" hint-placeholder-count="7">
+            <div onClick="{{ s.pick }}" style="flex:1;height:30px;border-radius:9px;box-sizing:border-box;background:{{ s.hex }};border:2px solid {{ s.ring }};cursor:pointer;transition:background-color 200ms" style-active="transform:scale(.94)"></div>
+          </sc-for>
+        </div>
+        <div style="display:flex;justify-content:space-between">
+          <sc-for list="{{ hues }}" as="h" hint-placeholder-count="13">
+            <div onClick="{{ h.pick }}" style="width:16px;height:16px;border-radius:999px;box-sizing:border-box;background:{{ h.hex }};border:2px solid {{ h.ring }};cursor:pointer"></div>
+          </sc-for>
+        </div>
+        <div onPointerDown="{{ svDown }}" title="Drag to pick any colour" style="position:relative;height:120px;border-radius:9px;border:2px solid #000;cursor:crosshair;touch-action:none;background:linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, {{ pk.pure }})">
+          <div style="position:absolute;left:{{ pk.x }}%;top:{{ pk.y }}%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:999px;box-sizing:border-box;border:2px solid #fff;outline:2px solid #000;background:{{ pk.hex }};pointer-events:none"></div>
+        </div>
+        <div onPointerDown="{{ hueDown }}" title="Drag to change hue" style="position:relative;height:16px;border-radius:999px;border:2px solid #000;cursor:ew-resize;touch-action:none;background:linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)">
+          <div style="position:absolute;left:{{ pk.hx }}%;top:50%;width:8px;height:20px;margin:-10px 0 0 -4px;border-radius:999px;box-sizing:border-box;border:2px solid #000;background:#fff;pointer-events:none"></div>
+        </div>
+        <input value="{{ hexVal }}" onChange="{{ onHex }}" onKeyDown="{{ onHexKey }}" onBlur="{{ applyHex }}" style="height:36px;width:100%;border:2px solid #000;border-radius:9px;padding:0 12px;font-family:inherit;font-size:13px;box-sizing:border-box;background:transparent;outline:none;color:#000;user-select:text">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+          <div style="font-size:12px;opacity:.6">Tap anything to fill it</div>
+          <div style="display:flex;gap:5px">
+            <div onClick="{{ setLight }}" title="Light ground" style="width:22px;height:22px;border-radius:999px;background:#ECF0F3;border:2px solid #000;box-sizing:border-box;cursor:pointer;outline:{{ gnd.lightOutline }};outline-offset:2px"></div>
+            <div onClick="{{ setDark }}" title="Dark ground" style="width:22px;height:22px;border-radius:999px;background:#000;border:2px solid #000;box-sizing:border-box;cursor:pointer;outline:{{ gnd.darkOutline }};outline-offset:2px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="position:absolute;right:40px;top:25px;display:flex;align-items:center;gap:10px;opacity:{{ chrome.op }};transition:opacity 280ms 180ms;z-index:5">
+      <div title="Guides (G)" onClick="{{ toggleGuides }}" style="width:40px;height:40px;box-sizing:border-box;border:2px solid #000;border-radius:999px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:{{ tb.guides.bg }};transition:background 140ms" style-hover="background:{{ tb.guides.hov }}">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="{{ tb.guides.fg }}"><rect x="1" y="1" width="16" height="16" stroke-width="2"></rect><path d="M7 1V17M11 1V17M1 7H17M1 11H17" stroke-width="1"></path></svg>
+      </div>
+      <div style="position:absolute;right:0;top:50px">
+        <div title="Layers" onClick="{{ toggleLayers }}" style="width:40px;height:40px;box-sizing:border-box;border:2px solid #000;border-radius:999px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:{{ tb.layers.bg }};transition:background 140ms" style-hover="background:{{ tb.layers.hov }}">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="{{ tb.layers.fg }}" stroke-width="2" stroke-linejoin="round"><path d="M9 2L16 6L9 10L2 6Z"></path><path d="M2 10L9 14L16 10"></path></svg>
+        </div>
+        <div onPointerDown="{{ stop }}" style="position:absolute;right:52px;top:0;width:280px;max-height:{{ pnl.maxH }}px;overflow:auto;box-sizing:border-box;padding:10px;border:2px solid #000;border-radius:19px;background:#ECF0F3;display:flex;flex-direction:column;gap:2px;opacity:{{ pnl.layers.op }};pointer-events:{{ pnl.layers.pe }};transform:{{ pnl.layers.tf }};transform-origin:90% 0;transition:opacity 140ms, transform 200ms cubic-bezier(.2,0,.2,1)">
+          <div style="font-size:11px;opacity:.6;padding:4px 8px 6px">Top of the stack first</div>
+          <sc-if value="{{ noLayers }}" hint-placeholder-val="{{ false }}">
+            <div style="font-size:12px;opacity:.6;padding:8px">Nothing on the canvas yet</div>
+          </sc-if>
+          <sc-for list="{{ layers }}" as="l" hint-placeholder-count="0">
+            <div onClick="{{ l.pick }}" style="height:40px;flex:none;border-radius:9px;display:flex;align-items:center;gap:8px;padding:0 4px 0 8px;cursor:pointer;background:{{ l.bg }};color:{{ l.fg }};transition:background 140ms" style-hover="background:{{ l.hov }}">
+              <div style="width:16px;height:16px;flex:none;border-radius:4px;box-sizing:border-box;border:2px solid {{ l.fg }};background:{{ l.hex }}"></div>
+              <div style="flex:1;min-width:0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:{{ l.nameOp }}">{{ l.name }}</div>
+              <div onClick="{{ l.up }}" title="Bring forward" style="width:26px;height:26px;border-radius:999px;display:flex;align-items:center;justify-content:center;opacity:{{ l.upOp }}" style-hover="background:rgba(156,171,194,.35)"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="{{ l.fg }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8L6 4L10 8"></path></svg></div>
+              <div onClick="{{ l.down }}" title="Send backward" style="width:26px;height:26px;border-radius:999px;display:flex;align-items:center;justify-content:center;opacity:{{ l.downOp }}" style-hover="background:rgba(156,171,194,.35)"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="{{ l.fg }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4L6 8L10 4"></path></svg></div>
+              <div onClick="{{ l.eye }}" title="{{ l.eyeTip }}" style="width:26px;height:26px;border-radius:999px;display:flex;align-items:center;justify-content:center;opacity:{{ l.eyeOp }}" style-hover="background:rgba(156,171,194,.35)"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="{{ l.fg }}" stroke-width="2" stroke-linejoin="round"><path d="M1 8C3 4.5 5.5 3 8 3S13 4.5 15 8C13 11.5 10.5 13 8 13S3 11.5 1 8Z"></path><circle cx="8" cy="8" r="2"></circle></svg></div>
+              <div onClick="{{ l.lock }}" title="{{ l.lockTip }}" style="width:26px;height:26px;border-radius:999px;display:flex;align-items:center;justify-content:center;opacity:{{ l.lockOp }}" style-hover="background:rgba(156,171,194,.35)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="{{ l.fg }}" stroke-width="2" stroke-linejoin="round"><rect x="2" y="6" width="10" height="7" rx="1.5"></rect><path d="M4.5 6V4.5A2.5 2.5 0 0 1 9.5 4.5V6"></path></svg></div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="position:absolute;right:0;top:100px">
+        <div title="Snap grid" onClick="{{ toggleGrid }}" style="width:40px;height:40px;box-sizing:border-box;border:2px solid #000;border-radius:999px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:{{ tb.grid.bg }};transition:background 140ms" style-hover="background:{{ tb.grid.hov }}">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="{{ tb.grid.fg }}"><circle cx="3" cy="3" r="1.6"></circle><circle cx="9" cy="3" r="1.6"></circle><circle cx="15" cy="3" r="1.6"></circle><circle cx="3" cy="9" r="1.6"></circle><circle cx="9" cy="9" r="1.6"></circle><circle cx="15" cy="9" r="1.6"></circle><circle cx="3" cy="15" r="1.6"></circle><circle cx="9" cy="15" r="1.6"></circle><circle cx="15" cy="15" r="1.6"></circle></svg>
+        </div>
+        <div onPointerDown="{{ stop }}" style="position:absolute;right:52px;top:0;width:240px;box-sizing:border-box;padding:15px;border:2px solid #000;border-radius:19px;background:#ECF0F3;display:flex;flex-direction:column;gap:12px;opacity:{{ pnl.grid.op }};pointer-events:{{ pnl.grid.pe }};transform:{{ pnl.grid.tf }};transform-origin:90% 0;transition:opacity 140ms, transform 200ms cubic-bezier(.2,0,.2,1)">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div style="font-size:13px">Snap to grid</div>
+            <div onClick="{{ flipGrid }}" title="Turn grid snapping on or off" style="width:44px;height:26px;border-radius:999px;box-sizing:border-box;border:2px solid #000;background:{{ grid.swBg }};position:relative;cursor:pointer;transition:background 140ms">
+              <div style="position:absolute;top:3px;left:{{ grid.knob }}px;width:16px;height:16px;border-radius:999px;background:{{ grid.knobBg }};transition:left 200ms cubic-bezier(.2,0,.2,1)"></div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;font-size:12px"><span style="opacity:.6">Grid size</span><span>{{ grid.size }} px</span></div>
+          <input type="range" min="5" max="200" step="5" value="{{ grid.size }}" onChange="{{ onGridSize }}" title="Distance between grid lines" style="width:100%;accent-color:#000;margin:0">
+          <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px">
+            <sc-for list="{{ gridPresets }}" as="g" hint-placeholder-count="4">
+              <div onClick="{{ g.pick }}" style="height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;background:{{ g.bg }};color:{{ g.fg }};transition:background 140ms">{{ g.n }}</div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+      <div onClick="{{ toggleRatio }}" title="Change ratio" style="height:40px;padding:0 16px;box-sizing:border-box;border:2px solid #000;border-radius:999px;background:{{ tb.ratio.bg }};color:{{ tb.ratio.fg }};display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;transition:background 140ms" style-hover="background:{{ tb.ratio.hov }}">
+        <div style="width:{{ tb.ratioGlyph.w }}px;height:{{ tb.ratioGlyph.h }}px;box-sizing:border-box;border:2px solid {{ tb.ratio.fg }};transition:width 280ms, height 280ms"></div>
+        <span>{{ tb.ratioLabel }}</span>
+      </div>
+      <div onPointerDown="{{ stop }}" style="position:absolute;right:0;top:52px;padding:10px;border:2px solid #000;border-radius:19px;background:#ECF0F3;opacity:{{ pnl.ratio.op }};pointer-events:{{ pnl.ratio.pe }};transform:{{ pnl.ratio.tf }};transform-origin:90% 0;transition:opacity 140ms, transform 200ms cubic-bezier(.2,0,.2,1)">
+        <div style="position:relative;width:260px;height:260px">
+          <svg width="260" height="260" viewBox="0 0 260 260" style="display:block;overflow:visible">
+            <path d="M124 -8H136L130 0Z" fill="#000"></path>
+            <g onWheel="{{ miniWheel }}" style="transform:rotate({{ miniRot.rot }}deg);transform-origin:130px 130px;transition:{{ miniRot.tr }}">
+              <sc-for list="{{ mini }}" as="s" hint-placeholder-count="5">
+                <g onClick="{{ s.pick }}" onPointerEnter="{{ s.enter }}" onPointerLeave="{{ s.leave }}" style="cursor:pointer">
+                  <path d="{{ s.d }}" fill="{{ s.fill }}" stroke="#000" stroke-width="2" vector-effect="non-scaling-stroke" style="transition:fill 280ms, stroke 280ms" style-hover="fill:{{ s.hover }}"></path>
+                  <g style="transform:rotate({{ miniRot.counter }}deg);transform-origin:{{ s.cx }}px {{ s.cy }}px;transition:{{ miniRot.tr }};pointer-events:none">
+                    <rect x="{{ s.rx }}" y="{{ s.ry }}" width="{{ s.rw }}" height="{{ s.rh }}" fill="none" stroke="{{ s.ink }}" stroke-width="2"></rect>
+                  </g>
+                </g>
+              </sc-for>
+            </g>
+            <circle cx="130" cy="130" r="80" fill="#ECF0F3" stroke="#000" stroke-width="2"></circle>
+          </svg>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;pointer-events:none">
+            <div style="font-size:20px">{{ miniLabel.ratio }}</div>
+            <div style="font-size:11px;opacity:.6">{{ miniLabel.name }}</div>
+            <div style="font-size:11px;opacity:.6">{{ miniLabel.px }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="position:absolute;left:40px;bottom:40px;display:flex;align-items:center;gap:10px;font-size:12px;opacity:{{ info.op }};transition:opacity 140ms;pointer-events:none">
+      <span>{{ info.name }}</span>
+      <span style="opacity:.6">{{ info.size }}</span>
+    </div>
+    <div onClick="{{ toggleKeys }}" style="position:absolute;right:40px;bottom:36px;display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;opacity:{{ chrome.op }};transition:opacity 280ms 180ms">
+      <span style="opacity:.6">Shortcuts</span>
+      <span style="min-width:24px;height:24px;padding:0 7px;box-sizing:border-box;border-radius:9px;background:#D0D8E2;display:flex;align-items:center;justify-content:center">?</span>
+    </div>
+
+    <div style="position:absolute;left:50%;bottom:36px;transform:translateX(-50%);height:36px;padding:0 18px;border-radius:999px;background:#000;color:#fff;display:flex;align-items:center;font-size:13px;pointer-events:none;opacity:{{ toast.op }};transition:opacity 140ms;z-index:20">{{ toast.msg }}</div>
+
+    <div onPointerDown="{{ stop }}" style="position:absolute;left:50%;top:50%;width:880px;margin-left:-440px;box-sizing:border-box;padding:30px 40px 40px;border:2px solid #000;border-radius:29px;background:#ECF0F3;display:flex;flex-direction:column;gap:25px;z-index:10;opacity:{{ pnl.keys.op }};pointer-events:{{ pnl.keys.pe }};transform:{{ pnl.keys.tfc }};transition:opacity 140ms, transform 200ms cubic-bezier(.2,0,.2,1)">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div style="font-size:20px;letter-spacing:-0.01em">Keyboard shortcuts</div>
+        <div onClick="{{ closePanel }}" title="Close (Esc)" style="width:40px;height:40px;border-radius:999px;display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:rgba(156,171,194,.15)">
+          <x-import component-from-global-scope="PaperWireframeDesignSystem_72d81a.Icon" name="x-circle" size="22" hint-size="22px,22px"></x-import>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:40px">
+        <sc-for list="{{ keyGroups }}" as="g" hint-placeholder-count="3">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="font-size:11px;opacity:.6">{{ g.name }}</div>
+            <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="8">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px">
+                <span>{{ r.label }}</span>
+                <span style="display:flex;gap:4px">
+                  <sc-for list="{{ r.keys }}" as="kk" hint-placeholder-count="2">
+                    <span style="min-width:26px;height:26px;padding:0 7px;box-sizing:border-box;border-radius:9px;background:#D0D8E2;display:flex;align-items:center;justify-content:center;font-size:12px">{{ kk.k }}</span>
+                  </sc-for>
+                </span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div onPointerDown="{{ stop }}" style="position:absolute;left:50%;bottom:0;width:660px;margin-left:-330px;box-sizing:border-box;padding:15px 40px 40px;border:2px solid #000;border-bottom:none;border-radius:49px 49px 0 0;background:#ECF0F3;display:flex;flex-direction:column;gap:25px;z-index:10;transform:{{ pnl.export.tfs }};transition:transform 280ms cubic-bezier(.2,0,.2,1)">
+      <div style="align-self:center;width:40px;height:5px;border-radius:2.5px;background:#000;opacity:.6"></div>
+      <div style="display:grid;grid-template-columns:220px minmax(0,1fr);gap:40px;align-items:center">
+        <div style="width:220px;height:220px;display:flex;align-items:center;justify-content:center;border-radius:19px;background:#D0D8E2">
+          <sc-if value="{{ exp.preview }}" hint-placeholder-val="{{ false }}">
+            <div style="width:{{ exp.pw }}px;height:{{ exp.ph }}px;outline:2px solid #000;background-image:{{ exp.bgImg }};background-size:100% 100%"></div>
+          </sc-if>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:18px">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div style="font-size:20px;letter-spacing:-0.01em">Export</div>
+            <div onClick="{{ closePanel }}" title="Close (Esc)" style="width:40px;height:40px;border-radius:999px;display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:rgba(156,171,194,.15)">
+              <x-import component-from-global-scope="PaperWireframeDesignSystem_72d81a.Icon" name="x-circle" size="22" hint-size="22px,22px"></x-import>
+            </div>
+          </div>
+          <div style="display:flex;gap:5px;padding:4px;border:2px solid #000;border-radius:999px;width:max-content">
+            <sc-for list="{{ exp.fmts }}" as="f" hint-placeholder-count="3">
+              <div onClick="{{ f.pick }}" style="height:32px;padding:0 16px;border-radius:999px;display:flex;align-items:center;font-size:13px;cursor:pointer;background:{{ f.bg }};color:{{ f.fg }};transition:background 140ms" style-hover="background:{{ f.hov }}">{{ f.label }}</div>
+            </sc-for>
+          </div>
+          <div style="display:flex;gap:5px;padding:4px;border:2px solid #000;border-radius:999px;width:max-content;opacity:{{ exp.scaleOp }};pointer-events:{{ exp.scalePe }};transition:opacity 140ms">
+            <sc-for list="{{ exp.scales }}" as="f" hint-placeholder-count="3">
+              <div onClick="{{ f.pick }}" style="height:32px;padding:0 16px;border-radius:999px;display:flex;align-items:center;font-size:13px;cursor:pointer;background:{{ f.bg }};color:{{ f.fg }};transition:background 140ms" style-hover="background:{{ f.hov }}">{{ f.label }}</div>
+            </sc-for>
+          </div>
+          <div style="font-size:13px;opacity:.6">{{ exp.size }}</div>
+          <div onClick="{{ download }}" style="position:relative;overflow:hidden;height:50px;width:220px;border-radius:999px;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;gap:10px;font-size:15px;cursor:pointer" style-active="transform:scale(.98)">
+            <div style="position:absolute;left:0;top:0;bottom:0;width:{{ exp.bar }};background:#92A0A9;transition:{{ exp.barTr }}"></div>
+            <span style="position:relative">{{ exp.label }}</span>
+            <sc-if value="{{ exp.done }}" hint-placeholder-val="{{ false }}">
+              <x-import component-from-global-scope="PaperWireframeDesignSystem_72d81a.Icon" name="check" size="18" color="#fff" hint-size="18px,18px" style="position:relative"></x-import>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+<div style="position:fixed;left:{{ tipBox.x }}px;top:{{ tipBox.y }}px;transform:translateX(-50%);padding:5px 10px;border-radius:9px;background:#000;color:#fff;font-size:12px;white-space:nowrap;pointer-events:none;z-index:50;opacity:{{ tipBox.op }};transition:opacity 140ms">{{ tipBox.text }}</div>
+
+<div style="position:fixed;left:40px;bottom:36px;display:flex;align-items:flex-end;gap:10px;z-index:40">
+  <div onClick="{{ toggleHelp }}" title="Help" style="width:36px;height:36px;flex:none;box-sizing:border-box;border:2px solid #000;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;background:{{ tb.help.bg }};color:{{ tb.help.fg }};transition:background 140ms" style-hover="background:{{ tb.help.hov }}">?</div>
+  <div style="width:320px;box-sizing:border-box;padding:12px 15px;border:2px solid #000;border-radius:19px;background:#ECF0F3;display:flex;flex-direction:column;gap:4px;opacity:{{ helpBox.op }};transform:translateY({{ helpBox.ty }}px);pointer-events:none;transition:opacity 140ms, transform 200ms cubic-bezier(.2,0,.2,1)">
+    <div style="font-size:13px">{{ helpBox.title }}</div>
+    <div style="font-size:12px;opacity:.6;line-height:1.4;text-wrap:pretty">{{ helpBox.body }}</div>
+  </div>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;spin&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:560,&quot;min&quot;:200,&quot;max&quot;:1200,&quot;step&quot;:20,&quot;unit&quot;:&quot;ms&quot;,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Dial&quot;},&quot;lens&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Dial&quot;},&quot;startScreen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dial&quot;,&quot;editor&quot;],&quot;default&quot;:&quot;dial&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Journey&quot;},&quot;snapping&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Editor&quot;},&quot;showGuides&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Editor&quot;}}">
+const PHI = (1 + Math.sqrt(5)) / 2, EASE = 'cubic-bezier(.2,0,.2,1)';
+const RATIOS = [['square', 'Square', 1, 1, 1080, 1080], ['portrait', 'Portrait', 4, 5, 1080, 1350], ['landscape', 'Landscape', 16, 9, 1920, 1080], ['story', 'Story', 9, 16, 1080, 1920], ['banner', 'Banner', 3, 1, 1500, 500]];
+const COMPS = [['cover', 'Cover'], ['split', 'Split'], ['stack', 'Stack'], ['poster', 'Poster'], ['frame', 'Frame'], ['band', 'Band']];
+const GUIDES = [['thirds', 'Thirds', [1 / 3, 2 / 3], 1.5], ['golden', 'Golden', [1 - 1 / PHI, 1 / PHI], PHI], ['quarters', 'Quarters', [.25, .5, .75], Math.SQRT2]];
+const HUES = [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330, null];
+const RINGS = [{ key: 'ratio', n: 5, Ro: 318, Ri: 270, name: 'Ratio' }, { key: 'comp', n: 6, Ro: 266, Ri: 190, name: 'Layout' }, { key: 'guide', n: 3, Ro: 186, Ri: 144, name: 'Guide' }, { key: 'hue', n: 13, Ro: 140, Ri: 110, name: 'Colour' }];
+const MAC = /Mac|iPhone|iPad/i.test((navigator.platform || '') + ' ' + navigator.userAgent);
+const MOD = MAC ? '⌘' : 'Ctrl', SHIFT = MAC ? '⇧' : 'Shift', ALT = MAC ? '⌥' : 'Alt';
+const FONT = '"Space Grotesk", system-ui, sans-serif';
+const row = k => RATIOS.find(r => r[0] === k) || RATIOS[1];
+const gl = k => (GUIDES.find(g => g[0] === k) || GUIDES[1])[2];
+const modn = (a, n) => ((a % n) + n) % n;
+const norm = a => modn(a + 180, 360) - 180;
+const hsl = (h, s, l) => { s /= 100; l /= 100; const a = s * Math.min(l, 1 - l); const f = n => { const k = (n + h / 30) % 12; return Math.round((l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1))) * 255).toString(16).padStart(2, '0'); }; return ('#' + f(0) + f(8) + f(4)).toUpperCase(); };
+const hsv2hex = (h, s, v) => { s /= 100; v /= 100; const f = n => { const k = (n + h / 60) % 6; return Math.round((v - v * s * Math.max(0, Math.min(k, 4 - k, 1))) * 255).toString(16).padStart(2, '0'); }; return ('#' + f(5) + f(3) + f(1)).toUpperCase(); };
+const hex2hsv = hex => { const n = parseInt(hex.slice(1), 16), r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255, mx = Math.max(r, g, b), d = mx - Math.min(r, g, b); let h = 0; if (d) h = mx === r ? ((g - b) / d + 6) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; return { h: Math.round(h * 60), s: mx ? Math.round(d / mx * 100) : 0, v: Math.round(mx * 100) }; };
+function palette(hue, dark) {
+  if (hue === null) return dark ? { ground: '#111111', ink: '#FFFFFF', accent: '#FFFFFF' } : { ground: '#FFFFFF', ink: '#111111', accent: '#111111' };
+  const c = (hue + 180) % 360;
+  return dark ? { ground: hsl(hue, 30, 12), ink: hsl(hue, 40, 92), accent: hsl(c, 55, 50) } : { ground: hsl(hue, 40, 92), ink: hsl(hue, 30, 12), accent: hsl(c, 55, 50) };
+}
+const pol = (cx, cy, r, a) => [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+function ringPath(cx, cy, Ro, Ri, i, n) {
+  const step = 2 * Math.PI / n, a0 = -Math.PI / 2 - step / 2 + i * step, a1 = a0 + step;
+  const [x0, y0] = pol(cx, cy, Ro, a0), [x1, y1] = pol(cx, cy, Ro, a1), [x2, y2] = pol(cx, cy, Ri, a1), [x3, y3] = pol(cx, cy, Ri, a0);
+  return { d: `M${x0} ${y0}A${Ro} ${Ro} 0 0 1 ${x1} ${y1}L${x2} ${y2}A${Ri} ${Ri} 0 0 0 ${x3} ${y3}Z`, c: pol(cx, cy, (Ro + Ri) / 2, (a0 + a1) / 2) };
+}
+const fitBox = (w, h, m) => { const s = m / Math.max(w, h); return [w * s, h * s]; };
+const HELP = {
+  'Text': 'Adds a text box. Double-click it on the canvas to type.',
+  'Shapes': 'Opens basic shapes and a searchable library of free icons. Click one to drop it on the canvas.',
+  'Search 1,500+ free Phosphor icons': 'Type a word like rocket or cat. Icons come from Phosphor, free to use under the MIT licence.',
+  'Image': 'Adds an image block you can resize and move.',
+  'Colour': 'Pick a role colour, a shade, or drag the picker for any colour. Then tap objects to fill them.',
+  'Drag to pick any colour': 'Left to right is saturation, top to bottom is brightness.',
+  'Drag to change hue': 'Slides through every hue on the colour wheel.',
+  'Drag to set the accent to any colour': 'Sets the accent colour your layout starts with.',
+  'Sketch': 'Draw freehand. Rough rectangles, circles and arrows clean themselves up.',
+  'Bold': 'Toggles heavy weight on the selected text.',
+  'Duplicate': 'Copies the selection and offsets it slightly.',
+  'Lock': 'Stops an object from being moved or edited.',
+  'Unlock': 'Lets this object be moved and edited again.',
+  'Delete': 'Removes the selection.',
+  'Undo': 'Steps back one change.',
+  'Redo': 'Steps forward again.',
+  'Remove background': 'Cuts the background out of the selected image.',
+  'Export': 'Saves your design as PNG or SVG.',
+  'Guides': 'Shows or hides the composition guide lines.',
+  'Layers': 'Lists every object, top first. Reorder, hide, lock or select from here.',
+  'Bring forward': 'Moves this object one step up the stack.',
+  'Send backward': 'Moves this object one step down the stack.',
+  'Hide': 'Hides the object on the canvas and in exports.',
+  'Show': 'Makes the hidden object visible again.',
+  'Snap grid': 'Turns on a grid that objects snap to when dragged, and sets its size.',
+  'Turn grid snapping on or off': 'When on, dragged objects pull towards the nearest grid line.',
+  'Distance between grid lines': 'Smaller numbers give a finer grid.',
+  'Change ratio': 'Switches the canvas shape. Objects rescale to fit.',
+  'Light ground': 'Uses a light background with dark ink.',
+  'Dark ground': 'Uses a dark background with light ink.',
+  'Start': 'Builds a starting layout from your dial choices and opens the editor.',
+  'Close': 'Closes this panel.',
+  'Help': 'Turns this help bar on or off. Hover anything to learn what it does.',
+};
+const helpFor = t => { if (!t) return ''; const base = t.replace(/\s*\(.*\)\s*$/, ''); return HELP[t] || HELP[base] || ''; };
+
+const MC = document.createElement('canvas').getContext('2d');
+const WRAP = new Map(), LAYC = new Map();
+function setFont(ctx, fs, fw) { ctx.font = `${fw} ${fs}px ${FONT}`; if ('letterSpacing' in ctx) ctx.letterSpacing = (-0.01 * fs) + 'px'; }
+function wrap(text, fs, fw, w) {
+  const key = text + '|' + fs.toFixed(2) + '|' + fw + '|' + Math.round(w);
+  if (WRAP.has(key)) return WRAP.get(key);
+  setFont(MC, fs, fw);
+  const out = [];
+  String(text).split('\n').forEach(par => {
+    let line = '';
+    par.split(' ').forEach(wd => { const t = line ? line + ' ' + wd : wd; if (line && MC.measureText(t).width > w) { out.push(line); line = wd; } else line = t; });
+    out.push(line);
+  });
+  WRAP.set(key, out);
+  return out;
+}
+const lineW = (t, fs, fw) => { setFont(MC, fs, fw); return MC.measureText(t).width; };
+
+const SHAPES = (() => {
+  const toD = pts => 'M' + pts.map(p => (+p[0].toFixed(2)) + ' ' + (+p[1].toFixed(2))).join('L') + 'Z';
+  const fit = pts => { const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys); return { d: toD(pts.map(([x, y]) => [(x - x0) / (x1 - x0) * 100, (y - y0) / (y1 - y0) * 100])), ar: (x1 - x0) / (y1 - y0) }; };
+  const reg = (n, a0) => Array.from({ length: n }, (_, i) => { const a = (a0 + i * 360 / n) * Math.PI / 180; return [Math.cos(a), Math.sin(a)]; });
+  const star = (n, r, a0 = -90) => Array.from({ length: 2 * n }, (_, i) => { const a = (a0 + i * 180 / n) * Math.PI / 180, q = i % 2 ? r : 1; return [q * Math.cos(a), q * Math.sin(a)]; });
+  const rot = (pts, deg) => { const a = deg * Math.PI / 180, c = Math.cos(a), s = Math.sin(a); return pts.map(([x, y]) => [x * c - y * s, x * s + y * c]); };
+  const P = (pts, ar) => { const f = fit(pts); return { d: f.d, ar: ar || f.ar }; };
+  const plus = [[35, 0], [65, 0], [65, 35], [100, 35], [100, 65], [65, 65], [65, 100], [35, 100], [35, 65], [0, 65], [0, 35], [35, 35]].map(([x, y]) => [x - 50, y - 50]);
+  const arrow = [[0, 30], [58, 30], [58, 5], [100, 50], [58, 95], [58, 70], [0, 70]].map(([x, y]) => [x - 50, y - 50]);
+  const scallop = (() => { const n = 10, r = 38.5, pts = Array.from({ length: n }, (_, i) => { const a = (-90 + i * 360 / n) * Math.PI / 180; return [50 + r * Math.cos(a), 50 + r * Math.sin(a)]; }), ch = r * Math.sin(Math.PI / n); return 'M' + pts[0].map(v => v.toFixed(2)).join(' ') + pts.map((p, i) => { const q = pts[(i + 1) % n]; return `A${ch.toFixed(2)} ${ch.toFixed(2)} 0 0 1 ${q[0].toFixed(2)} ${q[1].toFixed(2)}`; }).join('') + 'Z'; })();
+  const groups = [
+    ['Basic', [['rect', 'Rectangle', { css: 'rect', ar: 1.25 }], ['rounded', 'Rounded', { css: 'rounded', ar: 1.25 }], ['pill', 'Pill', { css: 'pill', ar: 2.4 }], ['circle', 'Circle', { css: 'circle', ar: 1 }], ['ring', 'Ring', { css: 'ring', ar: 1 }], ['frame', 'Frame', { css: 'frame', ar: 1 }], ['semi', 'Half circle', { d: 'M0 100A50 100 0 0 1 100 100Z', ar: 2 }], ['quarter', 'Quarter', { d: 'M0 0A100 100 0 0 1 100 100H0Z', ar: 1 }], ['arch', 'Arch', { d: 'M0 100V50A50 50 0 0 1 100 50V100Z', ar: .8 }]]],
+    ['Polygons', [['tri', 'Triangle', P([[50, 0], [100, 100], [0, 100]], 1.15)], ['rtri', 'Right triangle', P([[0, 0], [100, 100], [0, 100]], 1)], ['diamond', 'Diamond', P([[50, 0], [100, 50], [50, 100], [0, 50]], .8)], ['pent', 'Pentagon', P(reg(5, -90))], ['hex', 'Hexagon', P(reg(6, 0))], ['oct', 'Octagon', P(reg(8, 22.5))], ['pgram', 'Parallelogram', P([[25, 0], [100, 0], [75, 100], [0, 100]], 1.5)], ['trap', 'Trapezoid', P([[22, 0], [78, 0], [100, 100], [0, 100]], 1.5)]]],
+    ['Stars', [['star4', 'Star 4', P(star(4, .42))], ['star5', 'Star 5', P(star(5, .45))], ['star6', 'Star 6', P(star(6, .55))], ['star8', 'Star 8', P(star(8, .62))], ['burst', 'Burst', P(star(16, .8))], ['sparkle', 'Sparkle', { d: 'M50 0Q56 44 100 50Q56 56 50 100Q44 56 0 50Q44 44 50 0Z', ar: 1 }], ['plus', 'Plus', P(plus)], ['cross', 'Cross', P(rot(plus, 45))]]],
+    ['Arrows and lines', [['arrowR', 'Arrow right', P(arrow, 1.4)], ['arrowL', 'Arrow left', P(rot(arrow, 180), 1.4)], ['arrowU', 'Arrow up', P(rot(arrow, -90), 1 / 1.4)], ['arrowD', 'Arrow down', P(rot(arrow, 90), 1 / 1.4)], ['chevron', 'Chevron', P([[0, 0], [60, 0], [100, 50], [60, 100], [0, 100], [40, 50]], .8)], ['double', 'Double arrow', P([[0, 50], [28, 10], [28, 32], [72, 32], [72, 10], [100, 50], [72, 90], [72, 68], [28, 68], [28, 90]], 2)], ['arrowline', 'Arrow line', P([[0, 44], [84, 44], [84, 28], [100, 50], [84, 72], [84, 56], [0, 56]], 7)], ['line', 'Line', { css: 'rect', ar: 60 }]]],
+    ['Organic', [['drop', 'Drop', { d: 'M50 0C62 22 88 44 88 64A38 36 0 0 1 12 64C12 44 38 22 50 0Z', ar: .8 }], ['heart', 'Heart', { d: 'M50 94C24 74 0 56 0 30A26 26 0 0 1 50 16A26 26 0 0 1 100 30C100 56 76 74 50 94Z', ar: 1.08 }], ['bubble', 'Speech bubble', { d: 'M10 0H90A10 10 0 0 1 100 10V65A10 10 0 0 1 90 75H40L20 100V75H10A10 10 0 0 1 0 65V10A10 10 0 0 1 10 0Z', ar: 1.25 }], ['crescent', 'Crescent', { d: 'M70 4A50 50 0 1 0 70 96A48 48 0 0 1 70 4Z', ar: 1 }], ['blob', 'Blob', { d: 'M56 3C82 6 99 28 95 54C91 80 70 99 44 96C18 93 1 72 5 46C9 20 30 0 56 3Z', ar: 1 }], ['wave', 'Wave', { d: 'M0 30C16 10 34 10 50 30S84 50 100 30V100H0Z', ar: 2 }], ['leaf', 'Leaf', { d: 'M0 100C0 45 45 0 100 0C100 55 55 100 0 100Z', ar: 1 }], ['scallop', 'Scallop', { d: scallop, ar: 1 }]]],
+  ];
+  const map = {};
+  groups.forEach(([cat, list]) => list.forEach(([k, name, def]) => { map[k] = { key: k, name, cat, ...def }; }));
+  return { groups: groups.map(([name, list]) => ({ name, keys: list.map(l => l[0]) })), map };
+})();
+const SH = SHAPES.map;
+const ICON_CDN = 'https://cdn.jsdelivr.net/npm/@phosphor-icons/core@2/assets/fill/';
+const ICON_PICKS = ['heart', 'star', 'house', 'user', 'chat-circle', 'bell', 'camera', 'music-note', 'sun', 'moon', 'cloud', 'lightning', 'leaf', 'flower', 'tree', 'fire', 'drop', 'snowflake', 'map-pin', 'globe', 'airplane', 'car', 'bicycle', 'rocket', 'coffee', 'pizza', 'cake', 'gift', 'shopping-bag', 'tag', 'ticket', 'crown', 'trophy', 'medal', 'smiley', 'hand-heart', 'thumbs-up', 'check-circle', 'x-circle', 'plus-circle', 'info', 'warning', 'question', 'lock', 'key', 'envelope', 'phone', 'calendar', 'clock', 'bookmark', 'book-open', 'pencil', 'paint-brush', 'palette', 'scissors', 'lightbulb', 'magnifying-glass', 'play', 'pause', 'film-strip', 'headphones', 'microphone', 'paw-print', 'butterfly'];
+const scalePath = (d, k) => {
+  const t = d.match(/[a-zA-Z]|-?(?:\d*\.\d+|\d+\.?)(?:e[-+]?\d+)?/g) || []; let out = '', cmd = '', n = 0;
+  for (let i = 0; i < t.length; i++) {
+    const v = t[i]; if (/[a-zA-Z]/.test(v)) { cmd = v; n = 0; out += v; continue; }
+    if (/[aA]/.test(cmd)) { const j = n % 7; if (j >= 2 && j <= 4) { out += ' ' + v; n++; continue; } }
+    out += ' ' + (+(parseFloat(v) * k).toFixed(2)); n++;
+  }
+  return out.trim();
+};
+const ICONS = { names: ICON_PICKS.slice(), all: null, busy: {}, listeners: new Set(),
+  ping() { this.listeners.forEach(f => f()); },
+  key(n) { return 'ph-' + n; },
+  load(n) {
+    const k = this.key(n); if (SH[k] || this.busy[n]) return; this.busy[n] = 1;
+    fetch(ICON_CDN + n + '-fill.svg').then(r => r.ok ? r.text() : Promise.reject()).then(txt => {
+      const ds = [...txt.matchAll(/<path[^>]*\sd="([^"]+)"/g)].map(m => m[1]); if (!ds.length) throw 0;
+      SH[k] = { key: k, name: n.replace(/-/g, ' ').replace(/^./, c => c.toUpperCase()), cat: 'Icons', ar: 1, icon: true, d: scalePath(ds.join(' '), 100 / 256) };
+      this.ping();
+    }).catch(() => { this.busy[n] = 'x'; this.ping(); });
+  },
+  loadAll() {
+    if (this.all) return; this.all = [];
+    fetch('https://data.jsdelivr.com/v1/packages/npm/@phosphor-icons/core/resolved?specifier=2').then(r => r.json())
+      .then(j => fetch(`https://data.jsdelivr.com/v1/packages/npm/@phosphor-icons/core@${j.version}?structure=flat`)).then(r => r.json())
+      .then(j => { this.all = j.files.map(f => f.name).filter(p => p.startsWith('/assets/fill/')).map(p => p.slice(13, -9)); this.ping(); }).catch(() => {});
+  },
+};
+
+function layoutFor(sk, ck, gk) {
+  const id = sk + '|' + ck + '|' + gk;
+  if (LAYC.has(id)) return LAYC.get(id);
+  const R = row(sk), G = GUIDES.find(g => g[0] === gk) || GUIDES[1], L = G[2], TS = G[3];
+  const W = R[4], H = R[5], a = L[0], b = L[L.length - 1];
+  const pad = Math.min(W, H) * 0.045, ax = a * W, bx = b * W, ay = a * H, by = b * H;
+  let fs = Math.min(28 * TS * TS * W / 1000, H * 0.075), img = null, acc, head, body = null, cap = 0;
+  const Rc = (x, y, w, h) => ({ x, y, w, h });
+  if (ck === 'cover') { img = Rc(0, 0, W, by); acc = Rc(pad, pad, ax - 2 * pad, ay * 0.5); head = { x: ax, y: by + pad, w: W - ax - pad }; }
+  else if (ck === 'split') { img = Rc(0, 0, ax, H); acc = Rc(bx, by, W - bx, H - by); head = { x: ax + pad, y: ay, w: W - ax - 2 * pad }; }
+  else if (ck === 'stack') { img = Rc(0, ay, W, by - ay); acc = Rc(bx + pad, pad, W - bx - 2 * pad, ay - 2 * pad); head = { x: pad, y: pad, w: bx - 2 * pad }; cap = ay - 2 * pad; body = { x: pad, y: by + pad, w: W - 2 * pad }; }
+  else if (ck === 'poster') { acc = Rc(0, by, W, H - by); head = { x: pad, y: pad, w: W - 2 * pad }; fs = (W - 2 * pad) / 4.8; cap = by - 2 * pad; body = { x: pad, y: by + pad, w: W - 2 * pad }; }
+  else if (ck === 'frame') { img = Rc(ax, ay, bx - ax, by - ay); const s = Math.min(ax, ay) - 2 * pad; acc = Rc(pad, pad, s, s); head = { x: pad, y: by + pad, w: W - 2 * pad }; body = { x: bx + pad, y: pad, w: W - bx - 2 * pad }; }
+  else { img = Rc(bx, 0, W - bx, H); acc = Rc(pad, ay - pad * 1.8, pad * 3, pad * 0.7); head = { x: pad, y: ay, w: bx - 2 * pad }; }
+  const T = 'SPACE BETWEEN';
+  let lines = wrap(T, fs, 700, head.w);
+  if (cap) { fs = Math.min(fs, cap / (1.02 * lines.length)); lines = wrap(T, fs, 700, head.w); }
+  head = { ...head, fs, lines, lw: lines.map(t => lineW(t, fs, 700)) };
+  if (!body) body = { x: head.x, y: head.y + lines.length * fs * 1.02 + pad, w: head.w };
+  const out = { W, H, L, img, acc, head, body, paraH: 4 * 3 * W / 1000 + 3 * 11 * W / 1000 };
+  LAYC.set(id, out);
+  return out;
+}
+function docFrom(lay) {
+  const o = [];
+  if (lay.img) o.push({ kind: 'img', ...lay.img, rot: 0 });
+  o.push({ kind: 'shape', shape: 'rect', fill: 'accent', ...lay.acc, rot: 0 });
+  o.push({ kind: 'text', text: 'SPACE BETWEEN', x: lay.head.x, y: lay.head.y, w: lay.head.w, fs: lay.head.fs, fw: 700, align: 'left', fill: 'ink', rot: 0 });
+  o.push({ kind: 'para', n: 4, x: lay.body.x, y: lay.body.y, w: lay.body.w, h: lay.paraH, fill: 'ink', rot: 0 });
+  return o;
+}
+function thumb(lay, box, cx, cy, C) {
+  const s = box / Math.max(lay.W, lay.H), cw = lay.W * s, ch = lay.H * s, x0 = cx - cw / 2, y0 = cy - ch / 2, o = [];
+  const r = (x, y, w, h, fill, op, stroke, sw) => {
+    const X0 = Math.max(0, Math.min(cw, x)), Y0 = Math.max(0, Math.min(ch, y)), X1 = Math.max(0, Math.min(cw, x + w)), Y1 = Math.max(0, Math.min(ch, y + h));
+    o.push({ x: x0 + X0, y: y0 + Y0, w: X1 - X0, h: Y1 - Y0, fill, op, stroke: stroke || 'none', sw: sw || 0, rx: 0, bd: sw ? `${sw}px solid ${stroke}` : 'none' });
+  };
+  r(0, 0, cw, ch, C.ground, 1, C.frame, C.frameW);
+  for (let i = 0; i < 3; i++) { const f = lay.L[i]; r(f !== undefined ? f * cw - .5 : cw / 2, 0, 1, ch, C.ink, f !== undefined ? .3 : 0); }
+  for (let i = 0; i < 3; i++) { const f = lay.L[i]; r(0, f !== undefined ? f * ch - .5 : ch / 2, cw, 1, C.ink, f !== undefined ? .3 : 0); }
+  const im = lay.img;
+  if (im) r(im.x * s, im.y * s, im.w * s, im.h * s, C.img, C.imgOp, C.imgStroke, C.imgSw); else r(cw / 2, ch / 2, 0, 0, C.img, 0);
+  const a = lay.acc; r(a.x * s, a.y * s, a.w * s, a.h * s, C.acc, 1);
+  const hd = lay.head;
+  for (let i = 0; i < 2; i++) { const j = Math.min(i, hd.lines.length - 1); r(hd.x * s, (hd.y + j * hd.fs * 1.02 + hd.fs * .12) * s, Math.min(hd.w, hd.lw[j]) * s, hd.fs * .78 * s, C.ink, i < hd.lines.length ? 1 : 0); }
+  const bh = Math.max(1, 3 * cw / 1000), bg = Math.max(1.5, 11 * cw / 1000), bw = [1, .86, 1, .62];
+  for (let i = 0; i < 4; i++) r(lay.body.x * s, lay.body.y * s + i * (bh + bg), lay.body.w * s * bw[i], bh, C.ink, .6);
+  return o;
+}
+const mono = ink => ({ ground: 'none', frame: ink, frameW: 1.5, ink, img: ink, imgOp: .2, imgStroke: ink, imgSw: 1, acc: ink });
+const DESC = (L) => { const p = f => String(Math.round(f * 1000) / 10), a = L[0], b = L[L.length - 1]; return {
+  cover: `Image down to ${p(b)}%, headline off the ${p(a)}% column`,
+  split: `Image in the left ${p(a)}%, text beside it, accent in the bottom-right cell`,
+  stack: `Headline on top, image between ${p(a)}% and ${p(b)}%, body under`,
+  poster: `Type across the top, accent band from ${p(b)}% down`,
+  frame: `Image in the centre cell, headline under it, body top-right`,
+  band: `Image in the right ${p(1 - b)}%, headline on the ${p(a)}% line`,
+}; };
+const KEYS = [
+  { name: 'Edit', rows: [['Copy', [MOD, 'C']], ['Paste', [MOD, 'V']], ['Cut', [MOD, 'X']], ['Duplicate', [MOD, 'D']], ['Delete', ['Delete']], ['Select all', [MOD, 'A']], ['Undo', [MOD, 'Z']], ['Redo', [SHIFT, MOD, 'Z']], ['Bold', [MOD, 'B']]] },
+  { name: 'Arrange', rows: [['Nudge', ['Arrows']], ['Nudge 10 px', [SHIFT, 'Arrows']], ['Bring forward', [MOD, ']']], ['Send backward', [MOD, '[']], ['Bring to front', [SHIFT, MOD, ']']], ['Send to back', [SHIFT, MOD, '[']], ['Lock', [MOD, 'L']], ['Duplicate while dragging', [ALT, 'Drag']], ['Keep proportions', [SHIFT, 'Drag']]] },
+  { name: 'Tools', rows: [['Text', ['T']], ['Rectangle', ['R']], ['Ellipse', ['O']], ['Shapes', ['S']], ['Image', ['I']], ['Sketch', ['P']], ['Eraser', ['E']], ['Lasso', ['L']], ['Handwriting', ['W']], ['Colour', ['C']], ['Guides', ['G']], ['Edit text', ['Enter']], ['Export', [MOD, 'E']], ['Shortcuts', ['?']], ['Deselect', ['Esc']]] },
+];
+const rrect = (x, a, b, w, h, r) => { r = Math.min(r, w / 2, h / 2); if (x.roundRect) { x.roundRect(a, b, w, h, r); return; } x.moveTo(a + r, b); x.arcTo(a + w, b, a + w, b + h, r); x.arcTo(a + w, b + h, a, b + h, r); x.arcTo(a, b + h, a, b, r); x.arcTo(a, b, a + w, b, r); x.closePath(); };
+const radPx = (css, g) => { const m = Math.min(g.w, g.h); return css === 'rounded' ? m * .18 : css === 'pill' ? m / 2 : 0; };
+
+const INK = (() => {
+  const WOB = .2;
+  const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+  const lerp = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+  const plen = P => { let s = 0; for (let i = 1; i < P.length; i++) s += dist(P[i - 1], P[i]); return s; };
+  const bbox = P => { let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; P.forEach(([x, y]) => { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }); return { x0, y0, x1, y1, w: x1 - x0, h: y1 - y0 }; };
+  const segP = (p, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], l2 = dx * dx + dy * dy; let t = l2 ? ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / l2 : 0; t = Math.max(0, Math.min(1, t)); return [a[0] + t * dx, a[1] + t * dy]; };
+  const nearest = (p, segs) => segs.map(([a, c]) => segP(p, a, c)).reduce((m, q) => dist(p, q) < dist(p, m) ? q : m);
+  const resample = (P, n) => {
+    const L = plen(P); if (!L || P.length < 2) return P.map(p => p.slice());
+    const step = L / (n - 1), out = [P[0].slice()]; let acc = 0, prev = P[0];
+    for (let i = 1; i < P.length; i++) {
+      const cur = P[i]; let d = dist(prev, cur);
+      while (d > 0 && acc + d >= step && out.length < n) { const t = (step - acc) / d, q = [prev[0] + t * (cur[0] - prev[0]), prev[1] + t * (cur[1] - prev[1])]; out.push(q); prev = q; d = dist(prev, cur); acc = 0; }
+      acc += d; prev = cur;
+    }
+    while (out.length < n) out.push(P[P.length - 1].slice());
+    return out;
+  };
+  const rdp = (P, eps) => { if (P.length < 3) return P.map((_, i) => i); let m = 0, id = 0; for (let i = 1; i < P.length - 1; i++) { const d = dist(P[i], segP(P[i], P[0], P[P.length - 1])); if (d > m) { m = d; id = i; } } if (m <= eps) return [0, P.length - 1]; const l = rdp(P.slice(0, id + 1), eps), r = rdp(P.slice(id), eps).map(i => i + id); return [...l.slice(0, -1), ...r]; };
+  const revs = (vals, th) => { let r = 0, dir = 0, ext = vals[0]; for (const v of vals) { if (!dir) { if (Math.abs(v - ext) > th) { dir = Math.sign(v - ext); ext = v; } } else if ((v - ext) * dir > 0) ext = v; else if ((ext - v) * dir > th) { r++; dir = -dir; ext = v; } } return r; };
+  const snapV = (v, T, thr) => { let b = null; T.forEach(t => { if (Math.abs(t - v) < thr && (b === null || Math.abs(t - v) < Math.abs(b - v))) b = t; }); return b === null ? v : b; };
+  const shift = (vals, T, thr) => { let b = null; vals.forEach(v => T.forEach(t => { const df = t - v; if (Math.abs(df) < thr && (b === null || Math.abs(df) < Math.abs(b))) b = df; })); return b || 0; };
+  const rotv = (v, deg) => { const a = deg * Math.PI / 180, c = Math.cos(a), s = Math.sin(a); return [v[0] * c - v[1] * s, v[0] * s + v[1] * c]; };
+  const inPoly = (pt, poly) => { let c = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const a = poly[i], b = poly[j]; if ((a[1] > pt[1]) !== (b[1] > pt[1]) && pt[0] < (b[0] - a[0]) * (pt[1] - a[1]) / (b[1] - a[1]) + a[0]) c = !c; } return c; };
+  const snapSeg = (a, b, TX, TY, thr) => {
+    let ang = Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI; const q = Math.round(ang / 45) * 45, len = dist(a, b);
+    if (Math.abs(ang - q) < 7) { const m = lerp(a, b, .5), r = q * Math.PI / 180, hx = Math.cos(r) * len / 2, hy = Math.sin(r) * len / 2; a = [m[0] - hx, m[1] - hy]; b = [m[0] + hx, m[1] + hy]; ang = q; }
+    const md = ((Math.round(ang) % 180) + 180) % 180;
+    if (md === 0) { const y = snapV(a[1], TY, thr); a = [snapV(a[0], TX, thr), y]; b = [snapV(b[0], TX, thr), y]; }
+    else if (md === 90) { const x = snapV(a[0], TX, thr); a = [x, snapV(a[1], TY, thr)]; b = [x, snapV(b[1], TY, thr)]; }
+    return [a, b];
+  };
+  const isScribble = P => { const b = bbox(P), diag = Math.hypot(b.w, b.h) || 1; if (plen(P) / diag < 3.5) return false; return revs(P.map(p => p[0]), .2 * b.w) >= 4 || revs(P.map(p => p[1]), .2 * b.h) >= 4; };
+  function classify(P, C) {
+    const n = P.length, b = bbox(P), diag = Math.hypot(b.w, b.h) || 1, Lp = plen(P), s = 1 / C.k, thr = 10 * s;
+    if (diag < 10 * s) return null;
+    const A = P[0], B = P[n - 1], chord = dist(A, B);
+    const mk = (type, proj, open, extra, wob = WOB) => ({ type, raw: P, clean: P.map((p, i) => { const q = proj(p, i), w = open ? wob * Math.sin(Math.PI * i / (n - 1)) : wob; return [q[0] + (p[0] - q[0]) * w, q[1] + (p[1] - q[1]) * w]; }), ...extra });
+    if (chord / Lp > .94) {
+      for (const o of C.objs) {
+        if (o.kind !== 'ink' || o.sk !== 'rect' || o.rot) continue;
+        const tol = .22 * Math.hypot(o.w, o.h), c = [[o.x, o.y], [o.x + o.w, o.y + o.h], [o.x + o.w, o.y], [o.x, o.y + o.h]];
+        for (const [dir, i, j] of [[0, 0, 1], [1, 2, 3]]) {
+          let a = null, z = null;
+          if (dist(A, c[i]) < tol && dist(B, c[j]) < tol) { a = c[i]; z = c[j]; } else if (dist(A, c[j]) < tol && dist(B, c[i]) < tol) { a = c[j]; z = c[i]; }
+          if (a) return mk('line', (p, k2) => lerp(a, z, k2 / (n - 1)), true, { rect: o.id, dir, name: 'Line' });
+        }
+      }
+      const [a, z] = snapSeg(A, B, C.TX, C.TY, thr);
+      return mk('line', (p, i) => lerp(a, z, i / (n - 1)), true, { name: 'Line' });
+    }
+    let ti = 0, md = 0; P.forEach((p, i) => { const d = dist(A, p); if (d > md) { md = d; ti = i; } });
+    if (ti > n * .45 && ti < n - 6) {
+      const tip = P[ti], tm = Math.max(...P.slice(ti).map(p => dist(p, tip)));
+      if (md / plen(P.slice(0, ti + 1)) > .93 && tm > .08 * md && tm < .55 * md) {
+        const [a, z] = snapSeg(A, tip, C.TX, C.TY, thr), L0 = dist(a, z) || 1, back = [(a[0] - z[0]) / L0, (a[1] - z[1]) / L0], hl = Math.max(.12 * md, Math.min(.3 * md, tm));
+        const r1 = rotv(back, 30), r2 = rotv(back, -30), b1 = [z[0] + r1[0] * hl, z[1] + r1[1] * hl], b2 = [z[0] + r2[0] * hl, z[1] + r2[1] * hl];
+        return mk('arrow', (p, i) => i <= ti ? lerp(a, z, i / ti) : nearest(p, [[z, b1], [z, b2]]), true, { name: 'Arrow' });
+      }
+    }
+    if (chord < Math.max(.3 * Math.max(b.w, b.h), 14 * s) && Lp > 2.2 * Math.max(b.w, b.h)) {
+      const cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2, rx = Math.max(1, b.w / 2), ry = Math.max(1, b.h / 2);
+      const eP = (p, X, Y, RX, RY) => { const a = Math.atan2((p[1] - Y) / RY, (p[0] - X) / RX); return [X + RX * Math.cos(a), Y + RY * Math.sin(a)]; };
+      const rP = (p, l, t, r, bt) => { let x = Math.max(l, Math.min(r, p[0])), y = Math.max(t, Math.min(bt, p[1])); if (x > l && x < r && y > t && y < bt) { const m = Math.min(x - l, r - x, y - t, bt - y); if (m === x - l) x = l; else if (m === r - x) x = r; else if (m === y - t) y = t; else y = bt; } return [x, y]; };
+      const mx = P.reduce((a, p) => a + p[0], 0) / n, my = P.reduce((a, p) => a + p[1], 0) / n;
+      const far = f => P.reduce((m, p) => dist(p, f) > dist(m, f) ? p : m);
+      const v1 = far([mx, my]), v2 = far(v1), ar = q => Math.abs((v2[0] - v1[0]) * (q[1] - v1[1]) - (v2[1] - v1[1]) * (q[0] - v1[0])), v3 = P.reduce((m, p) => ar(p) > ar(m) ? p : m);
+      const tri = V => [[V[0], V[1]], [V[1], V[2]], [V[2], V[0]]];
+      const err = f => P.reduce((a, p) => a + dist(p, f(p)), 0) / n / diag;
+      const eE = err(p => eP(p, cx, cy, rx, ry)), rE = err(p => rP(p, b.x0, b.y0, b.x1, b.y1)), tE = err(p => nearest(p, tri([v1, v2, v3]))) * 1.15;
+      const best = Math.min(eE, rE, tE);
+      if (best > .06) return null;
+      if (best === rE) {
+        let l = b.x0, t = b.y0, r = b.x1, bt = b.y1, name = 'Rectangle';
+        if (Math.abs(b.w - b.h) / Math.max(b.w, b.h) < .1) { const h2 = (b.w + b.h) / 4; l = cx - h2; r = cx + h2; t = cy - h2; bt = cy + h2; const dx = shift([l, cx, r], C.TX, thr), dy = shift([t, cy, bt], C.TY, thr); l += dx; r += dx; t += dy; bt += dy; name = 'Square'; }
+        else { l = snapV(l, C.TX, thr); r = snapV(r, C.TX, thr); t = snapV(t, C.TY, thr); bt = snapV(bt, C.TY, thr); }
+        return mk('rect', p => rP(p, l, t, r, bt), false, { name });
+      }
+      if (best === eE) {
+        let X = cx, Y = cy, RX = rx, RY = ry, name = 'Ellipse';
+        if (Math.abs(rx - ry) / Math.max(rx, ry) < .14) { RX = RY = (rx + ry) / 2; name = 'Circle'; }
+        X += shift([X - RX, X, X + RX], C.TX, thr); Y += shift([Y - RY, Y, Y + RY], C.TY, thr);
+        return mk('ellipse', p => eP(p, X, Y, RX, RY), false, { name });
+      }
+      const V = [v1, v2, v3].map(v => v.slice());
+      for (let i = 0; i < 3; i++) for (let j = i + 1; j < 3; j++) if (Math.abs(V[i][1] - V[j][1]) < .08 * diag) { const y = (V[i][1] + V[j][1]) / 2; V[i][1] = V[j][1] = y; }
+      return mk('tri', p => nearest(p, tri(V)), false, { name: 'Triangle' });
+    }
+    const ys = P.map(p => p[1]);
+    if (b.h / Math.max(b.w, 1) < .45 && b.w > 30 * s && revs(ys, .18 * b.h) >= 3 && revs(P.map(p => p[0]), .25 * b.w) < 1) {
+      const cy = snapV(ys.reduce((a, v) => a + v, 0) / n, C.TY, thr), l = snapV(b.x0, C.TX, thr), r = snapV(b.x1, C.TX, thr);
+      return mk('wave', p => [Math.max(l, Math.min(r, p[0])), cy], true, { l, r, cy, name: 'Text line' }, .05);
+    }
+    const vi = rdp(P, .15 * diag);
+    if (vi.length === 3) {
+      const mi = vi[1], m = P[mi], u1 = [A[0] - m[0], A[1] - m[1]], u2 = [B[0] - m[0], B[1] - m[1]];
+      const ang = Math.acos(Math.max(-1, Math.min(1, (u1[0] * u2[0] + u1[1] * u2[1]) / ((Math.hypot(u1[0], u1[1]) * Math.hypot(u2[0], u2[1])) || 1)))) * 180 / Math.PI;
+      if (ang < 110) {
+        const hl = (dist(A, m) + dist(B, m)) / 2;
+        for (const o of C.objs) {
+          if (o.kind !== 'ink' || o.sk !== 'line') continue;
+          const pa = C.abs(o)[0], e0 = pa[0], e1 = pa[pa.length - 1];
+          for (const [E, O] of [[e0, e1], [e1, e0]]) {
+            const L0 = dist(E, O) || 1;
+            if (dist(E, m) > Math.max(24 * s, .6 * hl) || hl > .6 * L0) continue;
+            const back = [(O[0] - E[0]) / L0, (O[1] - E[1]) / L0], r1 = rotv(back, 30), r2 = rotv(back, -30);
+            let b1 = [E[0] + r1[0] * hl, E[1] + r1[1] * hl], b2 = [E[0] + r2[0] * hl, E[1] + r2[1] * hl];
+            if (dist(A, b2) < dist(A, b1)) [b1, b2] = [b2, b1];
+            return mk('head', (p, i) => i <= mi ? lerp(b1, E, i / mi) : lerp(E, b2, (i - mi) / (n - 1 - mi)), true, { line: o.id, name: 'Arrow' });
+          }
+        }
+      }
+    }
+    return null;
+  }
+  return { dist, segP, resample, bbox, inPoly, isScribble, classify };
+})();
+const INKD = new WeakMap();
+
+class Component extends DCLogic {
+  state = {
+    screen: 'dial', shape: 'portrait', comp: 'cover', guide: 'golden', hue: 210, dark: false,
+    rot: { ratio: -72 + 60, comp: -50, guide: -120 + 80, hue: -7 * 360 / 13 - 70 },
+    dragRing: null, hoverRing: null, focusRing: 0, miniHover: null,
+    vw: window.innerWidth, vh: window.innerHeight,
+    objs: [], docShape: 'portrait', ground: 'ground', sel: [], editing: null, editText: '',
+    panel: null, role: 'accent', swatch: 'accent', over: {}, guides: true, hexDraft: null,
+    snaps: [], snapAngle: null, marquee: null, live: false, tool: null, pen: null, lasso: null, erAt: null, hw: null,
+    undo: [], redo: [], toast: '', toastOn: false, opening: false, fresh: [], scan: null, iconQ: '', gridOn: false, gridSize: 40, help: null, pick: { h: 210, s: 60, v: 70 },
+    fmt: 'png', scale: 1, preview: null, expStatus: 'idle',
+  };
+  dialRef = React.createRef(); canvasRef = React.createRef(); editRef = React.createRef();
+  drag = null; clip = null; pasteN = 0; uid = 1; slots = []; k = 1;
+
+  componentDidMount() {
+    this.onMove = e => this.move(e); this.onUp = e => this.up(e); this.onKey = e => this.key(e);
+    this.onResize = () => this.setState({ vw: window.innerWidth, vh: window.innerHeight });
+    window.addEventListener('pointermove', this.onMove); window.addEventListener('pointerup', this.onUp);
+    window.addEventListener('keydown', this.onKey); window.addEventListener('resize', this.onResize);
+    this.onResize(); requestAnimationFrame(this.onResize); setTimeout(this.onResize, 250);
+    if (window.ResizeObserver) { this.ro = new ResizeObserver(this.onResize); this.ro.observe(document.documentElement); }
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { WRAP.clear(); LAYC.clear(); this.forceUpdate(); });
+    const P = this.props;
+    this.iconPing = () => this.forceUpdate(); ICONS.listeners.add(this.iconPing);
+    this.tipOver = e => {
+      const el = e.target.closest && e.target.closest('[title],[data-tip]'); if (!el) return;
+      if (el.hasAttribute('title')) { el.setAttribute('data-tip', el.getAttribute('title')); el.removeAttribute('title'); }
+      const text = el.getAttribute('data-tip'); if (!text) return;
+      const r = el.getBoundingClientRect();
+      this.setState({ tip: { text, x: r.left + r.width / 2, y: r.bottom + 8 } });
+    };
+    this.tipOut = e => { const el = e.target.closest && e.target.closest('[data-tip]'); if (el && !el.contains(e.relatedTarget)) this.setState({ tip: null }); };
+    document.addEventListener('pointerover', this.tipOver); document.addEventListener('pointerout', this.tipOut);
+    document.addEventListener('pointerdown', () => this.state.tip && this.setState({ tip: null }), true);
+    this.setState({ guides: P.showGuides ?? true });
+    setTimeout(() => this.setState({ rot: { ratio: -72, comp: 0, guide: -120, hue: -7 * 360 / 13 } }), 120);
+    if (P.startScreen === 'editor') setTimeout(() => this.start(), 0);
+  }
+  componentWillUnmount() {
+    window.removeEventListener('pointermove', this.onMove); window.removeEventListener('pointerup', this.onUp);
+    window.removeEventListener('keydown', this.onKey); window.removeEventListener('resize', this.onResize);
+    if (this.ro) this.ro.disconnect();
+  }
+  componentDidUpdate(pp, ps) {
+    if (this.state.editing && ps.editing !== this.state.editing && this.editRef.current) { const t = this.editRef.current; t.focus(); t.select(); }
+  }
+  nid() { return 'o' + (this.uid++) + Math.random().toString(36).slice(2, 6); }
+  pal() { const S = this.state; return { ...palette(S.hue, S.dark), ...S.over }; }
+  resolve(f) { const p = this.pal(); return p[f] || f; }
+  geo(o) { if (o.kind === 'text') return { x: o.x, y: o.y, w: o.w, h: wrap(o.text, o.fs, o.fw, o.w).length * o.fs * 1.02 }; return { x: o.x, y: o.y, w: o.w, h: o.h }; }
+  buzz() { try { navigator.vibrate && navigator.vibrate(6); } catch (_) {} }
+  say(msg, ms = 1300) { clearTimeout(this.tt); this.setState({ toast: msg, toastOn: true }); this.tt = setTimeout(() => this.setState({ toastOn: false }), ms); }
+  snapDoc(s) { return { objs: s.objs, ground: s.ground, shape: s.docShape }; }
+  commit(next, msg) { this.setState(s => ({ undo: [...s.undo.slice(-80), this.snapDoc(s)], redo: [], ...next })); if (msg) this.say(msg); }
+
+  // dial
+  ringIndex(key, S = this.state) {
+    if (key === 'ratio') return RATIOS.findIndex(r => r[0] === S.shape);
+    if (key === 'comp') return COMPS.findIndex(r => r[0] === S.comp);
+    if (key === 'guide') return GUIDES.findIndex(r => r[0] === S.guide);
+    return HUES.indexOf(S.hue);
+  }
+  patchFor(key, i) {
+    if (key === 'ratio') return { shape: RATIOS[i][0] };
+    if (key === 'comp') return { comp: COMPS[i][0] };
+    if (key === 'guide') return { guide: GUIDES[i][0] };
+    return { hue: HUES[i], over: {} };
+  }
+  pick(key, i) {
+    const rg = RINGS.find(r => r.key === key), step = 360 / rg.n;
+    this.setState(s => { const cur = s.rot[key]; return { rot: { ...s.rot, [key]: cur + norm(-i * step - cur) }, ...this.patchFor(key, i) }; });
+  }
+  angleAt(e) { const el = this.dialRef.current; if (!el) return 0; const r = el.getBoundingClientRect(); return Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2)) * 180 / Math.PI; }
+  ringDown(key, i, e) {
+    if (e.button) return; e.preventDefault();
+    this.drag = { type: 'ring', key, i, last: this.angleAt(e), acc: 0, r0: this.state.rot[key], moved: false, x: e.clientX, y: e.clientY };
+    this.setState({ focusRing: RINGS.findIndex(r => r.key === key) });
+  }
+  ringWheel(key, e) {
+    const now = Date.now(), dv = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+    if (Math.abs(dv) < 3 || now - (this.lastWheel || 0) < 130) return;
+    this.lastWheel = now;
+    const rg = RINGS.find(r => r.key === key);
+    this.pick(key, modn(this.ringIndex(key) + (dv > 0 ? 1 : -1), rg.n));
+    this.setState({ focusRing: RINGS.indexOf(rg) });
+  }
+  start() {
+    const S = this.state, lay = layoutFor(S.shape, S.comp, S.guide);
+    const objs = docFrom(lay).map(o => ({ ...o, id: this.nid() }));
+    const undo = S.objs.length ? [...S.undo, this.snapDoc(S)] : [];
+    this.slots = [];
+    this.setState({ screen: 'editor', objs, docShape: S.shape, sel: [], ground: 'ground', undo, redo: [], panel: null, opening: true, editing: null });
+    setTimeout(() => this.setState({ opening: false }), 60);
+  }
+  resume() {
+    const S = this.state;
+    if (S.docShape !== S.shape) this.reRatio(S.docShape, S.shape);
+    this.slots = [];
+    this.setState({ screen: 'editor', opening: true, panel: null });
+    setTimeout(() => this.setState({ opening: false }), 60);
+  }
+
+  // editor actions
+  selObjs() { const s = new Set(this.state.sel); return this.state.objs.filter(o => s.has(o.id)); }
+  addObjs(list, msg) {
+    const S = this.state, ids = list.map(o => o.id);
+    this.commit({ objs: [...S.objs, ...list], sel: ids, fresh: ids, panel: S.panel === 'colour' ? null : S.panel }, msg);
+    setTimeout(() => this.setState({ fresh: [] }), 40);
+  }
+  addShape(key) {
+    const S = this.state, R = row(S.shape), W = R[4], H = R[5], sd = SH[key];
+    const base = Math.min(W, H) * 0.32;
+    let w = sd.ar >= 1 ? base : base * sd.ar, h = sd.ar >= 1 ? base / sd.ar : base;
+    if (sd.ar > 5) { w = W * 0.5; h = Math.max(4, w / sd.ar); }
+    const off = ((this.addN = (this.addN || 0) + 1) % 6) * 20;
+    const fill = S.swatch === 'ground' ? 'accent' : S.swatch;
+    this.addObjs([{ id: this.nid(), kind: 'shape', shape: key, fill, x: W / 2 - w / 2 + off, y: H / 2 - h / 2 + off, w, h, rot: 0 }], sd.name);
+  }
+  addText() {
+    const S = this.state, R = row(S.shape), W = R[4], H = R[5], fs = Math.round(Math.min(W, H) * 0.07), w = W * 0.5;
+    const o = { id: this.nid(), kind: 'text', text: 'Text', x: W / 2 - w / 2, y: H / 2 - fs / 2, w, fs, fw: 700, align: 'left', fill: 'ink', rot: 0 };
+    this.addObjs([o]);
+    setTimeout(() => this.setState({ editing: o.id, editText: o.text }), 0);
+  }
+  addImage() {
+    const S = this.state, R = row(S.shape), W = R[4], H = R[5], w = W * 0.5, h = H * 0.35;
+    this.addObjs([{ id: this.nid(), kind: 'img', x: W / 2 - w / 2, y: H / 2 - h / 2, w, h, rot: 0, fill: 'ink' }], 'Image');
+  }
+  remove() {
+    const S = this.state, ids = new Set(this.selObjs().filter(o => !o.locked).map(o => o.id));
+    if (!ids.size) return;
+    this.commit({ objs: S.objs.filter(o => !ids.has(o.id)), sel: [] }, 'Deleted');
+  }
+  copy(msg = 'Copied') { const s = this.selObjs(); if (!s.length) return; this.clip = s.map(o => ({ ...o })); this.pasteN = 0; if (msg) this.say(msg); }
+  cut() { this.copy(null); this.remove(); this.say('Cut'); }
+  paste() {
+    if (!this.clip || !this.clip.length) return this.say('Nothing to paste');
+    this.pasteN++;
+    this.addObjs(this.clip.map(o => ({ ...o, id: this.nid(), x: o.x + 20 * this.pasteN, y: o.y + 20 * this.pasteN, locked: false })), 'Pasted');
+  }
+  duplicate() { const s = this.selObjs(); if (!s.length) return; this.addObjs(s.map(o => ({ ...o, id: this.nid(), x: o.x + 20, y: o.y + 20, locked: false })), 'Duplicated'); }
+  selectAll() { this.setState({ sel: this.state.objs.map(o => o.id) }); }
+  layerName(o) { if (o.kind === 'shape') return (SH[o.shape] || {}).name || 'Shape'; if (o.kind === 'text') return o.text.split('\n')[0] || 'Text'; if (o.kind === 'para') return 'Paragraph'; if (o.kind === 'img') return 'Image'; return o.name || o.kind.charAt(0).toUpperCase() + o.kind.slice(1); }
+  layerMove(id, dir) { const a = this.state.objs.slice(), i = a.findIndex(o => o.id === id), j = i + dir; if (i < 0 || j < 0 || j >= a.length) return; [a[i], a[j]] = [a[j], a[i]]; this.commit({ objs: a }, dir > 0 ? 'Brought forward' : 'Sent backward'); }
+  layerFlip(id, key) { const S = this.state; this.commit({ objs: S.objs.map(o => o.id === id ? { ...o, [key]: !o[key] } : o), sel: key === 'hidden' ? S.sel.filter(x => x !== id) : S.sel }); }
+  pickDrag(e, kind, where) {
+    e.stopPropagation(); e.preventDefault();
+    const el = e.currentTarget, r = el.getBoundingClientRect();
+    const upd = ev => {
+      const fx = Math.max(0, Math.min(1, (ev.clientX - r.left) / r.width)), fy = Math.max(0, Math.min(1, (ev.clientY - r.top) / r.height));
+      const p = kind === 'sv' ? { ...this.state.pick, s: Math.round(fx * 100), v: Math.round((1 - fy) * 100) } : { ...this.state.pick, h: Math.round(fx * 359) };
+      const hex = hsv2hex(p.h, p.s, p.v);
+      if (where === 'dial') this.setState(s => ({ pick: p, over: { ...s.over, accent: hex } }));
+      else this.setState({ pick: p, swatch: hex, hexDraft: null });
+      return hex;
+    };
+    let last = upd(e);
+    const mv = ev => { last = upd(ev); };
+    const up = () => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); if (where !== 'dial') this.applyFill(last); };
+    window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up);
+  }
+  toggleLock() {
+    const S = this.state, s = this.selObjs(); if (!s.length) return;
+    const lock = !s.every(o => o.locked), ids = new Set(s.map(o => o.id));
+    this.commit({ objs: S.objs.map(o => ids.has(o.id) ? { ...o, locked: lock } : o) }, lock ? 'Locked' : 'Unlocked');
+  }
+  reorder(mode) {
+    const S = this.state, sel = new Set(S.sel); if (!sel.size) return;
+    let a = [...S.objs];
+    if (mode === 'front') a = [...a.filter(o => !sel.has(o.id)), ...a.filter(o => sel.has(o.id))];
+    else if (mode === 'back') a = [...a.filter(o => sel.has(o.id)), ...a.filter(o => !sel.has(o.id))];
+    else if (mode === 'fwd') { for (let i = a.length - 2; i >= 0; i--) if (sel.has(a[i].id) && !sel.has(a[i + 1].id)) [a[i], a[i + 1]] = [a[i + 1], a[i]]; }
+    else { for (let i = 1; i < a.length; i++) if (sel.has(a[i].id) && !sel.has(a[i - 1].id)) [a[i], a[i - 1]] = [a[i - 1], a[i]]; }
+    this.commit({ objs: a }, { front: 'Brought to front', back: 'Sent to back', fwd: 'Brought forward', bwd: 'Sent backward' }[mode]);
+  }
+  nudge(dx, dy) {
+    const S = this.state, ids = new Set(this.selObjs().filter(o => !o.locked).map(o => o.id)); if (!ids.size) return;
+    const objs = S.objs.map(o => ids.has(o.id) ? { ...o, x: o.x + dx, y: o.y + dy } : o);
+    const now = Date.now(), co = now - (this.lastNudge || 0) < 700; this.lastNudge = now;
+    if (co) this.setState({ objs }); else this.commit({ objs });
+  }
+  editOne(fn) { const S = this.state, s = this.selObjs(); if (s.length !== 1) return; this.commit({ objs: S.objs.map(o => o.id === s[0].id ? fn(o) : o) }); }
+  fontStep(dir) { this.editOne(o => o.kind === 'text' ? { ...o, fs: Math.max(6, o.fs + dir * Math.max(2, Math.round(o.fs * 0.1))) } : o); }
+  toggleBold() { this.editOne(o => o.kind === 'text' ? { ...o, fw: o.fw >= 700 ? 400 : 700 } : o); }
+  cycleAlign() { this.editOne(o => o.kind === 'text' ? { ...o, align: { left: 'center', center: 'right', right: 'left' }[o.align] } : o); }
+  removeBg() {
+    const s = this.selObjs(); if (s.length !== 1 || s[0].kind !== 'img' || s[0].cut) return;
+    const id = s[0].id;
+    this.setState({ scan: { id, on: false } });
+    setTimeout(() => this.setState({ scan: { id, on: true } }), 30);
+    setTimeout(() => { const S = this.state; this.commit({ objs: S.objs.map(o => o.id === id ? { ...o, cut: true } : o), scan: null }, 'Background removed'); }, 960);
+  }
+  undo() {
+    const s = this.state; if (!s.undo.length) return this.say('Nothing to undo');
+    const p = s.undo[s.undo.length - 1];
+    this.setState({ undo: s.undo.slice(0, -1), redo: [...s.redo, this.snapDoc(s)], objs: p.objs, ground: p.ground, docShape: p.shape, sel: s.sel.filter(id => p.objs.some(o => o.id === id)), editing: null });
+    if (p.shape !== s.shape) this.pick('ratio', RATIOS.findIndex(r => r[0] === p.shape));
+    this.say('Undo');
+  }
+  redo() {
+    const s = this.state; if (!s.redo.length) return this.say('Nothing to redo');
+    const p = s.redo[s.redo.length - 1];
+    this.setState({ redo: s.redo.slice(0, -1), undo: [...s.undo, this.snapDoc(s)], objs: p.objs, ground: p.ground, docShape: p.shape, sel: s.sel.filter(id => p.objs.some(o => o.id === id)), editing: null });
+    if (p.shape !== s.shape) this.pick('ratio', RATIOS.findIndex(r => r[0] === p.shape));
+    this.say('Redo');
+  }
+  applyFill(fill) { const S = this.state, ids = new Set(S.sel); if (!ids.size) return; this.commit({ objs: S.objs.map(o => ids.has(o.id) && o.kind !== 'img' ? { ...o, fill } : o) }); }
+  paint(id) { const S = this.state; this.commit({ objs: S.objs.map(o => o.id === id && o.kind !== 'img' ? { ...o, fill: S.swatch } : o) }); }
+  reRatio(from, to) {
+    if (from === to) return;
+    const S = this.state, A = row(from), B = row(to), W0 = A[4], H0 = A[5], W1 = B[4], H1 = B[5], s = Math.min(W1 / W0, H1 / H0), L = gl(S.guide);
+    const anc = (v, s0, s1) => { if (Math.abs(v) < 1) return 0; if (Math.abs(v - s0) < 1) return s1; for (const f of L) if (Math.abs(v - f * s0) < 1) return f * s1; return null; };
+    const objs = S.objs.map(o => {
+      const g = this.geo(o), l = anc(g.x, W0, W1), r = anc(g.x + g.w, W0, W1), t = anc(g.y, H0, H1), b = anc(g.y + g.h, H0, H1);
+      const w = l !== null && r !== null ? r - l : g.w * s, h = t !== null && b !== null ? b - t : g.h * s;
+      const cx = (g.x + g.w / 2) / W0 * W1, cy = (g.y + g.h / 2) / H0 * H1;
+      const x = l !== null ? l : r !== null ? r - w : cx - w / 2, y = t !== null ? t : b !== null ? b - h : cy - h / 2;
+      return o.kind === 'text' ? { ...o, x, y, w, fs: o.fs * s } : { ...o, x, y, w, h };
+    });
+    this.commit({ objs, docShape: to }, `${B[1]} ${B[2]}:${B[3]}`);
+  }
+  pickRatio(i) { const S = this.state, to = RATIOS[i][0]; if (to === S.shape) return; this.reRatio(S.shape, to); this.pick('ratio', i); }
+  commitEdit() {
+    const S = this.state; if (!S.editing) return;
+    const o = S.objs.find(x => x.id === S.editing), t = S.editText;
+    if (!o) return this.setState({ editing: null });
+    if (!t.trim()) this.commit({ objs: S.objs.filter(x => x.id !== o.id), sel: [], editing: null });
+    else if (t !== o.text) this.commit({ objs: S.objs.map(x => x.id === o.id ? { ...x, text: t } : x), editing: null });
+    else this.setState({ editing: null });
+  }
+  openExport() {
+    const S = this.state, R = row(S.shape);
+    let preview = null;
+    try { preview = this.drawDoc(Math.min(2, 360 / Math.max(R[4], R[5]))).toDataURL('image/png'); } catch (e) {}
+    this.setState({ panel: 'export', expStatus: 'idle', preview, sel: [], editing: null });
+  }
+  download() {
+    const S = this.state; if (S.expStatus === 'working') return;
+    this.setState({ expStatus: 'working' });
+    setTimeout(() => {
+      const name = `kura8-${S.shape}`;
+      const done = () => { this.setState({ expStatus: 'done' }); this.say('Saved'); setTimeout(() => { if (this.state.expStatus === 'done') this.setState({ expStatus: 'idle' }); }, 2400); };
+      try {
+        if (S.fmt === 'svg') { this.dl(name + '.svg', URL.createObjectURL(new Blob([this.svgDoc()], { type: 'image/svg+xml' }))); done(); }
+        else this.drawDoc(S.scale).toBlob(b => { this.dl(`${name}@${S.scale}x.${S.fmt}`, URL.createObjectURL(b)); done(); }, S.fmt === 'jpg' ? 'image/jpeg' : 'image/png', .92);
+      } catch (e) { this.setState({ expStatus: 'idle' }); this.say('Export failed'); }
+    }, 720);
+  }
+  dl(name, url) { const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000); }
+  drawDoc(scale) {
+    const S = this.state, R = row(S.shape), W = R[4], H = R[5], c = document.createElement('canvas');
+    c.width = Math.round(W * scale); c.height = Math.round(H * scale);
+    const x = c.getContext('2d'); x.scale(scale, scale);
+    x.fillStyle = this.resolve(S.ground); x.fillRect(0, 0, W, H);
+    S.objs.forEach(o => {
+      if (o.hidden) return;
+      const g = this.geo(o), f = this.resolve(o.fill);
+      x.save(); x.translate(g.x + g.w / 2, g.y + g.h / 2); x.rotate(o.rot * Math.PI / 180); x.translate(-g.w / 2, -g.h / 2); x.fillStyle = f;
+      if (o.kind === 'shape') {
+        const sd = SH[o.shape], t = Math.min(g.w, g.h) * .18; x.beginPath();
+        if (sd.css === 'circle' || sd.css === 'ring') { x.ellipse(g.w / 2, g.h / 2, g.w / 2, g.h / 2, 0, 0, Math.PI * 2); if (sd.css === 'ring') { x.moveTo(g.w - t, g.h / 2); x.ellipse(g.w / 2, g.h / 2, Math.max(1, g.w / 2 - t), Math.max(1, g.h / 2 - t), 0, 0, Math.PI * 2); } x.fill('evenodd'); }
+        else if (sd.css === 'frame') { x.rect(0, 0, g.w, g.h); x.rect(t, t, g.w - 2 * t, g.h - 2 * t); x.fill('evenodd'); }
+        else if (sd.css) { rrect(x, 0, 0, g.w, g.h, radPx(sd.css, g)); x.fill(); }
+        else { x.scale(g.w / 100, g.h / 100); x.fill(new Path2D(sd.d), 'evenodd'); }
+      } else if (o.kind === 'text') {
+        setFont(x, o.fs, o.fw); x.textBaseline = 'middle'; x.textAlign = o.align;
+        const ax = o.align === 'center' ? g.w / 2 : o.align === 'right' ? g.w : 0, lh = o.fs * 1.02;
+        wrap(o.text, o.fs, o.fw, o.w).forEach((ln, i) => x.fillText(ln, ax, i * lh + lh / 2));
+      } else if (o.kind === 'para') {
+        x.globalAlpha = .55; const n = o.n || 4, u = g.h / (n * 3 + (n - 1) * 11), bw = [1, .86, 1, .62];
+        for (let i = 0; i < n; i++) x.fillRect(0, i * 14 * u, g.w * bw[i % 4], 3 * u);
+      } else if (o.kind === 'ink') {
+        x.strokeStyle = f; x.lineWidth = o.sw; x.lineCap = 'round'; x.lineJoin = 'round'; x.beginPath();
+        o.paths.forEach(p => p.forEach(([u, v], i) => i ? x.lineTo(u * g.w, v * g.h) : x.moveTo(u * g.w, v * g.h))); x.stroke();
+      } else if (o.kind === 'img') {
+        if (o.cut) { x.fillStyle = '#D0D8E2'; x.beginPath(); x.ellipse(g.w / 2, g.h / 2, g.w * .2, g.h * .35, 0, 0, Math.PI * 2); x.fill(); }
+        else { x.fillStyle = 'rgba(156,171,194,.35)'; x.fillRect(0, 0, g.w, g.h); x.strokeStyle = '#9CABC2'; x.lineWidth = 2; x.strokeRect(1, 1, g.w - 2, g.h - 2); }
+      }
+      x.restore();
+    });
+    return c;
+  }
+  svgDoc() {
+    const S = this.state, R = row(S.shape), W = R[4], H = R[5], n2 = v => +v.toFixed(2);
+    const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const ell = (cx, cy, rx, ry) => `M${n2(cx - rx)} ${n2(cy)}a${n2(rx)} ${n2(ry)} 0 1 0 ${n2(2 * rx)} 0a${n2(rx)} ${n2(ry)} 0 1 0 ${n2(-2 * rx)} 0Z`;
+    let out = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><rect width="${W}" height="${H}" fill="${this.resolve(S.ground)}"/>`;
+    S.objs.forEach(o => {
+      if (o.hidden) return;
+      const g = this.geo(o), f = this.resolve(o.fill);
+      out += `<g transform="translate(${n2(g.x + g.w / 2)} ${n2(g.y + g.h / 2)}) rotate(${n2(o.rot)}) translate(${n2(-g.w / 2)} ${n2(-g.h / 2)})">`;
+      if (o.kind === 'shape') {
+        const sd = SH[o.shape], t = Math.min(g.w, g.h) * .18;
+        if (sd.css === 'circle') out += `<ellipse cx="${n2(g.w / 2)}" cy="${n2(g.h / 2)}" rx="${n2(g.w / 2)}" ry="${n2(g.h / 2)}" fill="${f}"/>`;
+        else if (sd.css === 'ring') out += `<path fill-rule="evenodd" fill="${f}" d="${ell(g.w / 2, g.h / 2, g.w / 2, g.h / 2)}${ell(g.w / 2, g.h / 2, g.w / 2 - t, g.h / 2 - t)}"/>`;
+        else if (sd.css === 'frame') out += `<path fill-rule="evenodd" fill="${f}" d="M0 0H${n2(g.w)}V${n2(g.h)}H0Z M${n2(t)} ${n2(t)}H${n2(g.w - t)}V${n2(g.h - t)}H${n2(t)}Z"/>`;
+        else if (sd.css) out += `<rect width="${n2(g.w)}" height="${n2(g.h)}" rx="${n2(radPx(sd.css, g))}" fill="${f}"/>`;
+        else out += `<path fill-rule="evenodd" fill="${f}" transform="scale(${n2(g.w / 100)} ${n2(g.h / 100)})" d="${sd.d}"/>`;
+      } else if (o.kind === 'text') {
+        const lh = o.fs * 1.02, ax = o.align === 'center' ? g.w / 2 : o.align === 'right' ? g.w : 0, anchor = { left: 'start', center: 'middle', right: 'end' }[o.align];
+        out += `<text font-family="Space Grotesk, sans-serif" font-weight="${o.fw}" font-size="${n2(o.fs)}" letter-spacing="${n2(-0.01 * o.fs)}" fill="${f}" text-anchor="${anchor}" dominant-baseline="central">` + wrap(o.text, o.fs, o.fw, o.w).map((ln, i) => `<tspan x="${n2(ax)}" y="${n2(i * lh + lh / 2)}">${esc(ln)}</tspan>`).join('') + '</text>';
+      } else if (o.kind === 'para') {
+        const n = o.n || 4, u = g.h / (n * 3 + (n - 1) * 11), bw = [1, .86, 1, .62];
+        for (let i = 0; i < n; i++) out += `<rect y="${n2(i * 14 * u)}" width="${n2(g.w * bw[i % 4])}" height="${n2(3 * u)}" fill="${f}" opacity=".55"/>`;
+      } else if (o.kind === 'ink') {
+        out += `<path fill="none" stroke="${f}" stroke-width="${n2(o.sw)}" stroke-linecap="round" stroke-linejoin="round" d="${o.paths.map(p => 'M' + p.map(([u, v]) => n2(u * g.w) + ' ' + n2(v * g.h)).join('L')).join('')}"/>`;
+      } else if (o.kind === 'img') {
+        out += o.cut ? `<ellipse cx="${n2(g.w / 2)}" cy="${n2(g.h / 2)}" rx="${n2(g.w * .2)}" ry="${n2(g.h * .35)}" fill="#D0D8E2"/>` : `<rect x="1" y="1" width="${n2(g.w - 2)}" height="${n2(g.h - 2)}" fill="#9CABC2" fill-opacity=".35" stroke="#9CABC2" stroke-width="2"/>`;
+      }
+      out += '</g>';
+    });
+    return out + '</svg>';
+  }
+
+  // sketch
+  inkW() { const R = row(this.state.shape); return Math.max(2, Math.min(R[4], R[5]) * .005); }
+  inkObj(paths, sw, extra = {}) {
+    const b = INK.bbox(paths.flat()); let x0 = b.x0, y0 = b.y0, w = b.w, h = b.h;
+    if (w < sw) { x0 -= (sw - w) / 2; w = sw; } if (h < sw) { y0 -= (sw - h) / 2; h = sw; }
+    const r4 = v => Math.round(v * 1e4) / 1e4;
+    return { id: this.nid(), kind: 'ink', x: x0, y: y0, w, h, rot: 0, fill: 'ink', sw, paths: paths.map(p => p.map(([x, y]) => [r4((x - x0) / w), r4((y - y0) / h)])), ...extra };
+  }
+  absPaths(o) { const c = [o.x + o.w / 2, o.y + o.h / 2], a = (o.rot || 0) * Math.PI / 180, cs = Math.cos(a), sn = Math.sin(a); return o.paths.map(p => p.map(([u, v]) => { const dx = o.x + u * o.w - c[0], dy = o.y + v * o.h - c[1]; return [c[0] + dx * cs - dy * sn, c[1] + dx * sn + dy * cs]; })); }
+  setTool(t) {
+    const S = this.state;
+    if (S.hw && !S.hw.reading) { clearTimeout(this.hwT); this.readHw(); }
+    if (t && !S.tool) this.say('Hold at the end of a stroke to clean it up', 2600);
+    this.setState({ tool: t, lasso: null, erAt: null, pen: null, panel: null });
+  }
+  armHold() { clearTimeout(this.holdT); this.holdT = setTimeout(() => this.holdFire(), 420); }
+  holdFire() {
+    const d = this.drag; if (!d || d.type !== 'pen' || d.done || d.pts.length < 4) return;
+    const S = this.state, R = row(S.shape), W = R[4], H = R[5], L = gl(S.guide), others = S.objs.map(o => this.geo(o));
+    const TX = [0, W / 2, W, ...L.map(f => f * W), ...others.flatMap(g => [g.x, g.x + g.w / 2, g.x + g.w])];
+    const TY = [0, H / 2, H, ...L.map(f => f * H), ...others.flatMap(g => [g.y, g.y + g.h / 2, g.y + g.h])];
+    const r = INK.classify(INK.resample(d.pts, 96), { k: this.k, TX, TY, objs: S.objs, abs: o => this.absPaths(o) });
+    if (!r) return;
+    d.done = true; d.rec = r; d.recAt = Date.now(); this.buzz();
+    this.setState({ pen: { pts: r.raw, clean: null, morph: false } });
+    requestAnimationFrame(() => requestAnimationFrame(() => { if (this.state.pen) this.setState({ pen: { pts: r.raw, clean: r.clean, morph: true } }); }));
+  }
+  skDown(e) {
+    if (e.button) return; e.stopPropagation(); e.preventDefault();
+    const S = this.state, P = this.canvasPt(e), t = S.tool;
+    if (S.editing) this.commitEdit();
+    if (t === 'pen') { this.drag = { type: 'pen', pts: [P], ax: e.clientX, ay: e.clientY }; this.armHold(); this.setState({ pen: { pts: [P], clean: null, morph: false }, sel: [], panel: null }); }
+    else if (t === 'erase') { this.drag = { type: 'erase', before: this.snapDoc(S), hit: false }; this.setState({ erAt: P }); this.eraseAt(P, this.drag); }
+    else if (t === 'lasso') {
+      const hit = this.selObjs().find(o => { const g = this.geo(o); return !o.locked && P[0] >= g.x && P[0] <= g.x + g.w && P[1] >= g.y && P[1] <= g.y + g.h; });
+      if (hit) return this.objDown(hit.id, e);
+      this.drag = { type: 'lasso', pts: [P] }; this.setState({ lasso: [P], sel: [] });
+    }
+    else if (t === 'write') {
+      if (S.hw && S.hw.reading) return;
+      clearTimeout(this.hwT); this.drag = { type: 'write', pts: [P] };
+      this.setState(s => ({ hw: { strokes: [...(s.hw ? s.hw.strokes : []), [P]], reading: false }, sel: [] }));
+    }
+  }
+  eraseAt(P, d) {
+    const S = this.state, r = 12 / this.k;
+    const kill = S.objs.filter(o => o.kind === 'ink' && !o.locked && this.absPaths(o).some(pa => pa.some((q, i) => i && INK.dist(INK.segP(P, pa[i - 1], q), P) < r + o.sw / 2)));
+    if (!kill.length) return;
+    d.hit = true; const ids = new Set(kill.map(o => o.id));
+    this.setState({ objs: S.objs.filter(o => !ids.has(o.id)), sel: S.sel.filter(id => !ids.has(id)) });
+  }
+  skMove(d, e) {
+    const S = this.state, P = this.canvasPt(e), last = d.pts ? d.pts[d.pts.length - 1] : null, far = last ? Math.hypot(P[0] - last[0], P[1] - last[1]) * this.k : 0;
+    if (d.type === 'pen') {
+      if (d.done) return;
+      if (Math.hypot(e.clientX - d.ax, e.clientY - d.ay) > 3) { d.ax = e.clientX; d.ay = e.clientY; this.armHold(); }
+      if (far < 1.5) return;
+      d.pts.push(P); this.setState({ pen: { pts: d.pts.slice(), clean: null, morph: false } });
+    } else if (d.type === 'erase') { this.setState({ erAt: P }); this.eraseAt(P, d); }
+    else if (d.type === 'lasso') {
+      if (far < 3) return; d.pts.push(P);
+      const sel = d.pts.length > 3 ? S.objs.filter(o => { const g = this.geo(o); return INK.inPoly([g.x + g.w / 2, g.y + g.h / 2], d.pts); }).map(o => o.id) : [];
+      this.setState({ lasso: d.pts.slice(), sel });
+    } else if (d.type === 'write') {
+      if (far < 1.5) return; d.pts.push(P);
+      this.setState(s => s.hw ? ({ hw: { ...s.hw, strokes: [...s.hw.strokes.slice(0, -1), d.pts.slice()] } }) : null);
+    }
+  }
+  skUp(d) {
+    if (d.type === 'erase') { if (d.hit) this.setState(s => ({ undo: [...s.undo.slice(-80), d.before], redo: [] })); return; }
+    if (d.type === 'lasso') return this.setState({ lasso: null });
+    if (d.type === 'write') { this.hwT = setTimeout(() => this.readHw(), 1000); return; }
+    const S = this.state, sw = this.inkW();
+    if (d.pts.length < 3) return this.setState({ pen: null });
+    if (d.rec) { const r = d.rec; setTimeout(() => this.commitRec(r, sw), Math.max(0, 250 - (Date.now() - d.recAt))); return; }
+    const P = INK.resample(d.pts, 96);
+    if (INK.isScribble(P)) {
+      const sb = INK.bbox(P), sa = Math.max(1, sb.w * sb.h);
+      const fr = o => { const g = this.geo(o); return P.filter(p => p[0] >= g.x && p[0] <= g.x + g.w && p[1] >= g.y && p[1] <= g.y + g.h).length / P.length; };
+      let kill = S.objs.filter(o => { const g = this.geo(o); return !o.locked && fr(o) > .25 && g.w * g.h < sa * 4; });
+      if (!kill.length) { const top = [...S.objs].reverse().find(o => !o.locked && fr(o) > .5); if (top) kill = [top]; }
+      if (kill.length) { const ids = new Set(kill.map(o => o.id)); this.buzz(); return this.commit({ objs: S.objs.filter(o => !ids.has(o.id)), sel: [], pen: null }, 'Scribbled out'); }
+    }
+    const a = d.pts, sm = a.map((p, i) => { const q = a[Math.max(0, i - 1)], z = a[Math.min(a.length - 1, i + 1)]; return [(q[0] + p[0] * 2 + z[0]) / 4, (q[1] + p[1] * 2 + z[1]) / 4]; });
+    this.commit({ objs: [...S.objs, this.inkObj([sm], sw)], pen: null });
+  }
+  commitRec(r, sw) {
+    const S = this.state, W = row(S.shape)[4];
+    if (r.type === 'wave') {
+      const tgt = S.objs.find(o => { if (o.kind !== 'para' || o.rot || o.locked) return false; const n = o.n || 4, u = o.h / (n * 3 + (n - 1) * 11), bot = o.y + o.h; return Math.abs(o.x - r.l) < .08 * W && r.cy > bot - u && r.cy - bot < Math.max(60 * u, 40 / this.k); });
+      if (tgt) { const n = tgt.n || 4, u = tgt.h / (n * 3 + (n - 1) * 11); return this.commit({ objs: S.objs.map(o => o === tgt ? { ...o, n: n + 1, h: (n + 1) * 3 * u + n * 11 * u, w: Math.max(o.w, r.r - o.x) } : o), pen: null }, 'Text line'); }
+      const u = W / 1000;
+      return this.commit({ objs: [...S.objs, { id: this.nid(), kind: 'para', n: 1, x: r.l, y: r.cy - 1.5 * u, w: r.r - r.l, h: 3 * u, fill: 'ink', rot: 0 }], pen: null }, 'Text line');
+    }
+    if (r.type === 'head') {
+      const o = S.objs.find(q => q.id === r.line);
+      if (o) { const no = { ...this.inkObj([...this.absPaths(o), r.clean], o.sw, { sk: 'arrow' }), id: o.id, fill: o.fill }; return this.commit({ objs: S.objs.map(q => q.id === o.id ? no : q), pen: null }, 'Arrow'); }
+    }
+    if (r.type === 'line' && r.rect) {
+      const rc = S.objs.find(q => q.id === r.rect);
+      if (rc) {
+        if (rc.xd && rc.xd.dir !== r.dir && S.objs.some(q => q.id === rc.xd.id)) {
+          const img = { id: this.nid(), kind: 'img', x: rc.x, y: rc.y, w: rc.w, h: rc.h, rot: 0, fill: 'ink' }, kill = new Set([rc.id, rc.xd.id]);
+          this.buzz(); return this.commit({ objs: S.objs.flatMap(q => q.id === rc.id ? [img] : kill.has(q.id) ? [] : [q]), pen: null, sel: [] }, 'Image');
+        }
+        const lo = this.inkObj([r.clean], sw, { sk: 'line' });
+        return this.commit({ objs: [...S.objs.map(q => q.id === rc.id ? { ...q, xd: { id: lo.id, dir: r.dir } } : q), lo], pen: null }, 'Line');
+      }
+    }
+    const closed = r.type === 'rect' || r.type === 'ellipse' || r.type === 'tri';
+    const sk = r.type === 'head' ? 'line' : r.type;
+    this.commit({ objs: [...S.objs, this.inkObj([closed ? [...r.clean, r.clean[0]] : r.clean], sw, { sk })], pen: null }, r.name);
+  }
+  async readHw() {
+    const hw = this.state.hw; if (!hw || hw.reading || !hw.strokes.length) return;
+    const all = hw.strokes.flat(), b = INK.bbox(all);
+    if (Math.max(b.w, b.h) * this.k < 6) return this.setState({ hw: null });
+    this.setState({ hw: { ...hw, reading: true } });
+    let text = '';
+    try {
+      const pad = Math.max(b.w, b.h) * .08 + 4, sc = 640 / Math.max(b.w + 2 * pad, b.h + 2 * pad), c = document.createElement('canvas');
+      c.width = Math.round((b.w + 2 * pad) * sc); c.height = Math.round((b.h + 2 * pad) * sc);
+      const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.strokeStyle = '#000'; x.lineWidth = 6; x.lineCap = 'round'; x.lineJoin = 'round';
+      hw.strokes.forEach(st => { x.beginPath(); st.forEach(([px, py], i) => { const X = (px - b.x0 + pad) * sc, Y = (py - b.y0 + pad) * sc; i ? x.lineTo(X, Y) : x.moveTo(X, Y); }); if (st.length === 1) x.lineTo((st[0][0] - b.x0 + pad) * sc + .1, (st[0][1] - b.y0 + pad) * sc); x.stroke(); });
+      const data = c.toDataURL('image/png').split(',')[1];
+      const out = await window.claude.complete({ max_tokens: 200, messages: [{ role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: 'image/png', data } }, { type: 'text', text: 'This image is handwriting. Transcribe it exactly as written, keeping line breaks. Reply with only the text, no quotes or commentary. If it is unreadable, reply with a single ?' }] }] });
+      text = String(out || '').trim().replace(/^["'\u201c]+|["'\u201d]+$/g, '');
+    } catch (e) {}
+    if (!text || text === '?') { this.setState({ hw: null }); return this.say('Couldn\u2019t read that'); }
+    const lines = text.split('\n'), fs = Math.max(12, b.h / lines.length * .95), w = Math.max(b.w, ...lines.map(t => lineW(t, fs, 700))) * 1.04;
+    const o = { id: this.nid(), kind: 'text', text, x: b.x0, y: b.y0 + (b.h - lines.length * fs * 1.02) / 2, w, fs, fw: 700, align: 'left', fill: 'ink', rot: 0 };
+    this.setState({ hw: null }); this.addObjs([o], 'Text');
+  }
+
+  // pointer
+  canvasPt(e) { const r = this.canvasRef.current.getBoundingClientRect(); return [(e.clientX - r.left) / this.k, (e.clientY - r.top) / this.k]; }
+  objDown(id, e) {
+    if (e.button) return; e.stopPropagation();
+    const S = this.state; if (S.editing) this.commitEdit();
+    if (S.panel === 'colour') return this.paint(id);
+    let sel = S.sel;
+    if (e.shiftKey) sel = sel.includes(id) ? sel.filter(x => x !== id) : [...sel, id];
+    else if (!sel.includes(id)) sel = [id];
+    this.setState({ sel, panel: S.panel === 'shapes' ? S.panel : null });
+    if (!sel.includes(id)) return;
+    const ids = sel.filter(x => { const o = S.objs.find(q => q.id === x); return o && !o.locked; });
+    if (!ids.length) return;
+    const box = {}; S.objs.forEach(o => { if (ids.includes(o.id)) box[o.id] = this.geo(o); });
+    this.drag = { type: 'move', id, sx: e.clientX, sy: e.clientY, ids, box, before: this.snapDoc(S), moved: false, alt: e.altKey, shift: e.shiftKey };
+  }
+  objDbl(id) { const o = this.state.objs.find(x => x.id === id); if (o && o.kind === 'text' && !o.locked) this.setState({ editing: id, editText: o.text, sel: [id] }); }
+  handleDown(id, corner, e) {
+    if (e.button) return; e.stopPropagation(); e.preventDefault();
+    const S = this.state, o = S.objs.find(x => x.id === id);
+    this.drag = { type: 'resize', id, corner, o: { ...o }, g: this.geo(o), before: this.snapDoc(S), moved: false };
+  }
+  rotDown(id, e) {
+    if (e.button) return; e.stopPropagation(); e.preventDefault();
+    const S = this.state, o = S.objs.find(x => x.id === id), g = this.geo(o), c = [g.x + g.w / 2, g.y + g.h / 2], P = this.canvasPt(e);
+    this.drag = { type: 'rot', id, c, a0: Math.atan2(P[1] - c[1], P[0] - c[0]) * 180 / Math.PI, r0: o.rot, before: this.snapDoc(S), moved: false };
+  }
+  canvasDown(e) {
+    if (e.button) return; e.stopPropagation();
+    const S = this.state; if (S.editing) this.commitEdit();
+    if (S.panel === 'colour') return this.commit({ ground: S.swatch });
+    const base = e.shiftKey ? S.sel : [];
+    this.setState({ sel: base, panel: S.panel === 'shapes' ? S.panel : null });
+    this.drag = { type: 'marq', p0: this.canvasPt(e), base };
+  }
+  stageDown(e) { if (e.target !== e.currentTarget) return; if (this.state.editing) this.commitEdit(); this.setState({ sel: [], panel: null }); }
+  move(e) {
+    const d = this.drag; if (!d) return;
+    const S = this.state;
+    if (d.type === 'ring') {
+      const a = this.angleAt(e); d.acc += norm(a - d.last); d.last = a;
+      if (!d.moved && Math.hypot(e.clientX - d.x, e.clientY - d.y) > 4) d.moved = true;
+      if (!d.moved) return;
+      const rg = RINGS.find(r => r.key === d.key), step = 360 / rg.n, raw = d.r0 + d.acc, idx = modn(Math.round(-raw / step), rg.n);
+      const tgt = Math.round(raw / step) * step, u = (raw - tgt) / (step / 2), rot = tgt + (step / 2) * Math.sign(u) * Math.pow(Math.abs(u), 2.6);
+      const patch = idx !== this.ringIndex(d.key) ? this.patchFor(d.key, idx) : {};
+      if (idx !== this.ringIndex(d.key)) this.buzz();
+      this.setState(s => ({ dragRing: d.key, rot: { ...s.rot, [d.key]: rot }, ...patch }));
+      return;
+    }
+    if (d.type === 'pen' || d.type === 'erase' || d.type === 'lasso' || d.type === 'write') return this.skMove(d, e);
+    const R = row(S.shape), W = R[4], H = R[5], L = gl(S.guide), snapOn = this.props.snapping ?? true, thr = snapOn ? 6 / this.k : 0;
+    if (d.type === 'move') {
+      if (!d.moved) { if (Math.hypot(e.clientX - d.sx, e.clientY - d.sy) < 3) return; d.moved = true; }
+      let objs = S.objs;
+      if (d.alt && !d.cloned) { d.cloned = true; const ids = new Set(d.ids); objs = []; S.objs.forEach(o => { if (ids.has(o.id)) objs.push({ ...o, id: this.nid(), locked: false }); objs.push(o); }); }
+      let dx = (e.clientX - d.sx) / this.k, dy = (e.clientY - d.sy) / this.k;
+      if (e.shiftKey) { if (Math.abs(dx) > Math.abs(dy)) dy = 0; else dx = 0; }
+      const bs = d.ids.map(id => d.box[id]);
+      const x0 = Math.min(...bs.map(b => b.x)), x1 = Math.max(...bs.map(b => b.x + b.w)), y0 = Math.min(...bs.map(b => b.y)), y1 = Math.max(...bs.map(b => b.y + b.h));
+      const others = S.objs.filter(o => !d.ids.includes(o.id)).map(o => this.geo(o));
+      const GX = S.gridOn ? Array.from({ length: Math.floor(W / S.gridSize) + 1 }, (_, i) => i * S.gridSize) : [], GY = S.gridOn ? Array.from({ length: Math.floor(H / S.gridSize) + 1 }, (_, i) => i * S.gridSize) : [];
+      const TX = [0, W / 2, W, ...GX, ...L.map(f => f * W), ...others.flatMap(g => [g.x, g.x + g.w / 2, g.x + g.w])];
+      const TY = [0, H / 2, H, ...GY, ...L.map(f => f * H), ...others.flatMap(g => [g.y, g.y + g.h / 2, g.y + g.h])];
+      const lockR = 5 / this.k, reach = 20 / this.k, hold = 13 / this.k;
+      const well = (edges, T, prev) => {
+        if (!snapOn) return null;
+        if (prev != null) { let h = null; edges.forEach(v => { const df = prev - v; if (Math.abs(df) < hold && (!h || Math.abs(df) < Math.abs(h.df))) h = { df, t: prev }; }); if (h) return { ...h, pull: h.df, full: true }; }
+        let m = null; edges.forEach(v => T.forEach(t => { const df = t - v; if (Math.abs(df) < reach && (!m || Math.abs(df) < Math.abs(m.df))) m = { df, t }; }));
+        if (!m) return null;
+        const a = Math.abs(m.df); if (a <= lockR) return { ...m, pull: m.df, full: true };
+        const f = 1 - (a - lockR) / (reach - lockR); return { ...m, pull: m.df * f * f * f, full: false, f };
+      };
+      const bx = well([x0 + dx, (x0 + x1) / 2 + dx, x1 + dx], TX, d.lx), by = well([y0 + dy, (y0 + y1) / 2 + dy, y1 + dy], TY, d.ly), snaps = [];
+      if (bx) { dx += bx.pull; snaps.push({ v: true, p: bx.t, op: bx.full ? 1 : bx.f * bx.f * .4 }); }
+      if (by) { dy += by.pull; snaps.push({ v: false, p: by.t, op: by.full ? 1 : by.f * by.f * .4 }); }
+      const nlx = bx && bx.full ? bx.t : null, nly = by && by.full ? by.t : null;
+      if ((nlx != null && nlx !== d.lx) || (nly != null && nly !== d.ly)) this.buzz();
+      d.lx = nlx; d.ly = nly;
+      objs = objs.map(o => d.box[o.id] && d.ids.includes(o.id) && !(d.cloned && !S.objs.some(q => q.id === o.id)) ? { ...o, x: d.box[o.id].x + dx, y: d.box[o.id].y + dy } : o);
+      this.setState({ objs, snaps, live: true });
+    } else if (d.type === 'resize') {
+      d.moved = true;
+      const o = d.o, g = d.g, th = o.rot * Math.PI / 180, cs = Math.cos(th), sn = Math.sin(th), c0 = [g.x + g.w / 2, g.y + g.h / 2];
+      const sx = d.corner.includes('e') ? 1 : d.corner.includes('w') ? -1 : 0, sy = d.corner.includes('s') ? 1 : d.corner.includes('n') ? -1 : 0;
+      const ox = -sx * g.w / 2, oy = -sy * g.h / 2, A = [c0[0] + cs * ox - sn * oy, c0[1] + sn * ox + cs * oy];
+      const P = this.canvasPt(e), vx = P[0] - A[0], vy = P[1] - A[1], lx = cs * vx + sn * vy, ly = -sn * vx + cs * vy;
+      let w = sx ? Math.max(8, sx * lx) : g.w, h = sy ? Math.max(8, sy * ly) : g.h, patch;
+      if (sx && sy && (e.shiftKey || o.kind === 'text')) { const s = Math.max(w / g.w, h / g.h); w = g.w * s; h = g.h * s; }
+      if (o.kind === 'text') { const s = sx && sy ? w / g.w : 1, fs = o.fs * s; patch = { fs, w }; h = wrap(o.text, fs, o.fw, w).length * fs * 1.02; }
+      else patch = { w, h };
+      const hx = sx * w / 2, hy = sy * h / 2, cx = A[0] + cs * hx - sn * hy, cy = A[1] + sn * hx + cs * hy;
+      this.setState({ objs: S.objs.map(q => q.id === d.id ? { ...q, ...patch, x: cx - w / 2, y: cy - h / 2 } : q), live: true });
+    } else if (d.type === 'rot') {
+      d.moved = true;
+      const P = this.canvasPt(e), a = Math.atan2(P[1] - d.c[1], P[0] - d.c[0]) * 180 / Math.PI;
+      let r = norm(d.r0 + (a - d.a0)), caught = null;
+      if (e.shiftKey) r = Math.round(r / 15) * 15;
+      else if (snapOn) {
+        const dg = Math.atan2(H, W) * 180 / Math.PI;
+        let near = null;
+        [0, 45, 90, 135, 180, -45, -90, -135, -180, dg, -dg, 180 - dg, dg - 180].forEach(c => { const df = norm(c - r); if (Math.abs(df) < 11 && (!near || Math.abs(df) < Math.abs(near.df))) near = { c, df }; });
+        if (d.la != null && Math.abs(norm(d.la - r)) < 7) { r = d.la; caught = d.la; }
+        else if (near) { const a = Math.abs(near.df); if (a <= 3) { r = near.c; caught = near.c; } else { const f = 1 - (a - 3) / 8; r = norm(r + near.df * f * f * f); } }
+      }
+      if (caught !== null && caught !== d.la) this.buzz();
+      d.la = caught;
+      this.setState({ objs: S.objs.map(q => q.id === d.id ? { ...q, rot: r } : q), snapAngle: caught, live: true });
+    } else if (d.type === 'marq') {
+      const P = this.canvasPt(e), m = { x: Math.min(P[0], d.p0[0]), y: Math.min(P[1], d.p0[1]), w: Math.abs(P[0] - d.p0[0]), h: Math.abs(P[1] - d.p0[1]) };
+      if (m.w < 2 && m.h < 2) return;
+      const hit = S.objs.filter(o => { const g = this.geo(o); return g.x < m.x + m.w && g.x + g.w > m.x && g.y < m.y + m.h && g.y + g.h > m.y; }).map(o => o.id);
+      this.setState({ marquee: m, sel: [...new Set([...d.base, ...hit])] });
+    }
+  }
+  up() {
+    const d = this.drag; if (!d) return; this.drag = null; clearTimeout(this.holdT);
+    if (d.type === 'pen' || d.type === 'erase' || d.type === 'lasso' || d.type === 'write') return this.skUp(d);
+    if (d.type === 'ring') {
+      if (!d.moved) return this.pick(d.key, d.i);
+      const rg = RINGS.find(r => r.key === d.key), step = 360 / rg.n, rot = Math.round((d.r0 + d.acc) / step) * step;
+      this.setState(s => ({ dragRing: null, rot: { ...s.rot, [d.key]: rot } }));
+      return;
+    }
+    if (d.type === 'marq') return this.setState({ marquee: null });
+    if (d.moved) { this.setState(s => ({ undo: [...s.undo.slice(-80), d.before], redo: [], live: false, snaps: [], snapAngle: null })); if (d.cloned) this.say('Duplicated'); }
+    else { this.setState({ live: false, snaps: [], snapAngle: null }); if (d.type === 'move' && !d.shift && this.state.sel.length > 1) this.setState({ sel: [d.id] }); }
+  }
+  key(e) {
+    const S = this.state, t = e.target, typing = t && (t.tagName === 'TEXTAREA' || t.tagName === 'INPUT'), mod = e.metaKey || e.ctrlKey, k = e.key;
+    if (S.screen === 'dial') {
+      if (typing) return;
+      if (k === 'Enter') this.start();
+      else if (k === 'ArrowUp' || k === 'ArrowDown') this.setState({ focusRing: modn(S.focusRing + (k === 'ArrowDown' ? 1 : -1), 4) });
+      else if (k === 'ArrowLeft' || k === 'ArrowRight') { const rg = RINGS[S.focusRing]; this.pick(rg.key, modn(this.ringIndex(rg.key) + (k === 'ArrowRight' ? 1 : -1), rg.n)); }
+      else return;
+      e.preventDefault(); return;
+    }
+    if (typing) { if (k === 'Escape' || (k === 'Enter' && mod)) { e.preventDefault(); t.blur(); } return; }
+    if (S.panel === 'export' || S.panel === 'keys') {
+      if (k === 'Escape' || (S.panel === 'keys' && k === '?')) { e.preventDefault(); this.setState({ panel: null }); }
+      else if (S.panel === 'export' && k === 'Enter') { e.preventDefault(); this.download(); }
+      return;
+    }
+    if (mod) {
+      const c = e.code;
+      if (c === 'BracketRight') this.reorder(e.shiftKey ? 'front' : 'fwd');
+      else if (c === 'BracketLeft') this.reorder(e.shiftKey ? 'back' : 'bwd');
+      else switch (k.toLowerCase()) {
+        case 'c': this.copy(); break;
+        case 'v': this.paste(); break;
+        case 'x': this.cut(); break;
+        case 'd': this.duplicate(); break;
+        case 'z': e.shiftKey ? this.redo() : this.undo(); break;
+        case 'y': this.redo(); break;
+        case 'a': this.selectAll(); break;
+        case 'l': this.toggleLock(); break;
+        case 'b': this.toggleBold(); break;
+        case 'e': this.openExport(); break;
+        default: return;
+      }
+      e.preventDefault(); return;
+    }
+    if (e.altKey) return;
+    const step = e.shiftKey ? 10 : 1;
+    switch (k) {
+      case 'Backspace': case 'Delete': this.remove(); break;
+      case 'Escape': if (S.panel) this.setState({ panel: null }); else if (S.tool) this.setTool(null); else this.setState({ sel: [] }); break;
+      case 'ArrowLeft': this.nudge(-step, 0); break;
+      case 'ArrowRight': this.nudge(step, 0); break;
+      case 'ArrowUp': this.nudge(0, -step); break;
+      case 'ArrowDown': this.nudge(0, step); break;
+      case 'Enter': { const s = this.selObjs(); if (s.length === 1 && s[0].kind === 'text') this.objDbl(s[0].id); else return; break; }
+      case '?': this.setState({ panel: 'keys' }); break;
+      default:
+        switch (k.toLowerCase()) {
+          case 't': this.addText(); break;
+          case 'r': this.addShape('rect'); break;
+          case 'o': this.addShape('circle'); break;
+          case 's': this.setState({ panel: S.panel === 'shapes' ? null : 'shapes' }); break;
+          case 'i': this.addImage(); break;
+          case 'c': this.setState({ panel: S.panel === 'colour' ? null : 'colour' }); break;
+          case 'p': this.setTool(S.tool === 'pen' ? null : 'pen'); break;
+          case 'e': this.setTool('erase'); break;
+          case 'l': this.setTool('lasso'); break;
+          case 'w': this.setTool('write'); break;
+          case 'g': this.setState({ guides: !S.guides }); this.say(S.guides ? 'Guides off' : 'Guides on'); break;
+          default: return;
+        }
+    }
+    e.preventDefault();
+  }
+
+  renderVals() {
+    const S = this.state, P = this.props, set = p => this.setState(p);
+    const spin = P.spin ?? 560, lensOn = P.lens ?? true;
+    const R = row(S.shape), G = GUIDES.find(g => g[0] === S.guide) || GUIDES[1], L = G[2];
+    const pal = this.pal(), res = f => pal[f] || f, neutral = S.hue === null;
+    const lay = layoutFor(S.shape, S.comp, S.guide);
+    const togg = on => ({ bg: on ? '#000' : 'transparent', fg: on ? '#fff' : '#000', hov: on ? '#000' : 'rgba(156,171,194,.15)' });
+    const shown = on => ({ op: on ? 1 : 0, pe: on ? 'auto' : 'none', tf: on ? 'scale(1)' : 'scale(.98)', tfc: on ? 'translateY(-50%) scale(1)' : 'translateY(-50%) scale(.98)', tfs: on ? 'translateY(0)' : 'translateY(110%)' });
+
+    // dial
+    const rings = RINGS.map((rg, ri) => {
+      const rot = S.rot[rg.key], cur = this.ringIndex(rg.key), dragging = S.dragRing === rg.key;
+      const tr = dragging ? 'none' : `transform ${spin}ms ${EASE}`;
+      const act = !lensOn || S.focusRing === ri, hov = S.hoverRing === ri;
+      const cop = act ? 1 : hov ? .5 : 0, cs = act ? 1 : hov ? .8 : .4;
+      const ctr = dragging ? `opacity 280ms ${EASE}` : `transform ${spin}ms ${EASE}, opacity 280ms ${EASE}`;
+      const segs = Array.from({ length: rg.n }, (_, i) => {
+        const { d, c } = ringPath(320, 320, rg.Ro, rg.Ri, i, rg.n), sel = i === cur, on = sel && act && rg.key !== 'hue', ink = on ? '#fff' : '#000';
+        const sg = { d, cx: c[0], cy: c[1], fill: on ? '#000' : !act && sel ? 'rgba(156,171,194,.35)' : 'rgba(236,240,243,0)', stroke: act ? '#000' : 'rgba(0,0,0,.15)', hover: on ? '#000' : !act && sel ? 'rgba(156,171,194,.35)' : 'rgba(156,171,194,.15)', rects: [], lines: [], label: '', ly: 0, fs: 11, ink, down: e => this.ringDown(rg.key, i, e) };
+        if (rg.key === 'ratio') { const [, , w, h] = RATIOS[i], [rw, rh] = fitBox(w, h, 16); sg.rects = [{ x: c[0] - rw / 2, y: c[1] - 7 - rh / 2, w: rw, h: rh, rx: 0, fill: 'none', op: 1, stroke: ink, sw: 2 }]; sg.label = `${w}:${h}`; sg.ly = 12; }
+        else if (rg.key === 'comp') { sg.rects = thumb(layoutFor(S.shape, COMPS[i][0], S.guide), 42, c[0], c[1] - 10, mono(ink)); sg.label = COMPS[i][1]; sg.ly = 25; }
+        else if (rg.key === 'guide') { const gx = c[0] - 10, gy = c[1] - 17; sg.rects = [{ x: gx, y: gy, w: 20, h: 20, rx: 0, fill: 'none', op: 1, stroke: ink, sw: 1.5 }]; sg.lines = GUIDES[i][2].flatMap(f => [{ x1: gx + 20 * f, y1: gy, x2: gx + 20 * f, y2: gy + 20 }, { x1: gx, y1: gy + 20 * f, x2: gx + 20, y2: gy + 20 * f }]); sg.label = GUIDES[i][1]; sg.ly = 14; sg.fs = 10; }
+        else if (!act) { const hv = HUES[i]; if (sel) { sg.fill = hv === null ? 'rgba(156,171,194,.35)' : hsl(hv, 50, 55); sg.hover = sg.fill; } if (hv === null) sg.rects = [{ x: c[0] - 6, y: c[1] - 6, w: 12, h: 12, rx: 6, fill: 'none', op: 1, stroke: '#000', sw: 2 }]; }
+        else { const hv = HUES[i]; sg.stroke = '#ECF0F3'; if (hv === null) { sg.fill = '#ECF0F3'; sg.hover = '#DCE0E9'; sg.rects = [{ x: c[0] - 6, y: c[1] - 6, w: 12, h: 12, rx: 6, fill: 'none', op: 1, stroke: '#000', sw: 2 }]; } else { sg.fill = hsl(hv, 50, 55); sg.hover = hsl(hv, 50, 64); } }
+        return sg;
+      });
+      return { rot, counter: -rot, tr, ctr, cop, cs, act, segs, cur: dragging ? 'grabbing' : 'pointer', wheel: e => this.ringWheel(rg.key, e), enter: () => { if (this.state.hoverRing !== ri) set({ hoverRing: ri }); }, leave: () => set({ hoverRing: null }) };
+    });
+    const VW = S.vw || 1280, VH = S.vh || 800;
+    const ds = Math.max(.5, Math.min(1, (VH - 190) / 640, (VW - 660) / 640));
+    const dial = { s: ds, top: Math.max(40, (VH - 110 - 640 * ds) / 2 + 10) };
+    const hubItems = thumb(lay, 120, 106, 92, { ground: pal.ground, frame: '#000', frameW: 2, ink: pal.ink, img: 'rgba(156,171,194,.35)', imgOp: 1, imgStroke: '#9CABC2', imgSw: 1.5, acc: pal.accent });
+    const pct = f => String(Math.round(f * 1000) / 10);
+    const readout = [
+      { name: 'Ratio', value: `${R[1]} ${R[2]}:${R[3]}`, sub: `Exports at ${R[4]} × ${R[5]} px`, dots: [] },
+      { name: 'Layout', value: COMPS.find(c => c[0] === S.comp)[1], sub: DESC(L)[S.comp], dots: [] },
+      { name: 'Guide', value: G[1], sub: `Lines at ${L.map(pct).join(', ')}%`, dots: [] },
+      { name: 'Colour', value: S.over.accent ? `Custom ${S.over.accent}` : neutral ? 'No hue' : `Hue ${S.hue}°`, sub: S.dark ? 'Dark ground' : 'Light ground', dots: [{ hex: pal.ground }, { hex: pal.ink }, { hex: pal.accent }] },
+    ].map((r, i) => ({ ...r, border: S.focusRing === i || S.hoverRing === i ? '#000' : 'transparent', focus: () => set({ focusRing: i }) }));
+    const gnd = { lightBg: S.dark ? 'transparent' : '#000', lightRing: S.dark ? '#000' : '#fff', darkBg: S.dark ? '#000' : 'transparent', darkRing: S.dark ? '#fff' : '#000', lightOutline: S.dark ? 'none' : '2px solid #000', darkOutline: S.dark ? '2px solid #000' : 'none' };
+
+    // editor
+    const W = R[4], H = R[5];
+    const vw = S.vw || 1280, vh = S.vh || 800;
+    const k = Math.max(.1, Math.min((vw - 120) / W, (vh - 150) / H)); this.k = k;
+    const cw = W * k, ch = H * k;
+    const TR = S.live ? 'none' : ['left', 'top', 'width', 'height', 'transform'].map(p => `${p} 280ms ${EASE}`).join(', ') + ', opacity 200ms';
+    const idx = new Map(S.objs.map((o, i) => [o.id, i])), fresh = new Set(S.fresh), paintMode = S.panel === 'colour';
+    S.objs.forEach(o => { if (!this.slots.includes(o.id)) this.slots.push(o.id); });
+    const BLANK = { disp: 'none', l: 0, t: 0, w: 0, h: 0, tf: 'none', op: 0, z: 0, tr: 'none', cur: 'default', isBox: false, isPath: false, isText: false, isPara: false, isImg: false, bg: 'none', rad: '0', bd: 'none', d: '', fill: 'none', fs: 0, fw: 400, align: 'left', color: '#000', lines: [], bars: [], full: false, cut: false, scanning: false, scanTop: '0%', down: null, dbl: null, isInk: false, sw: 0 };
+    const items = this.slots.map(id => {
+      const i = idx.get(id); if (i === undefined) return BLANK;
+      const o = S.objs[i], g = this.geo(o), hex = res(o.fill), fr = fresh.has(o.id);
+      const it = { ...BLANK, disp: o.hidden ? 'none' : 'block', l: g.x * k, t: g.y * k, w: g.w * k, h: g.h * k, tf: `rotate(${o.rot}deg) scale(${fr ? .9 : 1})`, op: fr || S.editing === o.id ? 0 : 1, z: i, tr: TR, cur: paintMode ? 'copy' : o.locked ? 'default' : 'move', down: e => this.objDown(o.id, e), dbl: () => this.objDbl(o.id) };
+      if (o.kind === 'shape') {
+        const sd = SH[o.shape];
+        if (sd.css) { const m = Math.min(g.w, g.h) * k, ring = sd.css === 'ring' || sd.css === 'frame'; Object.assign(it, { isBox: true, bg: ring ? 'transparent' : hex, bd: ring ? `${m * .18}px solid ${hex}` : 'none', rad: sd.css === 'circle' || sd.css === 'ring' ? '50%' : `${radPx(sd.css, { w: g.w * k, h: g.h * k })}px` }); }
+        else Object.assign(it, { isPath: true, d: sd.d, fill: hex });
+      } else if (o.kind === 'text') Object.assign(it, { isText: true, fs: o.fs * k, fw: o.fw, align: o.align, color: hex, lines: wrap(o.text, o.fs, o.fw, o.w).map(t => ({ t: t || '\u00a0' })) });
+      else if (o.kind === 'para') { const n = o.n || 4, u = g.h * k / (n * 3 + (n - 1) * 11), bw = ['100%', '86%', '100%', '62%']; Object.assign(it, { isPara: true, color: hex, bars: Array.from({ length: n }, (_, j) => ({ h: 3 * u, w: bw[j % 4] })) }); }
+      else if (o.kind === 'ink') { let dd = INKD.get(o.paths); if (!dd) { dd = o.paths.map(p => 'M' + p.map(([u, v]) => (u * 100).toFixed(2) + ' ' + (v * 100).toFixed(2)).join('L')).join(''); INKD.set(o.paths, dd); } Object.assign(it, { isInk: true, fill: hex, sw: o.sw * k, d: dd }); }
+      else if (o.kind === 'img') { const sc = S.scan && S.scan.id === o.id; Object.assign(it, { isImg: true, full: !o.cut, cut: !!o.cut, scanning: !!sc, scanTop: sc && S.scan.on ? '100%' : '0%' }); }
+      return it;
+    });
+    const selObjs = S.objs.filter(o => S.sel.includes(o.id)), one = selObjs.length === 1 ? selObjs[0] : null;
+    const selBoxes = selObjs.map(o => {
+      const g = this.geo(o), single = !!one && !o.locked && S.editing !== o.id && !paintMode;
+      const hs = [['nw', '0%', '0%', 'nwse-resize'], ['ne', '100%', '0%', 'nesw-resize'], ['sw', '0%', '100%', 'nesw-resize'], ['se', '100%', '100%', 'nwse-resize'], ['w', '0%', '50%', 'ew-resize'], ['e', '100%', '50%', 'ew-resize']];
+      if (o.kind !== 'text') hs.push(['n', '50%', '0%', 'ns-resize'], ['s', '50%', '100%', 'ns-resize']);
+      return { l: g.x * k, t: g.y * k, w: g.w * k, h: g.h * k, tf: `rotate(${o.rot}deg)`, tr: TR, handles: single, locked: !!o.locked, rotDown: e => this.rotDown(o.id, e), hs: hs.map(([c, x, y, cur]) => ({ x, y, cur, down: e => this.handleDown(o.id, c, e) })) };
+    });
+    const snapLines = S.snaps.map(s => ({ ...(s.v ? { l: s.p * k - .5, t: -12, w: 1, h: ch + 24 } : { l: -12, t: s.p * k - .5, w: cw + 24, h: 1 }), op: s.op ?? 1 }));
+    let rotLine = false;
+    if (S.snapAngle !== null && one) { const g = this.geo(one), len = 2 * Math.hypot(cw, ch); rotLine = { l: (g.x + g.w / 2) * k - len / 2, t: (g.y + g.h / 2) * k - 1, w: len, tf: `rotate(${S.snapAngle}deg)` }; }
+    const marq = S.marquee ? { l: S.marquee.x * k, t: S.marquee.y * k, w: S.marquee.w * k, h: S.marquee.h * k } : false;
+    let ed = false;
+    if (S.editing) { const o = S.objs.find(x => x.id === S.editing); if (o) { const n = wrap(S.editText || ' ', o.fs, o.fw, o.w).length; ed = { text: S.editText, l: o.x * k, t: o.y * k, w: o.w * k, h: (n * o.fs * 1.02 + o.fs * .3) * k, fs: o.fs * k, fw: o.fw, align: o.align, color: res(o.fill), tf: `rotate(${o.rot}deg)` }; } }
+    const guides = { on: S.guides, ink: pal.ink, v: L.map(f => ({ x: f * cw })), h: L.map(f => ({ y: f * ch })), pts: L.flatMap(fx => L.map(fy => ({ x: fx * cw, y: fy * ch }))) };
+    const selSet = new Set(S.sel), nO = S.objs.length, sp = e => e.stopPropagation();
+    const layers = S.objs.map((o, i) => { const on = selSet.has(o.id); return { name: this.layerName(o), hex: res(o.fill), bg: on ? '#000' : 'transparent', fg: on ? '#fff' : '#000', hov: on ? '#000' : 'rgba(156,171,194,.15)', nameOp: o.hidden ? .45 : 1,
+      pick: e => set({ sel: e.shiftKey ? (on ? S.sel.filter(x => x !== o.id) : [...S.sel, o.id]) : [o.id] }),
+      up: e => { sp(e); this.layerMove(o.id, 1); }, down: e => { sp(e); this.layerMove(o.id, -1); }, upOp: i < nO - 1 ? 1 : .25, downOp: i > 0 ? 1 : .25,
+      eye: e => { sp(e); this.layerFlip(o.id, 'hidden'); }, eyeTip: o.hidden ? 'Show' : 'Hide', eyeOp: o.hidden ? .3 : 1,
+      lock: e => { sp(e); this.layerFlip(o.id, 'locked'); }, lockTip: o.locked ? 'Unlock' : 'Lock', lockOp: o.locked ? 1 : .3 }; }).reverse();
+    const grid = { op: S.gridOn ? 1 : 0, c: S.dark ? 'rgba(255,255,255,.18)' : 'rgba(0,0,0,.12)', px: S.gridSize * k, size: S.gridSize, swBg: S.gridOn ? '#000' : 'transparent', knob: S.gridOn ? 21 : 3, knobBg: S.gridOn ? '#fff' : '#000' };
+    const gridPresets = [10, 20, 40, 80].map(n => ({ n, bg: S.gridSize === n ? '#000' : 'rgba(156,171,194,.15)', fg: S.gridSize === n ? '#fff' : '#000', pick: () => set({ gridSize: n, gridOn: true }) }));
+    const cv = { w: cw, h: ch, ground: res(S.ground), s: S.opening ? Math.min(1, 120 * ds / Math.max(cw, ch)) : 1, tr: `width 280ms ${EASE}, height 280ms ${EASE}, transform 520ms ${EASE}, background-color 200ms`, cur: paintMode ? 'copy' : 'default' };
+
+    const pd = pts => pts && pts.length ? 'M' + pts.map(p => (p[0] * k).toFixed(1) + ' ' + (p[1] * k).toFixed(1)).join('L') : '';
+    const liveD = S.pen ? pd(S.pen.clean || S.pen.pts) : '';
+    let hwBox = false;
+    if (S.hw && S.hw.strokes.length) { const b = INK.bbox(S.hw.strokes.flat()); hwBox = { l: b.x0 * k - 14, t: b.y0 * k - 14, w: b.w * k + 28, h: b.h * k + 28, reading: !!S.hw.reading }; }
+    const sk = {
+      on: !!S.tool, cur: { pen: 'crosshair', erase: 'none', lasso: 'crosshair', write: 'crosshair' }[S.tool] || 'default', ink: res('ink'), sw: this.inkW() * k,
+      live: { on: !!liveD, d: liveD, pd: liveD ? "path('" + liveD + "')" : 'none', tr: S.pen && S.pen.morph ? 'd 240ms ' + EASE : 'none' },
+      lasso: S.lasso && S.lasso.length > 1 ? pd(S.lasso) + 'Z' : '',
+      er: S.tool === 'erase' && S.erAt ? { x: S.erAt[0] * k, y: S.erAt[1] * k } : false,
+      hwD: S.hw ? S.hw.strokes.map(pd).join('') : '', hwOp: S.hw && S.hw.reading ? .35 : 1, box: hwBox,
+      down: e => this.skDown(e), hover: e => { if (this.state.tool === 'erase' && !this.drag) this.setState({ erAt: this.canvasPt(e) }); }, leave: () => { if (this.state.erAt && !this.drag) this.setState({ erAt: null }); },
+    };
+    const isText = !!one && one.kind === 'text', en = b => ({ op: b ? 1 : .23, pe: b ? 'auto' : 'none' });
+    const tb = {
+      scale: Math.max(.45, Math.min(1, (VW - 520) / (1015 + (S.tool ? 140 : 0)))),
+      pen: togg(S.tool === 'pen'), erase: togg(S.tool === 'erase'), lasso: togg(S.tool === 'lasso'), write: togg(S.tool === 'write'), sketching: !!S.tool,
+      shapes: togg(S.panel === 'shapes'), colour: togg(S.panel === 'colour'), keys: togg(S.panel === 'keys'), ratio: togg(S.panel === 'ratio'), guides: togg(S.guides), grid: togg(S.panel === 'grid' || S.gridOn), layers: togg(S.panel === 'layers'), help: togg(!!S.help),
+      bold: togg(isText && one.fw >= 700), lock: togg(selObjs.length > 0 && selObjs.every(o => o.locked)),
+      text: en(isText), img: en(!!one && one.kind === 'img' && !one.cut && !S.scan), sel: en(selObjs.length > 0), one: en(!!one), undo: en(S.undo.length > 0), redo: en(S.redo.length > 0),
+      angle: one ? `${Math.round(one.rot)}°` : '—', fs: isText ? String(Math.round(one.fs)) : '—',
+      swatch: one && one.kind !== 'img' ? res(one.fill) : res(S.swatch), alignItems: { left: 'flex-start', center: 'center', right: 'flex-end' }[isText ? one.align : 'left'],
+      ratioLabel: `${R[2]}:${R[3]}`, ratioGlyph: (() => { const [w, h] = fitBox(R[2], R[3], 16); return { w: Math.max(6, w), h: Math.max(6, h) }; })(),
+    };
+    const tips = { text: 'Text (T)', shapes: 'Shapes (S)', image: 'Image (I)', colour: 'Colour (C)', bold: `Bold (${MOD} B)`, dup: `Duplicate (${MOD} D)`, lock: `Lock (${MOD} L)`, undo: `Undo (${MOD} Z)`, redo: `Redo (${SHIFT} ${MOD} Z)`, export: `Export (${MOD} E)`, pen: 'Sketch (P)', erase: 'Eraser (E)', lasso: 'Lasso (L)', write: 'Handwriting (W)' };
+    const pnl = { grid: shown(S.panel === 'grid'), layers: shown(S.panel === 'layers'), shapes: shown(S.panel === 'shapes'), colour: shown(paintMode), ratio: shown(S.panel === 'ratio'), keys: shown(S.panel === 'keys'), export: shown(S.panel === 'export'), maxH: VH - 120 };
+    const shapeGroups = SHAPES.groups.map(gr => ({ name: gr.name, items: gr.keys.map(key => {
+      const sd = SH[key], pw = Math.max(3, sd.ar >= 1 ? 28 : 28 * sd.ar), ph = Math.max(3, sd.ar >= 1 ? 28 / sd.ar : 28), ring = sd.css === 'ring' || sd.css === 'frame';
+      return { name: sd.name, pw, ph, isCss: !!sd.css, isPath: !sd.css, d: sd.d || '', bg: ring ? 'transparent' : '#000', bd: ring ? '5px solid #000' : 'none', rad: sd.css === 'circle' || sd.css === 'ring' ? '50%' : `${radPx(sd.css, { w: pw, h: ph })}px`, add: () => this.addShape(key) };
+    }) }));
+    if (S.panel === 'shapes') {
+      const q = (S.iconQ || '').trim().toLowerCase().replace(/\s+/g, '-');
+      if (q && !ICONS.all) ICONS.loadAll();
+      const pool = q ? [...new Set([...ICONS.names, ...(ICONS.all || [])])].filter(n => n.includes(q)) : ICONS.names;
+      const list = pool.slice(0, 64).filter(n => ICONS.busy[n] !== 'x');
+      list.forEach(n => ICONS.load(n));
+      shapeGroups.push({ name: q ? `Icons matching “${S.iconQ.trim()}”` : 'Icons', items: list.map(n => { const sd = SH[ICONS.key(n)]; return sd ? { name: sd.name, pw: 28, ph: 28, isCss: false, isPath: true, d: sd.d, add: () => this.addShape(sd.key) } : { name: n, pw: 20, ph: 20, isCss: true, isPath: false, bg: 'rgba(156,171,194,.35)', bd: 'none', rad: '6px', add: () => {} }; }) });
+    }
+    const roleHS = { ground: [S.hue || 0, neutral ? 0 : 40], ink: [S.hue || 0, neutral ? 0 : 30], accent: [((S.hue || 0) + 180) % 360, neutral ? 0 : 55] };
+    const curHex = res(S.swatch);
+    const roles = [['ground', 'Ground'], ['ink', 'Ink'], ['accent', 'Accent']].map(([key, name]) => { const on = S.swatch === key; return { name, hex: pal[key], bg: on ? '#000' : 'transparent', fg: on ? '#fff' : '#000', ring: on ? '#fff' : '#000', hov: on ? '#000' : 'rgba(156,171,194,.15)', pick: () => { set({ role: key, swatch: key, hexDraft: null }); this.applyFill(key); } }; });
+    const [rh0, rs0] = roleHS[S.role];
+    const shades = [92, 78, 64, 50, 36, 22, 10].map(l => { const hex = hsl(rh0, rs0, l), on = hex === curHex; return { hex, ring: on ? '#000' : 'rgba(0,0,0,.15)', pick: () => { set({ swatch: hex, hexDraft: null }); this.applyFill(hex); } }; });
+    const hues = HUES.map((hv, i) => { const on = S.hue === hv; return { hex: hv === null ? '#ECF0F3' : hsl(hv, 55, 50), ring: on ? '#000' : 'rgba(0,0,0,.15)', pick: () => this.pick('hue', i) }; });
+    const curRatio = RATIOS.findIndex(r => r[0] === S.shape), mh = S.miniHover ?? curRatio, MR = RATIOS[mh];
+    const mini = RATIOS.map(([key, , w, h], i) => { const { d, c } = ringPath(130, 130, 126, 86, i, 5), on = i === curRatio, [rw, rh] = fitBox(w, h, 22); return { d, cx: c[0], cy: c[1], fill: on ? '#000' : 'rgba(236,240,243,0)', hover: on ? '#000' : 'rgba(156,171,194,.15)', rx: c[0] - rw / 2, ry: c[1] - rh / 2, rw, rh, ink: on ? '#fff' : '#000', pick: () => this.pickRatio(i), enter: () => set({ miniHover: i }), leave: () => set({ miniHover: null }) }; });
+    const fmtOpt = (v, label, key) => { const on = S[key] === v; return { label, bg: on ? '#000' : 'transparent', fg: on ? '#fff' : '#000', hov: on ? '#000' : 'rgba(156,171,194,.15)', pick: () => set({ [key]: v }) }; };
+    const working = S.expStatus === 'working';
+    const exp = {
+      preview: S.preview || false, bgImg: S.preview ? `url(${S.preview})` : 'none', pw: Math.round(180 * Math.min(1, W / H)), ph: Math.round(180 * Math.min(1, H / W)), fmts: [['png', 'PNG'], ['jpg', 'JPG'], ['svg', 'SVG']].map(([v, l]) => fmtOpt(v, l, 'fmt')), scales: [1, 2, 3].map(v => fmtOpt(v, `${v}×`, 'scale')),
+      scaleOp: S.fmt === 'svg' ? .23 : 1, scalePe: S.fmt === 'svg' ? 'none' : 'auto',
+      size: S.fmt === 'svg' ? `${W} × ${H}, vector` : `${W * S.scale} × ${H * S.scale} px`,
+      bar: working ? '100%' : '0%', barTr: working ? 'width 700ms linear' : 'none', label: working ? 'Exporting' : S.expStatus === 'done' ? 'Saved' : 'Download', done: S.expStatus === 'done',
+    };
+    const nm = o => o.kind === 'shape' ? SH[o.shape].name : { text: 'Text', para: 'Paragraph', img: o.cut ? 'Cut-out' : 'Image' }[o.kind];
+    const info = one ? (() => { const g = this.geo(one); return { op: 1, name: nm(one), size: `${Math.round(g.w)} × ${Math.round(g.h)}` }; })() : selObjs.length > 1 ? { op: 1, name: `${selObjs.length} selected`, size: '' } : { op: 0, name: '', size: '' };
+
+    return {
+      isDial: S.screen === 'dial', isEditor: S.screen === 'editor', dialRef: this.dialRef, canvasRef: this.canvasRef, editRef: this.editRef,
+      stop: e => e.stopPropagation(),
+      iconQ: S.iconQ || '', onIconQ: e => set({ iconQ: e.target.value }), stopKey: e => { if (e.key === 'Escape') e.target.blur(); },
+      grid, gridPresets, layers, tipBox: S.tip ? { ...S.tip, op: 1 } : { x: -999, y: -999, text: '', op: 0 },
+      helpBox: S.help ? { op: 1, ty: 0, title: S.tip ? S.tip.text.replace(/\s*\(.*\)\s*$/, '') : 'Help is on', body: S.tip ? (helpFor(S.tip.text) || 'Shortcut and name shown above the button.') : 'Hover over any button or control to see what it does.' } : { op: 0, ty: 8, title: '', body: '' },
+      toggleHelp: () => set({ help: !S.help }), pk: { pure: hsv2hex(S.pick.h, 100, 100), hex: hsv2hex(S.pick.h, S.pick.s, S.pick.v), x: S.pick.s, y: 100 - S.pick.v, hx: S.pick.h / 3.59 },
+      svDown: e => this.pickDrag(e, 'sv', 'fill'), hueDown: e => this.pickDrag(e, 'h', 'fill'), dialSvDown: e => this.pickDrag(e, 'sv', 'dial'), dialHueDown: e => this.pickDrag(e, 'h', 'dial'), noLayers: nO === 0, toggleLayers: () => set({ panel: S.panel === 'layers' ? null : 'layers' }), toggleGrid: () => set({ panel: S.panel === 'grid' ? null : 'grid' }), flipGrid: () => set({ gridOn: !S.gridOn }), onGridSize: e => set({ gridSize: +e.target.value, gridOn: true }),
+      rings, dial, hubItems, readout, gnd, hueWindow: ringPath(320, 320, 144, 107, 0, 13).d, hueWin: { op: rings[3].act ? 1 : .15 }, hasDoc: S.objs.length > 0,
+      dialHints: [{ label: 'Choose ring', keys: [{ k: '↑' }, { k: '↓' }] }, { label: 'Turn', keys: [{ k: '←' }, { k: '→' }] }, { label: 'Start', keys: [{ k: 'Enter' }] }],
+      start: () => this.start(), resume: () => this.resume(),
+      setLight: () => set({ dark: false, over: {} }), setDark: () => set({ dark: true, over: {} }),
+      items, selBoxes, snapLines, rotLine, marq, ed, guides, cv, sk,
+      togglePen: () => this.setTool(S.tool === 'pen' ? null : 'pen'), setErase: () => this.setTool(S.tool === 'erase' ? 'pen' : 'erase'), setLasso: () => this.setTool(S.tool === 'lasso' ? 'pen' : 'lasso'), setWrite: () => this.setTool(S.tool === 'write' ? 'pen' : 'write'), chrome: { op: S.opening ? 0 : 1 }, tb, tips, pnl, shapeGroups, roles, shades, hues,
+      hexVal: S.hexDraft ?? curHex,
+      onHex: e => set({ hexDraft: e.target.value }),
+      onHexKey: e => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); } else if (e.key === 'Escape') { set({ hexDraft: null }); e.target.blur(); } },
+      applyHex: () => { const v = (this.state.hexDraft || '').trim().replace(/^#/, ''); if (/^[0-9a-f]{6}$/i.test(v)) { const hex = '#' + v.toUpperCase(); set({ swatch: hex, hexDraft: null }); this.applyFill(hex); } else set({ hexDraft: null }); },
+      mini, miniRot: { rot: S.rot.ratio, counter: -S.rot.ratio, tr: `transform ${spin}ms ${EASE}` }, miniLabel: { ratio: `${MR[2]}:${MR[3]}`, name: MR[1], px: `${MR[4]} × ${MR[5]} px` },
+      miniWheel: e => { const now = Date.now(); if (Math.abs(e.deltaY) < 3 || now - (this.lastWheel || 0) < 160) return; this.lastWheel = now; this.pickRatio(modn(curRatio + (e.deltaY > 0 ? 1 : -1), 5)); },
+      exp, info, toast: { op: S.toastOn ? 1 : 0, msg: S.toast },
+      keyGroups: KEYS.map(g => ({ name: g.name, rows: g.rows.map(([label, keys]) => ({ label, keys: keys.map(k2 => ({ k: k2 })) })) })),
+      stageDown: e => this.stageDown(e), canvasDown: e => this.canvasDown(e),
+      onEditChange: e => set({ editText: e.target.value }), commitEdit: () => this.commitEdit(),
+      toDial: () => { this.commitEdit(); set({ screen: 'dial', panel: null, sel: [] }); },
+      addText: () => this.addText(), addImage: () => this.addImage(),
+      toggleShapes: () => set({ panel: S.panel === 'shapes' ? null : 'shapes' }), toggleColour: () => set({ panel: paintMode ? null : 'colour' }),
+      toggleRatio: () => set({ panel: S.panel === 'ratio' ? null : 'ratio' }), toggleKeys: () => set({ panel: S.panel === 'keys' ? null : 'keys' }),
+      toggleGuides: () => set({ guides: !S.guides }), closePanel: () => set({ panel: null }),
+      fontDown: () => this.fontStep(-1), fontUp: () => this.fontStep(1), toggleBold: () => this.toggleBold(), cycleAlign: () => this.cycleAlign(),
+      removeBg: () => this.removeBg(), duplicate: () => this.duplicate(), toggleLock: () => this.toggleLock(), remove: () => this.remove(),
+      undo: () => this.undo(), redo: () => this.redo(), openExport: () => this.openExport(), download: () => this.download(),
+    };
+  }
+}
+</script>
+</body>
+</html>
