@@ -49,11 +49,11 @@ export function toolbar(host: HTMLElement, actions: Actions): { refresh(): void;
   const duplicate = button('Duplicate selected object', '<rect x="8" y="8" width="13" height="13"/><path d="M16 8V3H3v13h5"/>', actions.duplicate); host.append(duplicate);
   const lock = button('Lock selected object', '<rect x="5" y="10" width="14" height="11"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/>', actions.toggleLock); host.append(lock);
   const del = button('Delete selected object', icons.delete, actions.delete); host.append(del); sep();
-  const exp = button('Export PNG and JSON', icons.export, actions.export); host.append(exp);
+  const exp = button('Export PNG', icons.export, actions.export); host.append(exp);
   const help = document.createElement('div'); help.className = 'tool-panel shortcut-help'; help.hidden = true; help.setAttribute('role', 'group'); help.setAttribute('aria-label', 'Keyboard shortcuts');
   const helpButton = button('Keyboard shortcuts', '<rect x="2" y="5" width="20" height="14"/><path d="M5 9h2m2 0h2m2 0h2m2 0h2M5 12h2m2 0h2m2 0h2m2 0h2M7 16h10"/>', () => { help.hidden = !help.hidden; helpButton.setAttribute('aria-expanded', String(!help.hidden)); });
   helpButton.setAttribute('aria-expanded', 'false'); host.append(helpButton, help);
-  for (const [name, keys] of [['Duplicate', 'Mod+D'], ['Lock / unlock', 'Mod+Shift+L'], ['Bold text', 'Mod+B'], ['Export PNG + JSON', 'Mod+Shift+E'], ['Move', 'Arrow keys'], ['Move 10 units', 'Shift+Arrow keys'], ['Constrain drag / corner resize', 'Shift+Drag'], ['Delete', 'Backspace / Delete'], ['Edit text', 'Enter'], ['Finish editing', 'Mod+Enter'], ['Deselect / close', 'Escape']]) {
+  for (const [name, keys] of [['Duplicate', 'Mod+D'], ['Lock / unlock', 'Mod+Shift+L'], ['Bold text', 'Mod+B'], ['Export PNG', 'Mod+Shift+E'], ['Move', 'Arrow keys'], ['Move 10 units', 'Shift+Arrow keys'], ['Constrain drag / corner resize', 'Shift+Drag'], ['Delete', 'Backspace / Delete'], ['Edit text', 'Enter'], ['Finish editing', 'Mod+Enter'], ['Deselect / close', 'Escape']]) {
     const row = document.createElement('div'), key = document.createElement('kbd'); row.textContent = name; key.textContent = shortcutLabel(keys, actions.mac); row.append(key); help.append(row);
   }
   host.addEventListener('keydown', e => { if (e.key === 'Escape' && !help.hidden) { e.stopPropagation(); help.hidden = true; helpButton.setAttribute('aria-expanded', 'false'); helpButton.focus(); } });
