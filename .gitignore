@@ -6,3 +6,4 @@ private/
 public/models/
 public/ort/
 public/icons/
+scripts/__pycache__/
