@@ -1,10 +1,10 @@
 # HANDOFF
 
-Rolling state for the Ratio Phase 0 build. Read in full at session start; rewrite Status and append to the rest at session end. Rules are in AGENTS.md → Handoff protocol.
+Rolling state for the Kura8 build (Phase 1; the Phase 0 study is frozen at tag `study-v1`). Read in full at session start; rewrite Status and append to the rest at session end. Rules are in AGENTS.md → Handoff protocol.
 
 ## Status
 
-The merged editor includes the six-shape library, colour picker plus validated hex entry, object locks, platform-aware keyboard controls and Shift drag/resize constraints. All 50 unit tests pass with 100% core line coverage, and the production build succeeds. Chromium checks cover all 15 ratio/guide paths, both original study-condition interaction flows, all export sizes and JSON reload without console errors. The new controls audit verifies all six coloured shape PNG/JSON exports, Mac and PC shortcut dispatch/labels, locks and reload recovery, text input guards, and Shift constraints in both conditions. Screenshots are under private/editor-controls-audit/. The existing private demo at https://ratio-phase-zero.alazadsafwat.chatgpt.site has not been redeployed with these changes. Remote main's background remover and transparency fix are now integrated; locked images cannot start removal and any in-flight result is discarded if the image becomes locked. Local decision IDs were reconciled with the remote log (D-027). Study protocol, content approval and pilot remain Safwat's next decisions. On 2026-10-10 Safwat supplied the designer's Kura8 dial handoff (prototype, editor turns and refinements 5a–5z) and chose to freeze the study build and start Phase 1 (D-028–D-031). A draft implementation plan is in docs/plans/2026-10-10-phase1-dial.md. Nothing from it is built yet; the code is unchanged from 4061227 and awaits plan approval. On this session's Node 22.22 container, 48 of 50 tests pass; the two tests in tests/onnx-fp16.test.ts fail with `Float16Array is not defined` because that global needs Node 24 or newer, so the result depends on the environment and was not caused by this session's documentation-only changes.
+Phase 1 (the Kura8 dial editor, D-028–D-032) has started and M0 is complete. The Phase 0 study build is frozen at the local annotated tag `study-v1` on 4061227; the tag is not pushed yet. AGENTS.md now describes Phase 1 and the v2 contracts as the target, while `src/` still implements the Phase 0 contracts until M1–M3 migrate it. The dev-branch app is the Phase 0 editor without the study harness: wheel → guide → editor, autosave to `kura8:doc`, PNG-only export named `kura8-<ratio>.png`, title Kura8. A Chromium smoke run (wheel → portrait/golden → add rectangle → export → reload) produced the download and restored the document with no console errors. Design sources are in docs/design/2026-10-10-dial/, the approved plan in docs/plans/2026-10-10-phase1-dial.md, the handwriting draft in docs/drafts/handwriting.md. `npm run build` (including model preparation) and `npx tsc --noEmit` pass. On this session's Node 22.22 container 48 of 50 tests pass; the two tests in tests/onnx-fp16.test.ts fail with `Float16Array is not defined` because that global needs Node 24 or newer. `scripts/browser_audit.py` and `scripts/editor_controls_audit.py` exercise the study arms and content pack, so they only pass against a checkout of `study-v1`.
 
 ## Decision log
 
@@ -47,7 +47,33 @@ Append-only. New entries supersede named old entries; do not edit history. Forma
 - **D-030** 2026-10-10 safwat — Drop the prototype's handwriting tool for now and keep its spec as a draft document in the repo. Rule 4 (no LLM) stands. Why: explicit session answer; the prototype's recogniser calls an LLM that only exists inside Claude artifacts.
 - **D-031** 2026-10-10 safwat — Phase 1 scope is everything working in the Kura8 Prototype plus the refinement cards 5a–5z. Why: explicit session answer. The Paper visual language (Space Grotesk, #ECF0F3 ground, 2px strokes) is assumed from the prototype and is part of the plan awaiting approval.
 
+- **D-032** 2026-10-10 safwat — Approved docs/plans/2026-10-10-phase1-dial.md, milestones M0–M15 including its resolutions of conflicts between the prototype and the refinement cards. The three marked defaults (starting copy, ratio labels, 16:9 export width) stand until Safwat answers the open questions. Why: explicit session approval of the plan.
+- **D-033** 2026-10-10 fable — Phase 1 core contracts are the v2 set in AGENTS.md → Core contracts: document v2 with content on nodes and geometry in per-size frames, palette colour refs, injected `Measure`, snapping tiers with hold and soft pull, rotated-corner snapping and `snapAngle`. Supersedes D-006 (no object or grid snapping) and D-011 (neutral default placement), and the Phase 0 contract text. Why: linked sizes, dark mode and custom hues fall out of the data model without sync code; snapping stays deterministic because the previous lock is an input.
+- **D-034** 2026-10-10 fable — Resolutions of conflicts inside the designs: Alt bypasses snapping and duplicate-drag is dropped (5j); Shift+Arrow moves one grid cell with the grid on, otherwise 10 units (5l); keep D-026 Mod+Shift+L and Mod+Shift+E; toasts for confirmations and errors, help bar opt-in, no tour (5d); resize keeps size snapping; only the winning snap line draws (5k); thresholds stay in screen px and user zoom stays out; once a document exists the hub relayouts instead of wiping; a swatch with a selection fills it, with nothing selected it arms paint (5e); change ratio converts the active size, add size creates a linked one (5v/5w); a manual font size change turns autofit off (5q). Why: refinement cards are the later design word; browser-reserved shortcuts and logged decisions win over the prototype.
+- **D-035** 2026-10-10 fable — Commit the designer's handoff unchanged under docs/design/2026-10-10-dial/ as reference (never served or linked). Retire the study harness from the dev branch: no `?mode`/`?s`, document id generated by `newDocumentId()` and kept out of the URL, autosave key `kura8:doc`, PNG-only export `kura8-<ratio>.png`, page title Kura8 with an empty favicon so headless runs log no 404. Why: later sessions need the design source without the upload; the study lives on at `study-v1`.
+
 ## Next steps
+
+Phase 1, in plan order (details per milestone in docs/plans/2026-10-10-phase1-dial.md):
+
+- [x] M0 Freeze and re-charter: tag `study-v1`, design sources, handwriting draft, study harness removed, AGENTS.md for Phase 1, decisions D-028–D-035.
+- [ ] M1 Document v2: types, validation, `migrate` with v1 fixtures, rotation geometry, ratios with A4 and labels, `exportSize`, `MAX_PIXELS`.
+- [ ] M2 Palette, shapes, scene and renderer v2 (rotation, colour refs, ground, empty frames, ink, library shapes); Paper CSS and Space Grotesk.
+- [ ] M3 Snapping v2 and `snapAngle`, one named test per rule, Phase 0 snap tests unchanged.
+- [ ] M4 History, ops, store and interaction v2: multi-select, marquee, rotate, Alt bypass, nudge, clipboard, z-order, lock, hide, undo/redo, keyboard map.
+- [ ] M5 Paper chrome: toolbar, toasts, opt-in help bar, shortcuts, layers, grid, guides toggle.
+- [ ] M6 Layout engine: compositions, fit, typeScale, compositionFit.
+- [ ] M7 Dial: four rings, hub, readout, light/dark, any colour, Start/Go; 5a–5d and the 5f round trip.
+- [ ] M8 Colour panel, armed paint, custom hue, contrast hint, dark hold preview (5e, 5g–5i).
+- [ ] M9 Images: assets, drop/paste, working copy and original, focus crop, drop-on-frame, remover Before/After (5n–5p).
+- [ ] M10 Shape library and Phosphor icons: prepare-icons, search with synonyms, flatten note, licences (5s–5u).
+- [ ] M11 Text: rotated frames, start/end and RTL, script fonts, autofit with crossing mark (5q, 5r).
+- [ ] M12 Sketch: ink port, pen hold-to-clean, scribble delete, eraser, lasso.
+- [ ] M13 Re-ratio flags and linked sizes (5v, 5w).
+- [ ] M14 Export sheet: PNG/JPG/SVG/PDF, scale and dpi, hidden count, No ground (5x–5z, 5u).
+- [ ] M15 Performance, memory, Phase 1 browser audit, Definition of done.
+
+### Study (frozen at `study-v1`)
 
 - [x] Scaffold Vite vanilla-ts, Vitest, strict tsconfig, scripts and folder layout.
 - [x] geometry.ts, ratios.ts, document.ts with create/validate/round-trip tests.
@@ -64,18 +90,15 @@ Append-only. New entries supersede named old entries; do not edit history. Forma
 - [x] Shape library, exact colour input, object locks, platform-aware shortcuts and Shift constraints (D-025/D-026).
 - [ ] Safwat: approve the fixed content pack and define participants per condition, blinded raters, rating scale and success margin.
 - [ ] Run the pilot with those criteria; enable multiple downloads in each study browser and collect both PNG and JSON per participant.
-- [ ] Safwat: approve docs/plans/2026-10-10-phase1-dial.md (Phase 1 dial editor, milestones M0–M15) and its three marked defaults.
-- [ ] M0 freeze and re-charter: tag study-v1, copy the design files into docs/design/, write the handwriting draft, remove study code, rewrite AGENTS.md for Phase 1. Then M1–M15 in plan order.
 
 ## Open questions for Safwat
 
-- Approve the Phase 1 plan (docs/plans/2026-10-10-phase1-dial.md), including the proposed resolutions of conflicts between the prototype and the refinement cards.
 - Starting copy for layouts: default is "Headline" and "Body text" placeholders with empty image frames. Keep, or use real sample copy?
 - Destination labels for the six ratios (5a only names four): default is Post 1:1, Portrait 4:5, Slide 16:9, Story 9:16, Print A4, Banner 3:1.
 - 5x says social ratios export 1080 wide; default keeps 16:9 at 1920 and banner at 1500, with A4 at 300 dpi (2480 × 3508).
 - Pushing the `study-v1` tag to GitHub needs your OK.
 
-- Study protocol: participants per condition, raters, scale and margin for the thesis holding.
+- Study (applies to `study-v1`): participants per condition, raters, scale and margin for the thesis holding.
 - Whether study needs undo. It remains out of scope. Run a pilot of two or three people without it and decide from behaviour.
 - Approve the concrete fictional exhibition content pack before recruiting participants; it is identical in both modes.
 
@@ -89,6 +112,8 @@ Append-only. New entries supersede named old entries; do not edit history. Forma
 - Browser storage quota failure is caught so editing/export remain usable, but the app does not yet expose failed autosave visibly (no toasts per handbook). Check quota behaviour in the pilot with several large images.
 
 ## Browser audit
+
+This section and the editor controls audit below describe the Phase 0 audits. Run them from a checkout of tag `study-v1`; the dev branch no longer has the study arms or content pack. M15 replaces them with a Phase 1 audit.
 
 Run `npm run build`, start `npm run preview -- --port 4173`, then `python3 scripts/browser_audit.py`. Requires Python Playwright, its Chromium browser and Pillow; these are audit tools, not application dependencies. An optional first argument selects another base URL. The script creates a fresh browser profile and writes screenshots and paired exports under ignored `private/browser-audit/`. The 2026-09-15 run passed the complete matrix and both-condition interaction checks. Export sizes verified: square 1080 × 1080, portrait 1080 × 1350, landscape 1920 × 1080, story 1080 × 1920, banner 1500 × 500.
 
