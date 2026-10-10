@@ -46,13 +46,15 @@ export function reorder(doc: KuraDoc, ids: string[], mode: Order): KuraDoc {
   else for (let i = 1; i < a.length; i++) if (pick(a[i]) && !pick(a[i - 1])) [a[i], a[i - 1]] = [a[i - 1], a[i]];
   return { ...doc, nodes: a };
 }
-/** Copies with new ids, offset in every size, unlocked and untagged so a relayout leaves them where they are. Frames missing for a size (the clip came from before a size was added) copy the first frame. */
+/** Copies with new ids, offset in every size, unlocked and untagged so a relayout leaves them where they are. Frames missing for a size (the clip came from before a size was added) copy the first frame. Copied group members form a new group of their own; a lone copied member leaves its group. */
 export function cloneNodes(doc: KuraDoc, nodes: DocNode[], newId: () => string, offset: number): DocNode[] {
+  const groups = new Map<string, string>(), count = (g: string) => nodes.filter(n => n.group === g).length;
   return nodes.map(n => {
     const first = Object.values(n.frames)[0], frames: Record<string, Frame> = {};
     for (const s of doc.sizes) { const f = n.frames[s.id] ?? first; frames[s.id] = { ...f, rect: { ...f.rect, x: f.rect.x + offset, y: f.rect.y + offset } }; }
     const copy = { ...structuredClone(n), id: newId(), frames };
     delete copy.locked; delete copy.slot;
+    if (n.group !== undefined && count(n.group) > 1) { if (!groups.has(n.group)) groups.set(n.group, newId()); copy.group = groups.get(n.group); } else delete copy.group;
     return copy;
   });
 }

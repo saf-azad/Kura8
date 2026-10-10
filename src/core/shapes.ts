@@ -54,3 +54,16 @@ export function defaultShapeSize(ar: number, canvas: { w: number; h: number }): 
   if (ar > 5) { const w = canvas.w * .5; return { w, h: Math.max(4, w / ar) }; }
   return ar >= 1 ? { w: base, h: base / ar } : { w: base * ar, h: base };
 }
+const ARGS: Record<string, number> = { M: 2, L: 2, T: 2, H: 1, V: 1, C: 6, S: 4, Q: 4, A: 7, Z: 0 };
+/** An SVG path with every coordinate scaled by sx, sy (arcs keep their rotation, so stretched arcs stay exact only when unrotated). Used to stroke stretched outlines at an even width. */
+export function scalePath(d: string, sx: number, sy: number): string {
+  const tokens = d.match(/[a-zA-Z]|-?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?/g) ?? [], out: string[] = [];
+  let cmd = '', k = 0;
+  for (const t of tokens) {
+    if (/^[a-zA-Z]$/.test(t)) { cmd = t; k = 0; out.push(t); continue; }
+    const up = cmd.toUpperCase(), n = ARGS[up] ?? 2, j = k++ % n, v = parseFloat(t);
+    const axis = up === 'H' ? 'x' : up === 'V' ? 'y' : up === 'A' ? (j === 0 || j === 5 ? 'x' : j === 1 || j === 6 ? 'y' : '') : j % 2 ? 'y' : 'x';
+    out.push(String(n2(axis === 'x' ? v * sx : axis === 'y' ? v * sy : v)));
+  }
+  return out.join(' ').replace(/ ?([a-zA-Z]) ?/g, '$1');
+}
