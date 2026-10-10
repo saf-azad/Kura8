@@ -129,7 +129,7 @@ export type KuraDoc = { version: 2; id: string; createdAt: string; palette: Pale
 ```
 
 - Content (text, fill, weight, align, shape, icon, asset, cutout, paths, stroke, lock) lives on the node. Geometry (rect, rotation, font size, hidden) lives in `frames[sizeId]`. Linked sizes (5w) follow from this: content edits show in every size, geometry stays local. Adding or deleting a node affects every size; `hidden` leaves a node out of one size. Array order is the one shared draw order.
-- Colours resolve through the palette. Dark mode maps row step `s` to `6 − s`; `{ hex }` never mirrors. A custom hue (5g) adds row `c{n}` at the seven lightness steps, with the step nearest the pasted hex replaced by it exactly.
+- Colours resolve through the palette. Dark mode maps row step `s` to `6 − s`; `{ hex }` and a custom accent (`palette.accent`) never mirror (D-050). A custom hue (5g) adds row `c{n}` at the seven lightness steps, with the step nearest the pasted hex replaced by it exactly.
 - `ground: null` means unfilled: the editor draws the palette ground and PNG export offers No ground (5z).
 - `asset: null` is an empty image frame. Assets are IndexedDB keys (SHA-256 of the bytes) holding original, working copy and optional cutout; `cutout` chooses which one shows (5o). The cover crop is derived from the frame and `focus` (default centre), never stored.
 - Never stored: effective font size, overflow and off-canvas flags, crop rects, physical alignment, text direction, guide anchors.

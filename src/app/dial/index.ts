@@ -112,7 +112,8 @@ export function showDial(root: HTMLElement, host: DialHost): { paint(): void; de
     wheel.addEventListener('pointermove', move); wheel.addEventListener('pointerup', up); wheel.addEventListener('pointercancel', up);
   });
   const onKey = (e: KeyboardEvent) => {
-    if ((e.target as Element).closest?.('input, textarea')) return;
+    // Native combinations (Alt+Arrow is Back/Forward, Mod+Arrow moves by word) and IME composition are not the dial's.
+    if (e.metaKey || e.ctrlKey || e.altKey || e.isComposing || e.defaultPrevented || (e.target as Element).closest?.('input, textarea')) return;
     if (e.key === 'Enter' && !(e.target instanceof HTMLButtonElement)) { e.preventDefault(); host.start(); }
     else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); focus = modn(focus + (e.key === 'ArrowDown' ? 1 : -1), 4); paint(); }
     else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); const r = RINGS[focus]; pick(r.key, modn(index(r.key) + (e.key === 'ArrowRight' ? 1 : -1), r.n)); }

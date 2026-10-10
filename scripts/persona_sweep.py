@@ -1580,6 +1580,87 @@ def lea_touch_frame(app):
         ctx.close(); app.ctx = old; app.page = old.pages[0]
 
 
+# ------------------------------------------------------------------------------------------------ round 11 (second review)
+def quin_icons_export(app):
+    """Quin checks icons, shared pictures and file names in exports."""
+    p = app.page
+    app.start({'ratio': 'square', 'comp': 'cover', 'guide': 'thirds', 'hue': 40, 'dark': False})
+    p.keyboard.press('s'); p.wait_for_timeout(200); p.locator('.shapes-panel input').fill('warning'); p.wait_for_timeout(800)
+    p.locator('.shapes-panel [aria-label="Warning"]').first.click(); p.wait_for_timeout(500)
+    d = app.doc()['nodes'][-1]['icon']['d']
+    box = p.evaluate('''(d) => { const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); const q = document.createElementNS('http://www.w3.org/2000/svg', 'path'); q.setAttribute('d', d); s.append(q); document.body.append(s); const b = q.getBBox(); s.remove(); return [b.x, b.y, b.width, b.height]; }''', d)
+    note(box[0] >= -1 and box[1] >= -1 and box[0] + box[2] <= 101 and box[1] + box[3] <= 101, f'warning icon path spills out of its 100 box: {box}')
+    p.keyboard.press('Escape'); p.keyboard.press('Escape')
+    # a striped photo used twice: the large copy must keep its stripes when a tiny copy comes first
+    img = OUT / 'quin.png'; im = Image.new('RGB', (2000, 2000), (0, 0, 0))
+    from PIL import ImageDraw
+    dr = ImageDraw.Draw(im)
+    for x in range(0, 2000, 16): dr.rectangle([x, 0, x + 7, 1999], fill=(255, 255, 255))
+    im.save(img)
+    frame = find(app.doc(), slot='image')[0]; drop_file(app, img, *app.node_centre(frame)); p.wait_for_timeout(500)
+    app.select(node(app, id=frame['id'])); p.keyboard.press('Control+d'); p.wait_for_timeout(200)
+    r = app.frame(node(app, id=frame['id']))
+    p.keyboard.press('Escape'); app.click_unit(r['x'] + 5, r['y'] + 5)   # the original, under the copy's offset corner
+    app.drag_unit((r['x'] + r['w'] - 1, r['y'] + r['h'] - 1), (r['x'] + 60, r['y'] + 40), alt=True)
+    copy = app.doc()['nodes'][-1]; cr = app.frame(copy)
+    p.keyboard.press('Escape'); path = app.export('png'); ex = Image.open(path).convert('L'); s = 1080 / 1000
+    region = ex.crop((int((cr['x'] + cr['w'] * .3) * s), int((cr['y'] + cr['h'] * .3) * s), int((cr['x'] + cr['w'] * .6) * s), int((cr['y'] + cr['h'] * .6) * s)))
+    vals = list(region.getdata()); mean = sum(vals) / len(vals); sd = (sum((v - mean) ** 2 for v in vals) / len(vals)) ** .5
+    note(sd > 40, f'the large copy of a shared photo exported blurred flat (stdev {sd:.1f})')
+    app.close_panels()
+    # two linked squares: distinct names
+    p.locator('button[aria-label="Add a linked size"]').click(); p.wait_for_timeout(200); p.locator('.ratio-panel g[aria-label="Add Post 1:1"]').click(); p.wait_for_timeout(300)
+    a = app.export('png').name; app.close_panels(); p.locator('.corner .sizes button').nth(0).click(); p.wait_for_timeout(200)
+    b = app.export('png').name; app.close_panels()
+    note(a != b and a.startswith('kura8-square-') and b.startswith('kura8-square-'), f'same-ratio sizes export as {a} and {b}')
+
+
+def vy_dark_text(app):
+    """Vy works in dark mode, in Vietnamese, and pastes from a word processor."""
+    p = app.page
+    app.fresh({'ratio': 'portrait', 'comp': 'cover', 'guide': 'golden', 'hue': 200, 'dark': True})
+    p.keyboard.press('Alt+ArrowRight'); p.keyboard.press('Control+ArrowRight'); p.wait_for_timeout(150)
+    note('Portrait 4:5' in p.locator('.card').nth(0).inner_text(), f'modifier arrows turned the dial: {p.locator(".card").nth(0).inner_text()}')
+    sv = p.locator('.any-colour .sv').bounding_box(); p.mouse.click(sv['x'] + sv['width'] * .2, sv['y'] + sv['height'] * .05); p.wait_for_timeout(150)
+    readout = p.locator('.card').nth(3).inner_text().split('Custom ')[-1][:7].lower(); chip = p.locator('.any-colour .row span span').last.inner_text().lower()
+    note(readout == chip, f'dark dial: readout {readout} but accent shows {chip}')
+    p.keyboard.press('Enter'); p.wait_for_timeout(600); p.keyboard.press('Escape'); p.keyboard.press('Escape')
+    acc = find(app.doc(), slot='accent')[0]; app.select(acc); p.keyboard.press('c'); p.wait_for_timeout(200)
+    f = p.locator('.colour-panel input.field'); f.click(); f.fill('#ffd6d6'); p.keyboard.press('Enter'); p.wait_for_timeout(100)
+    p.locator('.colour-panel button', has_text='Add as hue').click(); p.wait_for_timeout(200)
+    shown = p.locator('.toolbar .readout.hex').inner_text().lower()
+    note(shown == '#ffd6d6', f'Add as hue on a dark ground shows {shown} instead of the typed colour')
+    p.keyboard.press('Escape'); p.keyboard.press('Escape')
+    head = find(app.doc(), slot='headline')[0]; app.select(head); p.keyboard.press('Enter'); p.wait_for_timeout(100)
+    p.evaluate('''() => { const t = document.querySelector('textarea.text-editor'); t.setRangeText('Tiếng Việt ạ ộ ữ\\u000bdòng hai', 0, t.value.length, 'end'); t.dispatchEvent(new Event('input', { bubbles: true })); }''')
+    p.keyboard.press('Control+Enter'); p.wait_for_timeout(150)
+    note(node(app, id=head['id'])['text'] == 'Tiếng Việt ạ ộ ữ\ndòng hai', f'soft return kept: {node(app, id=head["id"])["text"]!r}')
+    path = app.export('svg'); t = path.read_text()
+    import xml.dom.minidom
+    try: xml.dom.minidom.parseString(t)
+    except Exception as e: note(False, f'svg does not parse: {e}')
+    note(t.count('@font-face') == 6, f'{t.count("@font-face")} font faces embedded (Vietnamese missing?)')
+    app.close_panels(); valid(app)
+
+
+def wil_go_flags(app):
+    """Wil writes a long blurb, then turns the dial to a wide slide."""
+    p = app.page
+    app.start({'ratio': 'portrait', 'comp': 'cover', 'guide': 'golden', 'hue': 0, 'dark': False})
+    body = find(app.doc(), slot='body')[0]; app.select(body); p.keyboard.press('Enter'); p.wait_for_timeout(100)
+    p.keyboard.type('A long blurb about the evening, the programme, the people involved and how to get there. ' * 4); p.keyboard.press('Control+Enter'); p.keyboard.press('Escape')
+    head = find(app.doc(), slot='headline')[0]; app.select(head); p.keyboard.press('Control+Shift+L'); p.keyboard.press('Escape'); f0 = app.frame(node(app, id=head['id']))
+    p.locator('button.wordmark').click(); p.wait_for_timeout(300); p.keyboard.press('ArrowDown'); p.keyboard.press('ArrowRight')   # cover -> split, same ratio
+    p.locator('.dial .dial-actions button', has_text='Go').click(); p.wait_for_timeout(700)
+    note(app.frame(node(app, id=head['id'])) == f0, 'Go moved a locked headline on the same ratio')
+    p.locator('button.wordmark').click(); p.wait_for_timeout(300); p.keyboard.press('ArrowRight')   # portrait -> landscape
+    p.locator('.dial .dial-actions button', has_text='Go').click(); p.wait_for_timeout(700)
+    b = app.frame(node(app, id=body['id'])); note(b['y'] + b['h'] > 562.5, f'test blurb should overflow the slide: {b}')
+    dpr = p.evaluate('devicePixelRatio'); k = app.scale()
+    col = p.evaluate('''([x, y0, y1]) => { const g = document.querySelector('canvas.overlay').getContext('2d'); let hit = 0; for (let y = y0; y < y1; y++) if (g.getImageData(x, y, 1, 1).data[3] > 0) hit++; return hit; }''', [int((b['x'] * k + 64) * dpr), int((b['y'] * k + 64) * dpr) + 4, int((562.5 * k + 64) * dpr) - 4])
+    note(col > 3, 'body running off the slide after Go is not flagged')
+
+
 PERSONAS = [maya_social, priya_print, layla_scripts, kai_keyboard, sam_sketch, cleo_colour, pat_power, ren_returning, sol_small, chaos,
             ines_photos, tom_worksheet, ivy_icons, max_sizes, quinn_quota, ula_interrupts, dee_dark,
             rio_rotation, vic_migrated, ari_arrows, gus_grid, hana_help, zed_stress, lou_layers, nia_reratio,
@@ -1587,7 +1668,8 @@ PERSONAS = [maya_social, priya_print, layla_scripts, kai_keyboard, sam_sketch, c
             kim_dial, fay_extremes, lin_locks, pia_exports, ola_undo_ui, uma_crop, xia_dial_keys,
             ken_retina, rae_linked_text, sid_async,
             noor_hidden, zara_paste_sizes, cara_dial_back, mae_mouse_export, dan_picker,
-            ray_review, ruth_review, gwen_escape, ike_shift_locked, jo_tab_typing, lea_touch_frame]
+            ray_review, ruth_review, gwen_escape, ike_shift_locked, jo_tab_typing, lea_touch_frame,
+            quin_icons_export, vy_dark_text, wil_go_flags]
 
 
 def main():

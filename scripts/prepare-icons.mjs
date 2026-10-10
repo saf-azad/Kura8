@@ -32,7 +32,7 @@ export function scalePath(d, k) {
   }
   return out;
 }
-const absolute = d => d.replace(/^m([^a-df-z]*)/i, (_, a) => { const [x, y, ...rest] = a.match(NUMBER) ?? []; return rest.length ? `M${x} ${y}l${rest.join(' ')}` : 'M' + a; });
+const absolute = d => d.replace(/^m([^a-df-z]*)/, (_, a) => { const [x, y, ...rest] = a.match(NUMBER) ?? []; return rest.length ? `M${x} ${y}l${rest.join(' ')}` : 'M' + a; });
 export function flattenSvg(svg) {
   const ds = (svg.match(/<path\b[^>]*>/g) ?? []).map(t => /\sd\s*=\s*(["'])([^]*?)\1/.exec(t)?.[2].trim() ?? '').filter(Boolean);
   return { d: ds.map(absolute).join(' '), flattened: ds.length > 1 || /opacity\s*[=:]/i.test(svg) };
@@ -54,7 +54,7 @@ export function tagWords(entry, common = new Set()) {
   const own = entry.name.split('-'), words = new Set(wordsOf(entry));
   return [...words].filter(w => !own.some(x => x.startsWith(w)) && !common.has(w) && !(stem(w) !== w && (words.has(stem(w)) || own.includes(stem(w))))).join(' ');
 }
-const FORMAT = 1; // bump when the baked layout or tag rules change, so existing bakes are redone
+const FORMAT = 2; // bump when the baked layout or tag rules change, so existing bakes are redone
 async function main() {
   const version = JSON.parse(await readFile(path.join(pkg, 'package.json'), 'utf8')).version;
   const files = new Set((await readdir(fill)).filter(f => f.endsWith('-fill.svg')).map(f => f.slice(0, -'-fill.svg'.length)));

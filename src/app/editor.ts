@@ -396,7 +396,12 @@ export class Editor {
     area.value = node.text; this.textarea = area; this.stack.append(area);
     this.store.setUI({ editing: id, sel: [id], armed: null });
     this.positionTextarea(); area.focus(); area.select();
-    area.addEventListener('input', () => { const cur = nodeById(this.doc, id); if (cur?.kind === 'text') { this.store.set(updateNodes(this.doc, [id], n => ({ ...n, text: area.value }))); this.positionTextarea(); } });
+    area.addEventListener('input', () => {
+      // Soft returns pasted from word processors (U+000B, form feed, line/paragraph separators) become line breaks.
+      const clean = area.value.replace(/[\v\f\u2028\u2029]/g, '\n');
+      if (clean !== area.value) { const at = area.selectionStart; area.value = clean; area.setSelectionRange(at, at); }
+      const cur = nodeById(this.doc, id); if (cur?.kind === 'text') { this.store.set(updateNodes(this.doc, [id], n => ({ ...n, text: area.value }))); this.positionTextarea(); }
+    });
     area.addEventListener('keydown', e => {
       if (e.key === 'Escape' || e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); e.stopPropagation(); this.finishText(); this.overlay.focus(); }
       // Nothing typed yet, so the field has nothing to undo: Mod+Z undoes the document (New's "Undo brings the last one back").

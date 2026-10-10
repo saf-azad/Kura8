@@ -56,6 +56,7 @@ Exploratory browser runs after the Phase 1 merge, one scripted person per job, a
 | 10 | Ike | Shift-click to drop a locked object from a selection |
 | 10 | Jo | Typing in one tab while the other tab saves |
 | 10 | Lea | Double tap on an empty frame with a finger |
+| 11 | Quin, Vy, Wil | A second code read (core, export, dial) replayed as people: the nine reports below |
 
 ## Bugs fixed
 
@@ -87,6 +88,15 @@ Exploratory browser runs after the Phase 1 merge, one scripted person per job, a
 - **B26** (review) The contrast hint's "use" recoloured every selected object, not just the failing text. It now fills only that text. `src/app/tools/panels/colour.ts`.
 - **B27** (review) Hide and Show ignored the lock although `hidden` is frame geometry. `setHidden` refuses locked nodes (tested) and the layers row disables the eye with "unlock first". `src/core/ops.ts`, `src/app/tools/panels/layers.ts`.
 - **B28** (review) Redo of a hide left the hidden object selected, so Delete, arrows and Enter acted on something invisible. Commits, undo, redo and other-tab updates drop hidden objects from the selection. `src/app/store.ts`.
+- **B29** (second review) 79 Phosphor icons (warning, tag, bicycle, pencil, t-shirt, cube…) were baked with wrong paths and drew as scribbles: the moveto normaliser turned an uppercase `M`'s extra absolute pairs into relative line-tos. Only a lowercase `m` is rewritten now, the bake format is bumped so every build re-bakes, and a test pins it. Icons placed before the fix keep their stored path. `src/core/icons.ts`, `scripts/prepare-icons.mjs`.
+- **B30** (second review) With the same picture used twice, exports decoded it at the size of whichever copy came first, so a large copy behind a small one came out blurred to grey. Each picture is now decoded for its largest copy. `src/app/export/index.ts`.
+- **B31** (second review) Go from the dial could put long slot text off the new canvas with no flag; flags were only kept for nodes that were re-ratioed. Relayout now flags every node where it ends up (tested). `src/core/relayout.ts`.
+- **B32** (second review) Go moved locked slot nodes. A locked node now claims no slot and keeps its frame on the same ratio; a new ratio re-ratios it, as Change ratio does (tested). `src/core/relayout.ts`.
+- **B33** (second review) On a dark ground, "+ Add as hue" filled with the mirrored shade (#330000 for a typed #FFD6D6), and the dial's any-colour accent showed a different colour from its readout. Add as hue stores the mirrored step so the typed colour shows, and a custom accent is a picked colour that no longer mirrors (tested). `src/app/tools/panels/colour.ts`, `src/core/palette.ts`.
+- **B34** (second review) A soft return pasted from a word processor (U+000B) made the SVG export invalid XML. The text editor turns soft returns, form feeds and line/paragraph separators into line breaks, and the SVG writer drops every character XML forbids (tested). `src/app/editor.ts`, `src/core/export.ts`.
+- **B35** (second review) SVG exports fell back to a system font for Vietnamese letters (ạ ế ộ ữ ₫), which Space Grotesk covers. Its Vietnamese subset is embedded too. `src/app/export/index.ts`.
+- **B36** (second review) The dial turned rings on Alt+Arrow (browser Back/Forward) and Mod+Arrow and swallowed them. It now leaves modifier combinations and IME composition alone. `src/app/dial/index.ts`.
+- **B37** (second review) Two linked sizes of the same ratio downloaded under one name, so the browser numbered them arbitrarily. Names now carry the size's number among same-ratio sizes (`kura8-square-2.png`). `src/app/export/index.ts`.
 - The sketch clean-up morph is skipped under reduced motion, like the lift and the Go tween.
 - The dial's any-colour picker now also releases its listeners on `pointercancel`.
 

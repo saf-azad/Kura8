@@ -33,6 +33,10 @@ describe('palette', () => {
     expect(resolve({ role: 'ink' }, dark)).toBe(hsl(210, 40, 92));
     expect(resolve({ row: 'base', step: 1 }, dark)).toBe(resolve({ row: 'base', step: 5 }, light));
     expect(placeOf({ hex: '#123456' }, dark)).toBeNull(); expect(resolve({ hex: '#ABCDEF' }, dark)).toBe('#abcdef');
+    // A custom accent is a picked colour: it stays itself on a dark ground, while its row still mirrors.
+    const picked: Palette = { ...dark, accent: '#fae3cd' };
+    expect(resolve({ role: 'accent' }, picked)).toBe('#fae3cd'); expect(resolve({ role: 'accent' }, { ...picked, dark: false })).toBe('#fae3cd');
+    expect(placeOf({ row: 'accent', step: 0 }, picked)).toEqual({ row: 'accent', step: 6 });
     expect(resolve({ row: 'c9', step: 2 }, light)).toBe(rows(light).base[2]);
   });
   it('lets a custom accent replace the complementary row and the accent role', () => {

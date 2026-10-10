@@ -50,6 +50,7 @@ it('writes SVG with explicit tspans, licence metadata (5u) and optional ground (
   expect(licences(doc([icon, { ...icon, id: 'o2' }, { ...icon, id: 'o3', icon: { set: 'other', name: 'x', d: 'M0 0', licence: 'CC0' }, frames: { main: frame(0, 0, 1, 1, { hidden: true }) } }]), 'main')).toHaveLength(1);
   expect(licences(doc([{ ...icon, icon: { ...(icon as { icon: object }).icon, set: 'tabler' } } as DocNode]), 'main')[0].source).toBe('tabler');
   expect(escapeXml('"a"')).toBe('&quot;a&quot;');
+  expect(escapeXml('Hello\u000bWorld\u0000\u001f\ttab\n')).toBe('HelloWorld\ttab\n');
 });
 it('writes a valid one-page PDF around a JPEG with a correct xref', () => {
   const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xd9]), bytes = pdf(jpeg, { w: 2480, h: 3508 }, pageSize({ w: 2480, h: 3508 }, { w: 210, h: 297 }), 'kura8 (a4)\\é');

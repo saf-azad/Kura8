@@ -71,6 +71,18 @@ describe('relayout (5f)', () => {
     const noText = doc([rectNode('a', frame(0, 0, 10, 10), { slot: 'accent' })], size({ comp: 'cover' }));
     expect(relayout(noText, 'main', { ratio: 'square', guide: 'thirds', comp: 'band' }, fakeMeasure).doc.nodes[0].frames.main.rect.w).toBeCloseTo(45 * 3);
   });
+  it('flags slot text that runs off the new canvas, and leaves locked nodes where they are on the same ratio', () => {
+    const d = start(), body = d.nodes.findIndex(n => n.slot === 'body'), head = d.nodes.findIndex(n => n.slot === 'headline');
+    (d.nodes[body] as { text: string }).text = 'word '.repeat(400);
+    const { flags } = relayout(d, 'main', { ratio: 'landscape', guide: 'golden', comp: 'cover' }, fakeMeasure);
+    expect(flags).toContainEqual({ id: d.nodes[body].id, kind: 'off-canvas' });
+    d.nodes[head] = { ...d.nodes[head], locked: true };
+    const same = relayout(d, 'main', { ratio: 'portrait', guide: 'thirds', comp: 'split' }, fakeMeasure).doc;
+    expect(same.nodes[head].frames.main).toBe(d.nodes[head].frames.main);
+    const turned = relayout(d, 'main', { ratio: 'square', guide: 'golden', comp: 'split' }, fakeMeasure).doc;
+    const slot = layout({ canvas: canvasSize('square'), guide: 'golden', comp: 'split', measure: fakeMeasure, headline: 'Headline', body: 'Body text' }).headline.rect;
+    expect(turned.nodes[head].frames.main.rect).not.toEqual(slot);
+  });
 });
 describe('linked sizes (5w)', () => {
   it('adds a size seeded by re-ratio and removes it again, keeping the last one', () => {

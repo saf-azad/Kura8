@@ -7,7 +7,8 @@ import { coverCrop } from './images';
 export type Licence = { name: string; set: string; licence: string; source: string };
 export type SvgImage = { href: string; natural: Size };
 const n2 = (v: number) => +v.toFixed(2);
-export const escapeXml = (t: string): string => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+/** Escapes markup and drops characters XML 1.0 forbids (a pasted soft return U+000B would make the file unreadable). */
+export const escapeXml = (t: string): string => t.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 /** Icons used by visible nodes in a size, one entry per icon (5u). */
 export function licences(doc: KuraDoc, sizeId: string): Licence[] {
   const out: Licence[] = [];

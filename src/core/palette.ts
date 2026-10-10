@@ -55,11 +55,12 @@ export function roleRef(role: Role, p: Palette): { row: RowId; step: Step } {
   if (p.accent) return { row: 'accent', step: nearestStep(hslOf(p.accent).l) };
   return { row: 'accent', step: p.hue === null ? 6 : 3 };
 }
-/** The row and step a reference resolves to after the dark mirror, or null for literal hex. */
+/** The row and step a reference resolves to after the dark mirror, or null for literal hex. A custom accent is a colour
+ * the person picked, so like a hex it does not mirror. */
 export function placeOf(ref: ColourRef, p: Palette): { row: RowId; step: Step } | null {
   if ('hex' in ref) return null;
-  const at = 'role' in ref ? roleRef(ref.role, p) : ref;
-  return { row: at.row, step: (p.dark ? 6 - at.step : at.step) as Step };
+  const at = 'role' in ref ? roleRef(ref.role, p) : ref, literal = 'role' in ref && ref.role === 'accent' && !!p.accent;
+  return { row: at.row, step: (p.dark && !literal ? 6 - at.step : at.step) as Step };
 }
 export function resolve(ref: ColourRef, p: Palette): string {
   const at = placeOf(ref, p);

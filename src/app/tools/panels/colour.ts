@@ -53,7 +53,8 @@ export function colourPanel(ed: Editor): HTMLElement {
     if (!v) return;
     const { palette, ref } = addCustom(ed.doc.palette, v);
     if (palette !== ed.doc.palette) ed.setPalette({ custom: palette.custom }, 'Added as a hue');
-    editingHex = false; hex.blur(); ed.store.setUI({ row: ref.row }); ed.applySwatch(ref);
+    // The pasted hex sits at a light-mode step; on a dark ground that step is shown mirrored, so store the mirror.
+    editingHex = false; hex.blur(); ed.store.setUI({ row: ref.row }); ed.applySwatch(ed.palette().dark ? { row: ref.row, step: (6 - ref.step) as Step } : ref);
   });
   // 5i: tap a ground to switch; hold it to preview the other ground and let go to return.
   const ground = (b: HTMLElement, isDark: boolean) => {

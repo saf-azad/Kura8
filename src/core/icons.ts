@@ -19,8 +19,9 @@ export function scalePath(d: string, k: number): string {
   }
   return out;
 }
-/** A leading relative moveto is absolute for its first pair only; make that explicit so paths can be concatenated. */
-const absolute = (d: string) => d.replace(/^m([^a-df-z]*)/i, (_, a: string) => { const [x, y, ...rest] = a.match(NUMBER) ?? []; return rest.length ? `M${x} ${y}l${rest.join(' ')}` : 'M' + a; });
+/** A leading relative moveto is absolute for its first pair only; make that explicit so paths can be concatenated. An
+ * uppercase M's extra pairs are absolute line-tos already and stay as they are. */
+const absolute = (d: string) => d.replace(/^m([^a-df-z]*)/, (_, a: string) => { const [x, y, ...rest] = a.match(NUMBER) ?? []; return rest.length ? `M${x} ${y}l${rest.join(' ')}` : 'M' + a; });
 /** Joins all <path d> of an icon SVG into one single-ink path; flattened = true when the source had several paths or fill/opacity variations (5t). */
 export function flattenSvg(svg: string): { d: string; flattened: boolean } {
   const ds = (svg.match(/<path\b[^>]*>/g) ?? []).map(t => /\sd\s*=\s*(["'])([^]*?)\1/.exec(t)?.[2].trim() ?? '').filter(Boolean);

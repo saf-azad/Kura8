@@ -40,6 +40,8 @@ describe('flattenSvg', () => {
   it('joins several paths into one ink and flags it, making a leading relative moveto absolute', () => {
     expect(flattenSvg(SVGS[1])).toEqual({ d: 'M0 0H10V10Z M5 5l10 0 0 10z Mz', flattened: true });
     expect(flattenSvg(svg('<path d="m1 2z"/>', '<path d=" m3 4 "/>', '<path d="mz"/>'))).toEqual({ d: 'M1 2z M3 4 Mz', flattened: true });
+    // An uppercase M's extra pairs are absolute line-tos (warning, t-shirt, tag…): they must not become relative.
+    expect(flattenSvg(svg('<path d="M0,0,10,10Z"/>', '<path d="M96.7 23.9 173.2 36.8Z"/>')).d).toBe('M0,0,10,10Z M96.7 23.9 173.2 36.8Z');
   });
   it('flags opacity and fill-opacity variations even on one path', () => {
     expect(flattenSvg(SVGS[2])).toEqual({ d: 'M0 0H1Z', flattened: true });
