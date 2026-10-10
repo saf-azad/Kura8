@@ -6,7 +6,7 @@ Shared instructions for every coding agent working on this repo (Claude Fable, G
 
 Read this whole file once per session, then `HANDOFF.md` in full, then run `npm test`. Take the first unchecked next step unless Safwat's session message says otherwise. Consult Core contracts before touching `src/core/`, the plan for milestone detail, and the design files (open the `.dc.html` sources or read their scripts) for exact behaviour, geometry and copy. Consult Handoff protocol before stopping. Do not re-open logged decisions.
 
-**Contract status.** The contracts below describe the Phase 1 target. Code migrates milestone by milestone (M1 document, M2 palette and renderer, M3 snapping, …); HANDOFF says which are done. Where code still implements the Phase 0 contract, change it only through its milestone, in the order type → tests → code → HANDOFF.
+**Contract status.** The contracts below are implemented (M1–M15, see HANDOFF). Change them in the order type → tests → code → HANDOFF.
 
 ## Mission
 
@@ -69,9 +69,9 @@ src/
     scene.ts  ops.ts  history.ts  ink.ts  images.ts  script.ts
     shapes.ts  icons.ts  dial.ts  export.ts
   app/
-    store.ts  assets.ts
+    store.ts  assets.ts  editor.ts  measure.ts  ui.ts  paper-icons.ts
     dial/
-    canvas/{renderer,overlay,interaction,tween}.ts
+    canvas/{renderer,overlay,interaction,resize,tween}.ts
     tools/{toolbar,background,shortcuts}.ts
     tools/panels/{shapes,icons,colour,layers,grid,ratio,keys,export}.ts
     sketch/
@@ -80,7 +80,7 @@ src/
   style.css
 scripts/
   prepare-model.mjs  onnx-fp16.mjs  prepare-icons.mjs
-  browser_audit.py   Phase 1 audit (M15); Phase 0 audits target study-v1
+  browser_audit.py   Phase 1 audit (M15); the Phase 0 audits live at study-v1
 public/                generated, gitignored: ort/ models/ icons/
 tests/                 mirrors core, plus useful app tests
 ```
@@ -104,7 +104,7 @@ Core never measures text itself. Functions that need line breaks take an injecte
 
 ### Ratios
 
-`square` 1:1 (Post), `portrait` 4:5 (Portrait), `landscape` 16:9 (Slide), `story` 9:16 (Story), `a4` 1:√2 with √2 computed (Print), `banner` 3:1 (Banner). Labels are defaults pending Safwat. `exportSize(ratio, { scale: 1|2|3 } | { dpi: 300 })`: social ratios export 1080 wide except landscape 1920 and banner 1500; A4 at 300 dpi is 2480 × 3508. `MAX_PIXELS = 16_777_216`; larger export options are disabled.
+`square` 1:1 (Post), `portrait` 4:5 (Portrait), `landscape` 16:9 (Slide), `story` 9:16 (Story), `a4` 1:√2 with √2 computed (Print), `banner` 3:1 (Banner). Labels are defaults pending Safwat. `exportSize(ratio, { scale: 1|2|3 } | { dpi: 300 })`: social ratios export 1080 wide except landscape 1920 and banner 1500; A4 at 1× is 1240 wide (150 dpi) and at 300 dpi 2480 × 3508 from its paper size (`mm`); dpi on a ratio without a paper size throws. `MAX_PIXELS = 16_777_216`; larger export options are disabled.
 
 ### Document v2
 
@@ -133,6 +133,8 @@ export type KuraDoc = { version: 2; id: string; createdAt: string; palette: Pale
 - `ground: null` means unfilled: the editor draws the palette ground and PNG export offers No ground (5z).
 - `asset: null` is an empty image frame. Assets are IndexedDB keys (SHA-256 of the bytes) holding original, working copy and optional cutout; `cutout` chooses which one shows (5o). The cover crop is derived from the frame and `focus` (default centre), never stored.
 - Never stored: effective font size, overflow and off-canvas flags, crop rects, physical alignment, text direction, guide anchors.
+- Icons are shape nodes with `shape: 'icon'` and the path inline in `icon.d` (100 × 100 box); every other `shape` is a key of the 41-shape library in `shapes.ts`.
+- Text geometry: `frame.fontSize` is the set size; `textBox` derives lines, effective size and drawn height with line height 1.15. For `fit` text `rect.h` is the box the size steps down to fit; otherwise the drawn height is the measured height.
 - `createdAt` is ISO. Text frame width is wrap width; height is derived from `Measure`. Absent `locked`/`hidden` means false. Locks prevent geometry/property edits, deletion and duplication; locked nodes stay selectable.
 - `migrate(x)` turns a version-1 document into version 2 with one size, `comp: null`, a neutral palette and `ground: null`; hex colours become `{ hex }`, `left`/`right` become `start`/`end`, shapes are renamed (rectangle→rect, ellipse→circle, triangle→tri, star→star5, arrow→arrowR) and each image `src` becomes asset `v1-<nodeId>` returned for the app to store.
 
@@ -173,7 +175,8 @@ export function snapLines(o: { canvas: Size; others: { id: string; rect: Rect; r
 export function snapAngle(o: { angle: number; canvas: Size; regions: Rect[]; shift: boolean; lock: number; reach: number; hold: number; held: number | null }): { angle: number; caught: number | null };
 ```
 
-- Same input, same output: no time or randomness, the previous lock is an explicit `held` input. Core never clamps; the app clamps raw geometry to 20 × 20 and prevents handle crossing before snap. Axes are independent except locked-aspect derivation.
+- Same input, same output: no time or randomness, the previous lock is an explicit `held` input. Core never clamps; the app clamps raw geometry to 20 × 20 (or the starting size when smaller, for lines) and prevents handle crossing before snap. Axes are independent except locked-aspect derivation.
+- Phase 0 compatibility: without `extra` the canvas edges share tier 0 with the guide lines and hits carry no `tier`; `held` is returned only when `hold` is given. A soft pull also returns `near[axis]`, the line it leans towards, so the overlay can draw it faintly (`SnapResult.near?: { x?: SnapLine; y?: SnapLine }`).
 - Per axis: keep the held target while it is within `hold`; otherwise among candidates within `threshold` choose the lowest tier, then the smallest |delta|, then position before size, then lower coordinate (position) or alphabetically shorter span id (size); otherwise apply a soft pull of `delta·f³` towards the nearest candidate within `reach`, with no hit and `pull[axis]` set for overlay opacity. Unset `reach` equals `threshold`; with no `extra` lines the result equals Phase 0 behaviour.
 - Position targets: guide lines, canvas edges and centre (`centre-x|y`), other objects' edges and centres by rotated bounding box (`obj-<id>-l|c|r|t|m|b`), grid lines (`grid-x-n`). Points are drawn, never snapped to.
 - Size candidates only from tier-0 lines and canvas edges: every span (`span-<idA>-<idB>`) and every region width/height, deduplicated keeping the first in `[edges, anchors]` order; they move only the handle edge.
@@ -187,15 +190,16 @@ export function snapAngle(o: { angle: number; canvas: Size; regions: Rect[]; shi
 
 ```ts
 export interface Renderer {
-  render(doc: KuraDoc, opts: { sizeId: string; scale: number; images: Map<string, ImageBitmap>; measure: Measure; transparent?: boolean }): void;
+  render(doc: KuraDoc, opts: { sizeId: string; scale: number; measure: Measure; image: (asset: string, cutout: boolean) => ImageBitmap | null | undefined;
+    transparent?: boolean; placeholders?: boolean; pixels?: { w: number; h: number } }): void;
 }
 ```
 
-Both the canvas renderer and SVG export consume `buildScene(doc, sizeId, measure)` from `src/core/scene.ts`. The document canvas draws nodes and ground only. Overlay, guides, selection, snap lines, flags and handles live on a second canvas. Export renders offscreen at the export scale, guaranteeing no guides or selection marks.
+Both the canvas renderer and SVG export consume `buildScene(doc, sizeId, measure)` from `src/core/scene.ts`. The document canvas draws nodes and ground only; `placeholders` draws empty or missing image frames as slate washes in the editor, and exports leave them out. Overlay, guides, selection, snap lines, flags and handles live on a second canvas that reaches 64 px past the document on every side. Export renders offscreen at exact `pixels` with full-resolution originals, guaranteeing no guides or selection marks.
 
 ## Interface
 
-Paper visual language, values copied from `docs/design/2026-10-10-dial/_ds/…/tokens/`: paper ground `#ECF0F3`, ink `#000`, slate `#9CABC2` for placeholders and washes, one 2px stroke weight, radii 9 / 19 / 999, no shadows, no gradients except colour pickers, Space Grotesk for all chrome. Hover is a slate 15 % wash, selected is solid ink with white glyph, controls that do not apply fade to 23 %. Motion 80/140/200/280 ms on `cubic-bezier(.2,0,.2,1)`, honouring `prefers-reduced-motion`. Panels open 12 px above the button that owns them; Escape or a click outside closes them. The only colour in the chrome is user colour (swatches, palette dots, hue ring).
+Paper visual language, values copied from `docs/design/2026-10-10-dial/_ds/…/tokens/`: paper ground `#ECF0F3`, ink `#000`, slate `#9CABC2` for placeholders and washes, one 2px stroke weight, radii 9 / 19 / 999, no shadows, no gradients except colour pickers, Space Grotesk for all chrome. Hover is a slate 15 % wash, selected is solid ink with white glyph, controls that do not apply fade to 23 %. Motion 80/140/200/280 ms on `cubic-bezier(.2,0,.2,1)`, honouring `prefers-reduced-motion`. The toolbar sits at the top as in the prototype, so panels open 12 px below the control that owns them; Escape or a click outside closes them (canvas taps keep the colour, shapes and layers panels open). The only colour in the chrome is user colour (swatches, palette dots, hue ring).
 
 ## Keyboard controls
 

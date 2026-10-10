@@ -1,138 +1,153 @@
-import { isMac, primaryModifier, isEditingTarget } from './app/tools/shortcuts';
+import '@fontsource/space-grotesk/400.css';
+import '@fontsource/space-grotesk/700.css';
 import './style.css';
-import { createDocument, type RatioDoc, type DocNode, type TextNode, type ShapeKind } from './core/document';
-import { canvasSize, ratioById } from './core/ratios';
-import { guideById } from './core/guides';
-import { loadDocument, saveDocument, newDocumentId } from './app/store';
-import { showWheel } from './app/wheel';
-import { Canvas2DRenderer, measureText, FONT } from './app/canvas/renderer';
-import { drawOverlay } from './app/canvas/overlay';
+import { createDocument, type KuraDoc } from './core/document';
+import { canvasSize } from './core/ratios';
+import { layout, starterNodes, STARTER } from './core/compositions';
+import { relayout } from './core/relayout';
+import { Store, loadDocument, newDocumentId, newId, type DialSettings } from './app/store';
+import { Editor } from './app/editor';
+import { measure, clearMeasureCache } from './app/measure';
+import * as assets from './app/assets';
 import { installInteraction } from './app/canvas/interaction';
-import { toolbar } from './app/tools';
-import { exportDocument } from './app/export';
-import { removeBackground, preloadBackgroundRemoval } from './app/tools/background';
-import type { SnapHit } from './core/snap';
+import { installSketch } from './app/sketch';
+import { installShortcuts } from './app/tools/shortcuts';
+import { toolbar, corner } from './app/tools/toolbar';
+import { shapesPanel } from './app/tools/panels/shapes';
+import { colourPanel } from './app/tools/panels/colour';
+import { layersPanel } from './app/tools/panels/layers';
+import { gridPanel } from './app/tools/panels/grid';
+import { ratioPanel } from './app/tools/panels/ratio';
+import { keysPanel } from './app/tools/panels/keys';
+import { exportSheet } from './app/tools/panels/export';
+import { showDial } from './app/dial';
+import { h, installTips, toast } from './app/ui';
+// Boot: restore the one current document (migrating version 1 and its inline images), then show the editor when a
+// document exists, otherwise the dial. The Kura8 wordmark goes back to the dial with the canvas in the hub (5f).
 const app = document.querySelector<HTMLDivElement>('#app')!;
-app.innerHTML = '<header class="topbar"><div class="wordmark" aria-label="Ratio">ratio<span aria-hidden="true"></span></div><div class="document-meta"></div></header><main></main>';
-const host = app.querySelector('main')!, meta = app.querySelector<HTMLDivElement>('.document-meta')!;
-const existing = loadDocument();
-if (existing) openEditor(existing);
-else showWheel(host, (ratio, guide) => openEditor(createDocument(newDocumentId(), ratio, guide, new Date().toISOString())));
-function openEditor(doc: RatioDoc): void {
-  const size = canvasSize(doc.ratio), ratio = ratioById(doc.ratio), anchors = doc.guide ? guideById(doc.guide).generate(size) : [];
-  meta.textContent = `${ratio.w}:${ratio.h}`;
-  host.className = 'editor';
-  host.innerHTML = '<div class="work-area"><div class="canvas-stack"><canvas aria-label="Document"></canvas><canvas class="overlay" tabindex="0" aria-label="Canvas: select and drag objects; double-click text to edit"></canvas></div></div><div class="bottom-bar"><div class="tools"></div></div><input type="file" class="file-picker" accept="image/png,image/jpeg,image/webp,image/gif">';
-  const work = host.querySelector<HTMLDivElement>('.work-area')!, stack = host.querySelector<HTMLDivElement>('.canvas-stack')!;
-  const canvas = stack.querySelector('canvas')!, overlay = stack.querySelector<HTMLCanvasElement>('.overlay')!;
-  const renderer = new Canvas2DRenderer(canvas), images = new Map<string, ImageBitmap>();
-  const measure = document.createElement('canvas').getContext('2d')!;
-  let selectedId: string | undefined, scale = 1, hits: SnapHit[] = [], editor: HTMLTextAreaElement | undefined;
-  let loading = 0, exporting = false, removing = false, preloaded = false;
-  const mac = isMac(navigator.platform);
-  const selected = () => doc.nodes.find(n => n.id === selectedId);
-  const persist = () => { const saved = saveDocument(doc); canvas.setAttribute('data-autosave', saved ? 'saved' : 'unavailable'); };
-  const refresh = () => {
-    for (const n of doc.nodes) if (n.type === 'text') n.rect.h = measureText(measure, n);
-    renderer.render(doc, { scale: scale * (window.devicePixelRatio || 1), images });
-    drawOverlay(overlay, size, scale, anchors, hits, selected()); tools.refresh();
-    tools.exportButton.disabled = loading > 0 || exporting || removing;
-    host.classList.toggle('busy', removing);
-    if (!preloaded && selected()?.type === 'image') { preloaded = true; preloadBackgroundRemoval(progress).catch(() => { preloaded = false; }); }
-    persist();
-  };
-  const select = (nodeId?: string) => { selectedId = nodeId; hits = []; refresh(); };
-  const add = (node: DocNode) => { doc.nodes.push(node); select(node.id); };
-  const addText = (text: string, fontSize = 56, weight: 400 | 700 = 400, edit = false) => {
-    const n: TextNode = { id: crypto.randomUUID(), type: 'text', rect: { x: (size.w - 600) / 2, y: 0, w: 600, h: 20 }, text, fontSize, weight, align: 'left', color: '#111111' };
-    n.rect.h = measureText(measure, n); n.rect.y = (size.h - n.rect.h) / 2; add(n); if (edit) editText(n);
-  };
-  const decode = async (src: string) => createImageBitmap(await (await fetch(src)).blob());
-  const addImage = async (src: string) => {
-    loading++; refresh();
-    try { const bitmap = await decode(src), nodeId = crypto.randomUUID(); images.set(nodeId, bitmap); const h = 500 * bitmap.height / bitmap.width;
-      add({ id: nodeId, type: 'image', src, naturalSize: { w: bitmap.width, h: bitmap.height }, rect: { x: (size.w - 500) / 2, y: (size.h - h) / 2, w: 500, h } });
-    } finally { loading--; refresh(); }
-  };
-  const progress = (fraction: number) => tools.backgroundButton.style.setProperty('--progress', fraction >= 1 ? '0' : String(fraction));
-  const cutout = async () => {
-    const n = selected(); if (n?.type !== 'image' || n.locked || removing) return;
-    removing = true; tools.backgroundButton.setAttribute('aria-busy', 'true'); tools.backgroundButton.removeAttribute('aria-invalid'); tools.backgroundButton.title = 'Remove image background'; refresh();
-    try {
-      const src = await removeBackground(n.src, progress), bitmap = await decode(src);
-      if (!doc.nodes.includes(n) || n.locked) { bitmap.close(); return; }
-      images.get(n.id)?.close(); images.set(n.id, bitmap); n.src = src; n.naturalSize = { w: bitmap.width, h: bitmap.height };
-    } catch (e) {
-      console.error(e); tools.backgroundButton.setAttribute('aria-invalid', 'true'); tools.backgroundButton.title = 'Remove image background: unavailable, check the connection and try again';
-    } finally { removing = false; tools.backgroundButton.removeAttribute('aria-busy'); progress(0); refresh(); }
-  };
-  const remove = () => { const index = doc.nodes.findIndex(n => n.id === selectedId); if (index < 0 || doc.nodes[index].locked) return; const n = doc.nodes[index]; images.get(n.id)?.close(); images.delete(n.id); doc.nodes.splice(index, 1); select(); };
-  const addShape = (shape: ShapeKind) => add({ id: crypto.randomUUID(), type: 'rect', shape, rect: { x: (size.w - 300) / 2, y: (size.h - 200) / 2, w: 300, h: 200 }, fill: '#111111' });
-  const toggleLock = () => { const n = selected(); if (n) { n.locked = !n.locked; refresh(); } };
-  const duplicate = async () => {
-    const n = selected(); if (!n || n.locked) return;
-    const copy = structuredClone(n); copy.id = crypto.randomUUID(); copy.rect.x += 20; copy.rect.y += 20;
-    if (copy.type === 'image') { loading++; refresh(); try { images.set(copy.id, await decode(copy.src)); add(copy); } finally { loading--; refresh(); } }
-    else add(copy);
-  };
-  const file = host.querySelector<HTMLInputElement>('.file-picker')!;
-  const tools = toolbar(host.querySelector<HTMLElement>('.tools')!, {
-    selected, mac, addShape, toggleLock, duplicate: () => { void duplicate(); }, update: refresh, addText: () => addText('Text', 56, 400, true),
-    addRect: () => add({ id: crypto.randomUUID(), type: 'rect', rect: { x: (size.w - 300) / 2, y: (size.h - 200) / 2, w: 300, h: 200 }, fill: '#111111' }),
-    addImage: () => file.click(), removeBackground: () => { void cutout(); }, delete: remove,
-    export: () => { exporting = true; refresh(); void exportDocument(doc, images).finally(() => { exporting = false; refresh(); }); },
-  });
-  file.onchange = async () => {
-    const image = file.files?.[0]; file.value = ''; if (!image) return;
-    try {
-      const bitmap = await createImageBitmap(image), raster = document.createElement('canvas');
-      const fit = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height)); raster.width = Math.round(bitmap.width * fit); raster.height = Math.round(bitmap.height * fit);
-      raster.getContext('2d')!.drawImage(bitmap, 0, 0, raster.width, raster.height); bitmap.close();
-      await addImage(raster.toDataURL(image.type === 'image/jpeg' ? 'image/jpeg' : 'image/png', .9));
-    } catch { file.setCustomValidity('Choose a readable PNG, JPEG, WebP or GIF image.'); file.reportValidity(); }
-  };
-  function editText(node: DocNode): void {
-    if (node.type !== 'text' || node.locked || editor) return;
-    select(node.id); editor = document.createElement('textarea'); const input = editor;
-    input.className = 'text-editor'; input.setAttribute('aria-label', 'Edit text'); input.value = node.text;
-    const position = () => {
-      input.style.cssText = `left:${node.rect.x * scale}px;top:${node.rect.y * scale}px;width:${node.rect.w * scale}px;height:${Math.max(node.rect.h * scale, node.fontSize * scale * 1.2 + 4)}px;font:${node.weight} ${node.fontSize * scale}px ${FONT};line-height:1.2;text-align:${node.align};color:${node.color}`;
-    };
-    position(); stack.append(input); input.focus(); input.select();
-    input.oninput = () => { node.text = input.value; refresh(); position(); };
-    input.onblur = () => { input.remove(); editor = undefined; refresh(); };
-    input.onkeydown = e => { if (e.key === 'Escape' || e.key === 'Enter' && primaryModifier(e, mac)) { e.preventDefault(); input.blur(); overlay.focus(); } };
+const tips = installTips();
+const loaded = loadDocument();
+const store = new Store(loaded?.doc ?? null);
+void navigator.storage?.persist?.().catch(() => false);
+addEventListener('pagehide', () => store.save());
+let saveWarned = false;
+store.on(() => { if (store.saveFailed && !saveWarned) { saveWarned = true; toast('Couldn’t save in this browser; export to keep your work', 3000); } if (!store.saveFailed) saveWarned = false; });
+/** Writes a migrated version 1 document's inline images to IndexedDB; the v2 document is saved only when all of them landed. */
+async function restoreAssets(): Promise<void> {
+  if (!loaded) return;
+  let ok = true;
+  for (const { asset, dataUrl } of loaded.inline) {
+    try { await assets.putImage(await assets.dataUrlToBlob(dataUrl), 2160, asset); editor?.forgetBitmap(asset); }
+    catch { ok = false; }
   }
-  installInteraction({ canvas: overlay, doc, size, anchors, snapping: true, scale: () => scale, selected, select, change: nextHits => { hits = nextHits; refresh(); }, edit: editText });
-  document.onkeydown = e => {
-    if (isEditingTarget(e.target) || e.isComposing || e.altKey) return;
-    const n = selected(), mod = primaryModifier(e, mac), key = e.key.toLowerCase();
-    if (mod) {
-      if (key === 'd' && !e.shiftKey) { e.preventDefault(); if (!e.repeat) void duplicate(); }
-      if (key === 'l' && e.shiftKey) { e.preventDefault(); if (!e.repeat) toggleLock(); }
-      if (key === 'b' && !e.shiftKey && n?.type === 'text' && !n.locked) { e.preventDefault(); if (!e.repeat) { n.weight = n.weight === 700 ? 400 : 700; refresh(); } }
-      if (key === 'e' && e.shiftKey) { e.preventDefault(); if (!e.repeat) tools.exportButton.click(); }
-      return;
-    }
-    if (e.metaKey || e.ctrlKey) return;
-    if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); remove(); }
-    if (e.key === 'Escape') select();
-    if (e.key === 'Enter' && !(e.target instanceof HTMLButtonElement)) { if (n) editText(n); }
-    if (n && !n.locked && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
-      e.preventDefault(); const amount = e.shiftKey ? 10 : 1;
-      n.rect.x += e.key === 'ArrowLeft' ? -amount : e.key === 'ArrowRight' ? amount : 0;
-      n.rect.y += e.key === 'ArrowUp' ? -amount : e.key === 'ArrowDown' ? amount : 0;
-      hits = []; refresh();
-    }
-  };
-  const fit = () => {
-    editor?.blur(); const style = getComputedStyle(work);
-    const w = work.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight), h = work.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
-    scale = Math.max(.01, Math.min(w / size.w, h / size.h)); stack.style.width = `${size.w * scale}px`; stack.style.height = `${size.h * scale}px`; refresh();
-  };
-  new ResizeObserver(fit).observe(work); fit();
-  for (const node of doc.nodes) if (node.type === 'image') {
-    loading++; void decode(node.src).then(bitmap => images.set(node.id, bitmap)).finally(() => { loading--; refresh(); });
+  if (loaded.inline.length) {
+    if (ok) store.save(); else { store.keepSaved = true; toast('Some images could not be stored; the old document is kept', 3000); }
+    editor?.invalidate();
   }
-  refresh();
+  if (store.doc && ok) void assets.gc(new Set(store.doc.nodes.flatMap(n => n.kind === 'image' && n.asset ? [n.asset] : [])));
 }
+const editorRoot = h('div', { className: 'screen', style: 'position:absolute;inset:0' }), dialRoot = h('div', { className: 'screen', style: 'position:absolute;inset:0' });
+app.append(editorRoot, dialRoot);
+let editor: Editor | null = null, dial: { paint(): void; destroy(): void } | null = null;
+const settingsOf = (doc: KuraDoc, sizeId: string): Partial<DialSettings> => {
+  const spec = doc.sizes.find(s => s.id === sizeId) ?? doc.sizes[0], p = doc.palette;
+  return { ratio: spec.ratio, ...(spec.guide ? { guide: spec.guide } : {}), ...(spec.comp ? { comp: spec.comp } : {}), hue: p.hue, dark: p.dark, accent: p.accent };
+};
+function starter(s: DialSettings): { doc: KuraDoc; headline: string } {
+  const canvas = canvasSize(s.ratio), nodes = starterNodes(layout({ canvas, guide: s.guide, comp: s.comp, measure, headline: STARTER.headline, body: STARTER.body }), { sizeId: 'main', newId });
+  const doc = createDocument(newDocumentId(), new Date().toISOString(), { id: 'main', ratio: s.ratio, guide: s.guide, comp: s.comp }, { hue: s.hue, dark: s.dark, custom: [], ...(s.accent ? { accent: s.accent } : {}) });
+  return { doc: { ...doc, nodes }, headline: nodes.find(n => n.slot === 'headline')!.id };
+}
+/** The document the dial would make: the current canvas re-laid on the dial's geometry (5f), or a fresh starter. */
+function preview(s: DialSettings): KuraDoc {
+  const doc = store.doc;
+  if (!doc) return starter(s).doc;
+  const sizeId = store.ui.size, spec = doc.sizes.find(x => x.id === sizeId) ?? doc.sizes[0], palette = { ...doc.palette, hue: s.hue, dark: s.dark, accent: s.accent };
+  const same = spec.ratio === s.ratio && spec.guide === s.guide && spec.comp === s.comp;
+  const out = same ? doc : relayout(doc, spec.id, { ratio: s.ratio, guide: s.guide, comp: s.comp }, measure).doc;
+  return { ...out, palette, sizes: [out.sizes.find(x => x.id === spec.id)!] };
+}
+function ensureEditor(): Editor {
+  if (editor) return editor;
+  const ed = editor = new Editor(editorRoot, store);
+  installInteraction(ed, installSketch(ed));
+  installShortcuts(ed);
+  const panels = { shapes: shapesPanel(ed), colour: colourPanel(ed), layers: layersPanel(ed), grid: gridPanel(ed), ratio: ratioPanel(ed) };
+  const word = h('button', { type: 'button', className: 'wordmark', title: 'Back to the dial' }, 'Kura8');
+  word.addEventListener('click', () => toDial());
+  const hint = h('button', { type: 'button', className: 'shortcut-hint', title: 'Keyboard shortcuts' }, h('span', { className: 'muted' }, 'Shortcuts'), h('span', { className: 'key' }, '?'));
+  hint.addEventListener('click', () => ed.openPanel('keys'));
+  editorRoot.append(word, toolbar(ed, panels), corner(ed, panels), hint, keysPanel(ed), exportSheet(ed));
+  // Escape or a click outside closes a panel; clicks on the canvas keep the colour, shapes and layers panels open.
+  document.addEventListener('pointerdown', e => {
+    const t = e.target as Element, panel = store.ui.panel;
+    if (!panel || store.ui.screen !== 'editor' || t.closest('.panel, .modal, .sheet, .toolbar, .corner, .corner-stack, .help, .shortcut-hint')) return;
+    if (t === ed.overlay && (panel === 'colour' || panel === 'shapes' || panel === 'layers')) return;
+    ed.openPanel(null);
+  });
+  let tool = store.ui.tool;
+  store.on(() => {
+    if (store.ui.tool !== tool) {
+      tool = store.ui.tool;
+      tips.hint(tool === 'pen' ? 'Sketch' : tool === 'erase' ? 'Eraser' : tool === 'lasso' ? 'Lasso' : '', tool === 'pen' ? 'Hold still at the end of a stroke to clean it into a line, arrow or shape. Scribble over something to delete it.' : tool === 'erase' ? 'Drag across ink strokes to remove them.' : tool === 'lasso' ? 'Draw around objects to select them.' : '');
+    }
+  });
+  return ed;
+}
+function toDial(): void {
+  editor?.finishText();
+  if (store.doc) store.setDial(settingsOf(store.doc, store.ui.size));
+  store.setUI({ screen: 'dial', panel: null, tool: null, armed: null, sel: [] });
+}
+function route(): void {
+  const onDial = store.ui.screen === 'dial' || !store.doc;
+  dialRoot.hidden = !onDial; editorRoot.hidden = onDial;
+  if (onDial) {
+    dial ??= showDial(dialRoot, {
+      settings: () => store.dial, set: patch => store.setDial(patch), hasDoc: () => !!store.doc, preview,
+      image: (asset, cutout) => editor?.image(asset, cutout), start: go, fresh, back: () => store.setUI({ screen: 'editor' }),
+    });
+    dial.paint();
+  } else {
+    dial?.destroy(); dial = null; dialRoot.replaceChildren();
+    ensureEditor().fit();
+  }
+}
+/** Start (no document) or Go: re-lay the current content on the dial's geometry with a tween, undoable. */
+function go(): void {
+  const s = store.dial;
+  if (!store.doc) { fresh(); return; }
+  const before = store.doc, sizeId = store.ui.size, spec = before.sizes.find(x => x.id === sizeId) ?? before.sizes[0];
+  const same = spec.ratio === s.ratio && spec.guide === s.guide && spec.comp === s.comp;
+  const palette = { ...before.palette, hue: s.hue, dark: s.dark, ...(s.accent ? { accent: s.accent } : {}) };
+  if (!s.accent) delete palette.accent;
+  const out = same ? { doc: before, flags: [] } : relayout(before, spec.id, { ratio: s.ratio, guide: s.guide, comp: s.comp }, measure);
+  const next = { ...out.doc, palette };
+  store.setUI({ screen: 'editor', size: spec.id });
+  route();
+  if (next !== before && JSON.stringify(next) !== JSON.stringify(before)) {
+    store.commit(next, {}); store.setUI({ flags: out.flags });
+    const ed = ensureEditor();
+    if (spec.ratio === s.ratio && !same) { store.paused = true; ed.tween.start(before, next, spec.id, d => { ed.display = d; ed.invalidate(); }, () => { ed.display = null; store.paused = false; ed.invalidate(); }); }
+  }
+}
+function fresh(): void {
+  const had = !!store.doc, { doc, headline } = starter(store.dial);
+  store.commit(doc, { before: store.doc });
+  store.setUI({ screen: 'editor', size: 'main', sel: [], flags: [] });
+  route();
+  const ed = ensureEditor();
+  if (had) toast('New design · Undo brings the last one back', 2200);
+  ed.lift();
+  ed.editText(headline);
+}
+let screen = '';
+store.on(() => {
+  const now = store.ui.screen === 'dial' || !store.doc ? 'dial' : 'editor';
+  if (now !== screen) { screen = now; route(); } else if (now === 'dial') dial?.paint();
+});
+screen = store.ui.screen === 'dial' || !store.doc ? 'dial' : 'editor';
+const restored = restoreAssets();
+if (loaded?.inline.length) void restored.finally(() => { route(); editor?.invalidate(); }); else route();
+if (store.doc && store.ui.screen === 'editor' && !loaded?.inline.length) ensureEditor().lift();
+document.fonts?.ready.then(() => { clearMeasureCache(); editor?.invalidate(); dial?.paint(); });
