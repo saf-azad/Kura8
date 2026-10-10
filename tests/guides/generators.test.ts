@@ -33,3 +33,11 @@ for (const ratio of ['square', 'story', 'banner'] as const) for (const guide of 
     expect(guideById(guide.id)).toBe(guide); expect(guide.generate({ w, h })).toEqual(actual);
   });
 });
+import { fractionsOf, scaleFactorOf } from '../../src/core/guides';
+describe('guide fractions and type-scale factors', () => {
+  it('pins names, fractions and factors', () => {
+    expect(guides.map(g => g.name)).toEqual(['Thirds', 'Golden', 'Quarters']);
+    expect(fractionsOf('thirds')).toEqual([1 / 3, 2 / 3]); expect(fractionsOf('golden')).toEqual([1 - 1 / PHI, 1 / PHI]); expect(fractionsOf('divisions')).toEqual([.25, .5, .75]);
+    expect([scaleFactorOf('thirds'), scaleFactorOf('golden'), scaleFactorOf('divisions')]).toEqual([1.5, PHI, Math.SQRT2]);
+  });
+});

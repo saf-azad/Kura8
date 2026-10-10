@@ -1,7 +1,7 @@
 import type { Guide, Anchor } from './types';
 import { grid } from './grid';
 export const PHI = (1 + Math.sqrt(5)) / 2;
-export const golden: Guide = { id: 'golden', name: 'Golden ratio', generate(canvas) {
+export const golden: Guide = { id: 'golden', name: 'Golden', generate(canvas) {
   const { w, h } = canvas;
   const gh = Math.min(h, w / PHI), gw = Math.min(w, h / PHI);
   const extra: Anchor[] = [
