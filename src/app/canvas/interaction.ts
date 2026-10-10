@@ -17,7 +17,7 @@ type Drag =
   | { kind: 'move'; ids: string[]; start: Point; before: KuraDoc; last?: KuraDoc; frames: Record<string, Frame>; box: Rect; rot: number; moved: boolean; held?: { x?: string; y?: string }; toggle: string | null }
   | { kind: 'resize'; id: string; handle: Handle; before: KuraDoc; last?: KuraDoc; frame: Frame; box: Rect; size: number; moved: boolean }
   | { kind: 'rotate'; id: string; c: Point; a0: number; r0: number; before: KuraDoc; last?: KuraDoc; held: number | null; moved: boolean }
-  | { kind: 'marquee'; start: Point; base: string[] };
+  | { kind: 'marquee'; start: Point; base: string[]; prev: string[] };
 const MIN = 20;
 const CURSORS: Record<string, string> = { n: 'ns-resize', s: 'ns-resize', e: 'ew-resize', w: 'ew-resize', nw: 'nwse-resize', se: 'nwse-resize', ne: 'nesw-resize', sw: 'nesw-resize', rotate: 'grab' };
 export function installInteraction(ed: Editor, sketch: SketchTools): void {
@@ -62,7 +62,7 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
     if (!hit) {
       const base = e.shiftKey ? ui.sel : [];
       ed.store.setUI({ sel: base, panel: keepPanel });
-      drag = { kind: 'marquee', start: p, base }; el.setPointerCapture(e.pointerId); return;
+      drag = { kind: 'marquee', start: p, base, prev: ui.sel }; el.setPointerCapture(e.pointerId); return;
     }
     // Shift on a selected object drops it from the selection on release, so Shift-dragging it still moves the
     // selection along one axis.
@@ -165,11 +165,12 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
     else if (d.kind === 'move' && !e.shiftKey && ed.store.ui.sel.length > 1) { const hit = ed.hitTest(ed.toUnits(e)); if (hit) ed.select([hit.id]); }
     ed.invalidate();
   };
-  // Escape during a gesture cancels it: the document returns to where the gesture started and the selection stays.
+  // Escape during a gesture cancels it: the document returns to where the gesture started, and a marquee gives back the
+  // selection from before it.
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape' || e.isComposing) return;
     if (sketch.active()) { sketch.cancel(); }
-    else if (drag?.kind === 'marquee') { ed.select(drag.base); drag = null; }
+    else if (drag?.kind === 'marquee') { ed.select(drag.prev); drag = null; }
     else if (drag) { if (drag.last && ed.doc === drag.last) ed.store.set(drag.before); drag = null; }
     else return;
     e.preventDefault(); e.stopPropagation(); ed.live = emptyLive(); ed.invalidate();

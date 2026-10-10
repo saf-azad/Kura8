@@ -52,6 +52,10 @@ Exploratory browser runs after the Phase 1 merge, one scripted person per job, a
 | 8 | Mae | Mouse for the toolbar, keyboard for the rest: Export then Enter, shapes panel then Delete |
 | 8 | Dan | Colour picker drags and undo |
 | 9 | Ray, Ruth | A code read of the app layer by a review agent, replayed as people: the twelve reports below |
+| 10 | Gwen | Escape halfway through a text-corner resize, a rotation, a marquee and an eraser stroke |
+| 10 | Ike | Shift-click to drop a locked object from a selection |
+| 10 | Jo | Typing in one tab while the other tab saves |
+| 10 | Lea | Double tap on an empty frame with a finger |
 
 ## Bugs fixed
 
@@ -59,7 +63,7 @@ Exploratory browser runs after the Phase 1 merge, one scripted person per job, a
 - **B2** (Pat) Shift on an already-selected object removed it from the selection on press, so a Shift-drag to constrain the axis did nothing unless Shift came after the drag started. Shift now removes a selected object on release, and only when the pointer did not move. `src/app/canvas/interaction.ts`.
 - **B3** (Tom) The stored height of text went stale after Larger, Smaller and Bold, and a text edit in one size left the other sizes' heights behind. `syncTextHeights` (core, tested) now runs after every text edit, in every size. `src/core/fit.ts`, `src/app/editor.ts`.
 - **B4** (Tom) A new text box left empty disappeared, but Undo then brought back a box reading "Text". A new box now records no history until it is finished with some text. `src/app/editor.ts`.
-- **B5** (Ula) Escape during a drag deselected the object while the drag carried on and was committed on release. Escape now cancels the gesture: move, resize and rotate restore the document, a marquee restores the selection, a pen stroke is dropped and the eraser gives back what it took. `src/app/canvas/interaction.ts`, `src/app/sketch/index.ts`.
+- **B5** (Ula) Escape during a drag deselected the object while the drag carried on and was committed on release. Escape now cancels the gesture: move, resize and rotate restore the document, a marquee restores the selection from before it, a pen stroke is dropped and the eraser gives back what it took. `src/app/canvas/interaction.ts`, `src/app/sketch/index.ts`.
 - **B6** (Ines) Dropping several images at once stacked them 20 units apart from one cell, so near an edge they ran off the canvas. Each image now takes the next nearest free cell; past the last cell they step down-right and stay on the canvas. `src/app/editor.ts`.
 - **B7** (Ivy) Closing a panel while focus was inside it (Escape in the icon search) left focus in the hidden field, so a quick next key was typed into it instead of running its shortcut. Closing a panel that holds focus now returns focus to the canvas. `src/app/editor.ts`.
 - **B8** (Nia) A re-ratio flag kept its dashed outline after the object was moved back onto the canvas. Flags are now drawn only while the object still sits off the canvas or overflows. `src/app/editor.ts`.

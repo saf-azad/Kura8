@@ -511,7 +511,11 @@ def ines_photos(app):
     r2 = app.frame(node(app, id=frame['id'])); note(abs(r2['w'] / r2['h'] - ar) < .01, f'image corner resize changed aspect {ar:.3f} -> {r2["w"] / r2["h"]:.3f}')
     # replace by dropping another image on it
     drop_many(app, [(c, 'image/png')], *app.node_centre(node(app, id=frame['id'])))
-    f3 = node(app, id=frame['id']); note(f3['asset'] != f2['asset'], 'dropping onto a filled image did not replace it')
+    for _ in range(10):   # reading the file can take a while on a busy machine
+        f3 = node(app, id=frame['id'])
+        if f3['asset'] != f2['asset']: break
+        p.wait_for_timeout(500)
+    note(f3['asset'] != f2['asset'], 'dropping onto a filled image did not replace it')
     note(len(app.doc()['nodes']) == n0 + 3, 'replacing added a node')
     # delete, wait for eviction, undo -> still draws
     top = [n for n in app.doc()['nodes'] if n['kind'] == 'image'][-1]; app.select(top); cx, cy = app.node_centre(top)
@@ -1414,7 +1418,7 @@ def ray_review(app):
     p.keyboard.press('Escape'); p.keyboard.press('Escape')
     # 3 a picture dropped while typing: the typing and the picture are separate undo steps
     head = find(app.doc(), slot='headline')[0]; app.select(head); p.keyboard.press('Enter'); p.wait_for_timeout(100); p.keyboard.type('New words')
-    drop_file(app, image_file(OUT / 'ray.png', 300, 200, (10, 200, 10)), 900, 1300); p.keyboard.press('Control+End'); p.keyboard.type(' more')
+    drop_file(app, image_file(OUT / 'ray.png', 300, 200, (10, 200, 10)), 950, 950); p.keyboard.press('Control+End'); p.keyboard.type(' more')
     p.keyboard.press('Control+Enter'); p.wait_for_timeout(150); p.keyboard.press('Escape')
     p.keyboard.press('Control+z'); p.wait_for_timeout(100); d = app.doc()
     note(node(app, id=head['id'])['text'] == 'New words', f'first undo: {node(app, id=head["id"])["text"]!r}')
@@ -1450,9 +1454,9 @@ def ruth_review(app):
     note(not str(fill.get('row', '')).startswith('c'), f'new rectangle filled from a removed custom row: {fill}')
     # 10 contrast "use" recolours only the text
     head = find(app.doc(), slot='headline')[0]; acc = find(app.doc(), slot='accent')[0]
-    app.select(head); p.keyboard.press('c'); p.wait_for_timeout(150); p.locator('.colour-panel .roles button', has_text='Ground').click(); p.wait_for_timeout(100)
-    p.keyboard.down('Shift'); app.click_unit(*app.node_centre(acc)); p.keyboard.up('Shift'); p.wait_for_timeout(150)
-    acc_fill = node(app, id=acc['id'])['fill']
+    app.select(acc); p.keyboard.down('Shift'); app.click_unit(*app.node_centre(head)); p.keyboard.up('Shift'); p.wait_for_timeout(150)
+    p.keyboard.press('c'); p.wait_for_timeout(150); p.locator('.colour-panel .roles button', has_text='Ground').click(); p.wait_for_timeout(150)
+    acc_fill = node(app, id=acc['id'])['fill']; note(acc_fill == {'role': 'ground'}, f'role did not fill both: {acc_fill}')
     use = p.locator('.colour-panel .contrast button', has_text='use')
     if use.count(): use.click(); p.wait_for_timeout(150)
     note(node(app, id=acc['id'])['fill'] == acc_fill, f'contrast fix recoloured the rectangle too: {node(app, id=acc["id"])["fill"]}')
@@ -1496,6 +1500,86 @@ def ruth_review(app):
     p.keyboard.press('Escape'); valid(app)
 
 
+# ------------------------------------------------------------------------------------------------ round 10 (regressions around the fixes)
+def gwen_escape(app):
+    """Gwen presses Escape halfway through every kind of gesture."""
+    p = app.page
+    app.start({'ratio': 'portrait', 'comp': 'split', 'guide': 'thirds', 'hue': 140, 'dark': False})
+    head = find(app.doc(), slot='headline')[0]; app.select(head); r = app.frame(head); f0 = node(app, id=head['id'])['frames']['main']
+
+    def half(a, b, then='Escape'):
+        p.mouse.move(*app.to_px(*a)); p.mouse.down()
+        for i in range(1, 7): p.mouse.move(*app.to_px(a[0] + (b[0] - a[0]) * i / 12, a[1] + (b[1] - a[1]) * i / 12))
+        p.keyboard.press(then); p.wait_for_timeout(50)
+        for i in range(7, 13): p.mouse.move(*app.to_px(a[0] + (b[0] - a[0]) * i / 12, a[1] + (b[1] - a[1]) * i / 12))
+        p.mouse.up(); p.wait_for_timeout(150)
+    half((r['x'] + r['w'], r['y'] + r['h']), (r['x'] + r['w'] + 80, r['y'] + r['h'] + 80))
+    note(node(app, id=head['id'])['frames']['main'] == f0, f'Escape mid text-corner resize: {node(app, id=head["id"])["frames"]["main"]}')
+    k = app.scale(); cx = r['x'] + r['w'] / 2
+    half((cx, r['y'] - 44 / k), (cx + 200, r['y'] + 100))
+    note(node(app, id=head['id'])['frames']['main'] == f0, 'Escape mid rotate')
+    note(not p.locator('.toolbar button[aria-label="Delete"]').is_disabled(), 'Escape mid-gesture also deselected')
+    p.keyboard.press('Escape'); acc = find(app.doc(), slot='accent')[0]; app.select(acc)
+    half((980, 1230), (500, 800))
+    p.wait_for_timeout(100); note(p.locator('.info').inner_text().startswith('Rectangle'), f'Escape mid marquee did not restore the selection: {p.locator(".info").inner_text()!r}')
+    # eraser
+    p.keyboard.press('Escape'); p.keyboard.press('p'); p.wait_for_timeout(100)
+    pts = [(100 + i * 10, 1100) for i in range(30)]
+    p.mouse.move(*app.to_px(*pts[0])); p.mouse.down()
+    for q in pts[1:]: p.mouse.move(*app.to_px(*q))
+    p.mouse.up(); p.wait_for_timeout(300); n = len(app.doc()['nodes'])
+    p.keyboard.press('e'); p.wait_for_timeout(100)
+    half((250, 1000), (250, 1200))
+    note(len(app.doc()['nodes']) == n, 'Escape mid eraser did not give the stroke back')
+    note(p.locator('.toolbar button[aria-label="Eraser"]').get_attribute('aria-pressed') == 'true', 'Escape mid eraser also left the tool')
+    p.keyboard.press('Escape'); valid(app)
+
+
+def ike_shift_locked(app):
+    """Ike shift-clicks a locked object to drop it from a selection."""
+    p = app.page
+    app.start({'ratio': 'square', 'comp': 'cover', 'guide': 'thirds', 'hue': 260, 'dark': False})
+    acc = find(app.doc(), slot='accent')[0]; head = find(app.doc(), slot='headline')[0]
+    app.select(acc); p.keyboard.press('Control+Shift+L'); p.keyboard.down('Shift'); app.click_unit(*app.node_centre(head)); p.keyboard.up('Shift'); p.wait_for_timeout(100)
+    note(p.locator('.info').inner_text().startswith('2 selected'), f'shift add: {p.locator(".info").inner_text()!r}')
+    p.keyboard.down('Shift'); app.click_unit(*app.node_centre(acc)); p.keyboard.up('Shift'); p.wait_for_timeout(120)
+    note(p.locator('.info').inner_text().startswith('Headline'), f'shift-click on a locked selected object did not drop it: {p.locator(".info").inner_text()!r}')
+
+
+def jo_tab_typing(app):
+    """Jo is typing in one tab when the other tab saves."""
+    p = app.page
+    app.start({'ratio': 'square', 'comp': 'cover', 'guide': 'thirds', 'hue': 10, 'dark': False})
+    b = app.ctx.new_page(); b.goto(BASE); b.wait_for_timeout(800)
+    p.bring_to_front(); head = find(app.doc(), slot='headline')[0]; app.select(head); p.keyboard.press('Enter'); p.wait_for_timeout(100); p.keyboard.type('half typed')
+    k = len(ba.errors)
+    b.bring_to_front(); b.keyboard.press('r'); b.wait_for_timeout(900)
+    p.bring_to_front(); p.wait_for_timeout(300)
+    note('another tab' in p.locator('.toast').inner_text(), f'no notice of the other tab: {p.locator(".toast").inner_text()!r}')
+    note(p.locator('textarea.text-editor').count() == 0, 'text editor left open over a replaced document')
+    p.keyboard.press('o'); p.wait_for_timeout(900)
+    d = app.doc(); note(any(n.get('shape') == 'rect' for n in d['nodes']) and any(n.get('shape') == 'circle' for n in d['nodes']), 'edits from both tabs not kept')
+    note(not ba.errors[k:], f'errors {ba.errors[k:]}'); b.close(); valid(app)
+
+
+def lea_touch_frame(app):
+    """Lea fills an empty frame with a double tap."""
+    old = app.ctx
+    ctx = old.browser.new_context(viewport={'width': 1280, 'height': 800}, has_touch=True, accept_downloads=True)
+    app.ctx = ctx; app.page = ctx.new_page(); p = app.page
+    try:
+        app.start({'ratio': 'square', 'comp': 'frame', 'guide': 'thirds', 'hue': 60, 'dark': False})
+        frame = find(app.doc(), slot='image')[0]; c = app.to_px(*app.node_centre(frame))
+        p.touchscreen.tap(*c); p.wait_for_timeout(80)
+        with p.expect_file_chooser(timeout=5000) as fc: p.touchscreen.tap(*c)
+        fc.value.set_files(str(image_file(OUT / 'lea.png', 400, 400, (200, 100, 20)))); p.wait_for_timeout(1500)
+        note(node(app, id=frame['id'])['asset'], 'double tap on an empty frame did not fill it')
+    except Exception as e:  # noqa: BLE001
+        note(False, f'double tap on an empty frame: {str(e)[:160]}')
+    finally:
+        ctx.close(); app.ctx = old; app.page = old.pages[0]
+
+
 PERSONAS = [maya_social, priya_print, layla_scripts, kai_keyboard, sam_sketch, cleo_colour, pat_power, ren_returning, sol_small, chaos,
             ines_photos, tom_worksheet, ivy_icons, max_sizes, quinn_quota, ula_interrupts, dee_dark,
             rio_rotation, vic_migrated, ari_arrows, gus_grid, hana_help, zed_stress, lou_layers, nia_reratio,
@@ -1503,7 +1587,7 @@ PERSONAS = [maya_social, priya_print, layla_scripts, kai_keyboard, sam_sketch, c
             kim_dial, fay_extremes, lin_locks, pia_exports, ola_undo_ui, uma_crop, xia_dial_keys,
             ken_retina, rae_linked_text, sid_async,
             noor_hidden, zara_paste_sizes, cara_dial_back, mae_mouse_export, dan_picker,
-            ray_review, ruth_review]
+            ray_review, ruth_review, gwen_escape, ike_shift_locked, jo_tab_typing, lea_touch_frame]
 
 
 def main():
