@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { absolutePaths, bbox, classify, dist, inkFrame, inPoly, isScribble, plen, rdp, resample, segP, smooth, touches, type InkContext, type InkTarget, type P, type Recognised } from '../src/core/ink';
+import { absolutePaths, addStroke, refitFrame, bbox, classify, dist, inkFrame, inPoly, isScribble, plen, rdp, resample, segP, smooth, touches, type InkContext, type InkTarget, type P, type Recognised } from '../src/core/ink';
 const ctx = (o: Partial<InkContext> = {}): InkContext => ({ scale: 1, tx: [], ty: [], inks: [], ...o });
 /** Deterministic hand wobble on a densely sampled polyline through `corners`. */
 const stroke = (corners: P[], a = 2): P[] => resample(corners, 400).map(([x, y], i): P => [x + a * Math.sin(i * .05), y + a * Math.cos(i * .07)]);
@@ -296,5 +296,18 @@ describe('classify: unrecognised', () => {
     expect(rec(resample([[100, 100], [150, 300], [200, 150], [250, 300], [300, 100]], 400))).toBeNull();
     expect(rec(resample([[100, 100], [300, 100], [300, 300], [150, 300], [150, 180]], 400))).toBeNull();
     expect(classify([[0, 0], [0, 0], [0, 0]], ctx({ scale: 20 }))).toBeNull();
+  });
+});
+describe('adding a stroke to a rotated ink node', () => {
+  it('keeps the drawn strokes and the new stroke where they appear, in the edited size and in another size', () => {
+    const f = { rect: { x: 100, y: 300, w: 200, h: 4 }, rot: 90 }, paths: P[][] = [[[0, .5], [1, .5]]];
+    const before = absolutePaths(paths, f.rect, f.rot), end = before[0][1], head: P[] = [[end[0] - 20, end[1] - 20], end, [end[0] + 20, end[1] - 20]];
+    const out = addStroke(paths, f, head, 4), frame = refitFrame(f, f.rect, out.rect), after = absolutePaths(out.paths, frame.rect, frame.rot);
+    expect(frame.rot).toBe(90);
+    after[0].forEach((q, i) => { expect(q[0]).toBeCloseTo(before[0][i][0], 2); expect(q[1]).toBeCloseTo(before[0][i][1], 2); });
+    after[1].forEach((q, i) => { expect(q[0]).toBeCloseTo(head[i][0], 2); expect(q[1]).toBeCloseTo(head[i][1], 2); });
+    const other = { rect: { x: 10, y: 20, w: 100, h: 2 }, rot: 0 }, moved = refitFrame(other, f.rect, out.rect);
+    expect(moved.rect.w).toBeCloseTo(out.rect.w / 2); expect(moved.rect.h).toBeCloseTo(out.rect.h / 2);
+    const same = refitFrame(other, f.rect, f.rect); expect(same.rect.x).toBeCloseTo(10); expect(same.rect.y).toBeCloseTo(20);
   });
 });

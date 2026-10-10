@@ -124,7 +124,7 @@ button.wordmark{transition:color var(--fast)}button.wordmark:hover{color:var(--s
 .layer .name{flex:1;min-width:0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .layer button{width:26px;height:26px;border-radius:var(--r-pill);display:grid;place-items:center}
 .layer button:hover{background:var(--slate-a35)}.layer button svg{width:14px;height:14px}
-.layer button.off{opacity:.3}
+.layer button.off{opacity:.3}.layer button:disabled{opacity:.23;cursor:default}.layer button:disabled:hover{background:none}
 .grid-panel{width:240px}
 .row{display:flex;align-items:center;justify-content:space-between;font-size:13px;gap:10px}
 .presets{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}

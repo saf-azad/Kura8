@@ -30,9 +30,9 @@ export function setLocked(doc: KuraDoc, ids: string[], locked: boolean): KuraDoc
   const pick = has(ids);
   return { ...doc, nodes: doc.nodes.map(n => { if (!pick(n)) return n; const next = { ...n }; if (locked) next.locked = true; else delete next.locked; return next; }) };
 }
-/** Hides or shows nodes in one size only. */
+/** Hides or shows nodes in one size only; `hidden` is frame geometry, so locked nodes refuse it. */
 export function setHidden(doc: KuraDoc, sizeId: string, ids: string[], hidden: boolean): KuraDoc {
-  const pick = has(ids);
+  const pick = unlocked(ids);
   return { ...doc, nodes: doc.nodes.map(n => { if (!pick(n)) return n; const f = { ...n.frames[sizeId] }; if (hidden) f.hidden = true; else delete f.hidden; return { ...n, frames: { ...n.frames, [sizeId]: f } }; }) };
 }
 export type Order = 'front' | 'back' | 'forward' | 'backward';

@@ -46,6 +46,12 @@ Exploratory browser runs after the Phase 1 merge, one scripted person per job, a
 | 6 | Ken | 2× display, large window: canvas resolution, handles, rotate knob, export size |
 | 6 | Rae | Long copy edited in a square, checked in a linked banner |
 | 6 | Sid | Clicking again before things finish: double-click Download, delete during background removal |
+| 7 | Noor | A block hidden in one size: selection, export note, edits elsewhere, select all and delete |
+| 7 | Zara | Copy in a banner size, paste in a portrait size |
+| 7 | Cara | Turning the dial and going Back to canvas; Go with nothing changed |
+| 8 | Mae | Mouse for the toolbar, keyboard for the rest: Export then Enter, shapes panel then Delete |
+| 8 | Dan | Colour picker drags and undo |
+| 9 | Ray, Ruth | A code read of the app layer by a review agent, replayed as people: the twelve reports below |
 
 ## Bugs fixed
 
@@ -65,6 +71,18 @@ Exploratory browser runs after the Phase 1 merge, one scripted person per job, a
 - **B14** (Bea) Removing the background of one copy of a photo switched every copy of it to the cut-out. Only the image it was asked for switches; the cut-out is stored once, so the copies can show it with their own After toggle. `src/app/editor.ts`.
 - **B15** (Sid) When background removal finished after its image had been deleted, it still recorded an empty undo step (the first Undo then did nothing) and said "Background removed"; a picture read into a frame deleted meanwhile did the same with "Filled". Both now check the image is still there and unlocked; a removed image keeps its stored cut-out for later. `src/app/editor.ts`.
 - **B16** (Sid) A double-click on Download saved two files. The second click of a double-click is ignored. `src/app/tools/panels/export.ts`.
+- **B17** (review) With the export sheet open at 300 dpi on A4, switching to a non-print size threw `square has no print size` on every redraw and Download failed. The sheet now resets to the new ratio's default whenever the active size changes shape under it. `src/app/tools/panels/export.ts`.
+- **B18** (review) Enter on a focused layers row or ratio segment also opened the selected text for editing. Shortcuts now skip keys a focused control already handled. `src/app/tools/shortcuts.ts`.
+- **B19** (review) A picture dropped (or a cut-out finishing) while text was being typed folded the typing into the same undo step, and a later Undo restored half-typed text. The typing so far is now its own step and the rest is measured from after the change. `src/app/editor.ts`.
+- **B20** (review) An arrowhead drawn on a rotated ink line turned the whole line a second time. The head now joins the line in the line's own unrotated space, and every size's frame keeps its rotation with the pivot shift corrected (`addStroke`, `refitFrame`, tested). `src/core/ink.ts`, `src/app/sketch/index.ts`.
+- **B21** (review) Pasting after the size you copied from changed shape (a new design reuses the size id `main`, or a ratio change) put the copy far off the canvas. The clip remembers its sizes and re-ratios frames whose size changed or did not exist. `src/app/editor.ts`.
+- **B22** (review) After undoing a custom hue, or after New, the swatch could still point at the removed custom row, so new shapes took a fallback colour that changed when a hue was added later. Undo, redo, New and other-tab updates now drop swatches that point at rows the document no longer has. `src/app/store.ts`.
+- **B23** (review) An arrowhead drawn on a locked line said "Arrow" but changed nothing and left an empty undo step; two diagonals over a locked ink rectangle stacked a frame on it. Locked strokes are no longer targets; the stroke is kept as its own ink. `src/app/sketch/index.ts`.
+- **B24** (review) "New design · Undo brings the last one back", but Mod+Z went to the headline's text field. Mod+Z in a text field with nothing typed yet now finishes editing and undoes the document. `src/app/editor.ts`.
+- **B25** (review) Cut on a locked object said "Cut" and removed nothing, and Paste then made an unlocked copy, so a lock could be bypassed. Copy and cut take unlocked objects only (locks refuse duplication). `src/app/editor.ts`.
+- **B26** (review) The contrast hint's "use" recoloured every selected object, not just the failing text. It now fills only that text. `src/app/tools/panels/colour.ts`.
+- **B27** (review) Hide and Show ignored the lock although `hidden` is frame geometry. `setHidden` refuses locked nodes (tested) and the layers row disables the eye with "unlock first". `src/core/ops.ts`, `src/app/tools/panels/layers.ts`.
+- **B28** (review) Redo of a hide left the hidden object selected, so Delete, arrows and Enter acted on something invisible. Commits, undo, redo and other-tab updates drop hidden objects from the selection. `src/app/store.ts`.
 - The sketch clean-up morph is skipped under reduced motion, like the lift and the Go tween.
 - The dial's any-colour picker now also releases its listeners on `pointercancel`.
 

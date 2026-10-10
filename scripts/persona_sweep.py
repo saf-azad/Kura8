@@ -1299,12 +1299,211 @@ def sid_async(app):
     note(not ba.errors[k:], f'errors {ba.errors[k:]}')
 
 
+# ------------------------------------------------------------------------------------------------ round 7
+def noor_hidden(app):
+    """Noor hides a block in one size and keeps editing elsewhere."""
+    p = app.page
+    app.start({'ratio': 'square', 'comp': 'cover', 'guide': 'thirds', 'hue': 75, 'dark': False})
+    p.locator('button[aria-label="Add a linked size"]').click(); p.wait_for_timeout(200); p.locator('.ratio-panel g[aria-label="Add Slide 16:9"]').click(); p.wait_for_timeout(300)
+    body = find(app.doc(), slot='body')[0]; slide = app.doc()['sizes'][1]['id']
+    p.locator('button[aria-label="Layers"]').click(); p.wait_for_timeout(200)
+    p.locator('.layer', has_text='Body text').locator('button[aria-label="Hide"]').click(); p.keyboard.press('Escape')
+    fr = body['frames'][slide]['rect']; app.click_unit(fr['x'] + 5, fr['y'] + 5); p.wait_for_timeout(120)
+    note(not p.locator('.info').inner_text().startswith('Body'), 'a hidden block could be selected on the canvas')
+    p.keyboard.press('Control+Shift+E'); p.wait_for_timeout(300)
+    note('1 hidden object not included' in p.locator('.sheet .notes').inner_text(), f'hidden note: {p.locator(".sheet .notes").inner_text()!r}')
+    app.close_panels()
+    p.locator('.corner .sizes button').nth(0).click(); p.wait_for_timeout(200)
+    app.select(find(app.doc(), slot='body')[0]); p.keyboard.press('Enter'); p.wait_for_timeout(100); p.keyboard.type('Visible here only'); p.keyboard.press('Control+Enter'); p.wait_for_timeout(100)
+    d = app.doc(); b = find(d, slot='body')[0]; note(b['text'] == 'Visible here only' and b['frames'][slide].get('hidden'), 'edit in the square changed hidden state in the slide')
+    p.locator('.corner .sizes button').nth(1).click(); p.wait_for_timeout(200)
+    p.keyboard.press('Control+a'); p.wait_for_timeout(100); n = len(d['nodes'])
+    note(p.locator('.info').inner_text().startswith(f'{n - 1} selected'), f'select all in the slide: {p.locator(".info").inner_text()!r}')
+    p.keyboard.press('Delete'); p.wait_for_timeout(100)
+    d = app.doc(); note([x.get('slot') for x in d['nodes']] == ['body'], f'delete all in the slide removed the hidden block too: {[x.get("slot") for x in d["nodes"]]}')
+    p.keyboard.press('Control+z'); valid(app)
+
+
+def zara_paste_sizes(app):
+    """Zara copies in one size and pastes in another."""
+    p = app.page
+    app.start({'ratio': 'portrait', 'comp': 'stack', 'guide': 'golden', 'hue': 330, 'dark': False})
+    p.locator('button[aria-label="Add a linked size"]').click(); p.wait_for_timeout(200); p.locator('.ratio-panel g[aria-label="Add Banner 3:1"]').click(); p.wait_for_timeout(300)
+    banner = app.doc()['sizes'][1]['id']
+    acc = find(app.doc(), slot='accent')[0]; fr = acc['frames'][banner]['rect']
+    app.click_unit(fr['x'] + fr['w'] / 2, fr['y'] + fr['h'] / 2); p.keyboard.press('Control+c')
+    p.locator('.corner .sizes button').nth(0).click(); p.wait_for_timeout(200); p.keyboard.press('Control+v'); p.wait_for_timeout(150)
+    d = app.doc(); copy = d['nodes'][-1]
+    note(copy.get('shape') == acc['shape'] and 'slot' not in copy, 'paste in another size')
+    for s in d['sizes']:
+        r = copy['frames'][s['id']]['rect']; H = 1250 if s['ratio'] == 'portrait' else 1000 / 3
+        note(r['x'] >= -1 and r['x'] + r['w'] <= 1001 and r['y'] >= -1 and r['y'] + r['h'] <= H + 1, f'pasted copy off canvas in {s["ratio"]}: {r}')
+    valid(app)
+
+
+def cara_dial_back(app):
+    """Cara turns the dial, changes her mind and goes back."""
+    p = app.page
+    app.start({'ratio': 'square', 'comp': 'cover', 'guide': 'thirds', 'hue': 30, 'dark': False})
+    before = app.doc()
+    p.locator('button.wordmark').click(); p.wait_for_timeout(300)
+    for _ in range(2): p.keyboard.press('ArrowRight')
+    p.keyboard.press('ArrowDown'); p.keyboard.press('ArrowRight')
+    p.locator('.dial .dial-actions button', has_text='Back to canvas').click(); p.wait_for_timeout(300)
+    note(app.doc() == before, 'Back to canvas changed the document')
+    note(app.box()['width'] / app.box()['height'] > .95 and app.box()['width'] / app.box()['height'] < 1.05, 'canvas shape changed after Back to canvas')
+    p.locator('button.wordmark').click(); p.wait_for_timeout(300)
+    note('Post 1:1' in p.locator('.card').nth(0).inner_text() and 'Cover' in p.locator('.card').nth(1).inner_text(), f'dial does not reopen on the canvas settings: {p.locator(".card").nth(0).inner_text()} / {p.locator(".card").nth(1).inner_text()}')
+    p.keyboard.press('Enter'); p.wait_for_timeout(500)
+    note(app.doc() == before, 'Go with unchanged settings changed the document')
+    p.keyboard.press('Control+z'); p.wait_for_timeout(150); note(app.doc() == before or len(app.doc()['nodes']) == len(before['nodes']), 'undo after a no-op Go')
+
+
+# ------------------------------------------------------------------------------------------------ round 8
+def mae_mouse_export(app):
+    """Mae uses the mouse for the toolbar and the keyboard for the rest."""
+    p = app.page
+    app.start({'ratio': 'landscape', 'comp': 'poster', 'guide': 'thirds', 'hue': 190, 'dark': False})
+    p.locator('.toolbar button[aria-label="Export"]').click(); p.wait_for_timeout(300)
+    with p.expect_download(timeout=30000) as dl: p.keyboard.press('Enter')
+    note(dl.value.suggested_filename == 'kura8-landscape.png', f'Enter after clicking Export: {dl.value.suggested_filename}')
+    p.keyboard.press('Escape'); p.wait_for_timeout(150); note(p.locator('.sheet:not([hidden])').count() == 0, 'Escape after a mouse-opened export')
+    p.keyboard.press('r'); p.wait_for_timeout(100); note(app.doc()['nodes'][-1].get('shape') == 'rect', 'shortcut after closing the export sheet')
+    p.locator('.toolbar button[aria-label="Shapes"]').click(); p.wait_for_timeout(200)
+    p.locator('.shapes-panel button[aria-label="Circle"]').first.click(); p.wait_for_timeout(150)
+    note(app.doc()['nodes'][-1].get('shape') == 'circle', 'circle from the shapes panel')
+    p.keyboard.press('Delete'); p.wait_for_timeout(100); note(app.doc()['nodes'][-1].get('shape') != 'circle', 'Delete after adding from the shapes panel')
+
+
+def dan_picker(app):
+    """Dan drags the colour picker to find a colour."""
+    p = app.page
+    app.start({'ratio': 'square', 'comp': 'band', 'guide': 'divisions', 'hue': 0, 'dark': False})
+    acc = find(app.doc(), slot='accent')[0]; app.select(acc); fill0 = acc['fill']
+    p.keyboard.press('c'); p.wait_for_timeout(200)
+    sv = p.locator('.colour-panel .sv').bounding_box()
+    p.mouse.move(sv['x'] + 10, sv['y'] + 10); p.mouse.down()
+    for i in range(1, 15): p.mouse.move(sv['x'] + 10 + i * (sv['width'] - 30) / 14, sv['y'] + 10 + i * (sv['height'] - 30) / 14)
+    p.mouse.up(); p.wait_for_timeout(150)
+    f = node(app, id=acc['id'])['fill']; note('hex' in f, f'SV drag did not fill the selection: {f}')
+    hb = p.locator('.colour-panel .hue-bar').bounding_box(); p.mouse.click(hb['x'] + hb['width'] * .6, hb['y'] + hb['height'] / 2); p.wait_for_timeout(150)
+    f2 = node(app, id=acc['id'])['fill']; note(f2 != f, 'hue bar click did not change the colour')
+    p.keyboard.press('Escape'); p.keyboard.press('Control+z'); p.wait_for_timeout(100); p.keyboard.press('Control+z'); p.wait_for_timeout(100)
+    note(node(app, id=acc['id'])['fill'] == fill0, f'two undos did not return to the first colour: {node(app, id=acc["id"])["fill"]}')
+
+
+# ------------------------------------------------------------------------------------------------ round 9 (code-review findings)
+def ray_review(app):
+    """Ray replays the code reviewer's twelve reports as a person would hit them."""
+    p = app.page
+    # 1 export sheet open while the size changes from A4 to a square
+    app.start({'ratio': 'a4', 'comp': 'stack', 'guide': 'golden', 'hue': 200, 'dark': False}); k = len(ba.errors)
+    p.locator('button[aria-label="Add a linked size"]').click(); p.wait_for_timeout(200); p.locator('.ratio-panel g[aria-label="Add Post 1:1"]').click(); p.wait_for_timeout(300)
+    p.locator('.corner .sizes button').nth(0).click(); p.wait_for_timeout(150); p.keyboard.press('Escape')
+    p.keyboard.press('Control+Shift+E'); p.wait_for_timeout(300)
+    p.locator('.corner .sizes button').nth(1).click(); p.wait_for_timeout(300)
+    note(not ba.errors[k:], f'switching size under the export sheet: {ba.errors[k:][:2]}')
+    note('1080 × 1080' in p.locator('.sheet').inner_text(), f'sheet after the switch: {p.locator(".sheet").inner_text()[:120]!r}')
+    with p.expect_download(timeout=30000) as dl: p.locator('.sheet .download').click()
+    note(dl.value.suggested_filename == 'kura8-square.png', f'download after the switch: {dl.value.suggested_filename}')
+    app.close_panels()
+    # 2 Enter on a layers row does not also open text
+    app.select(find(app.doc(), slot='headline')[0]); p.locator('button[aria-label="Layers"]').click(); p.wait_for_timeout(200)
+    p.locator('.layer', has_text='Headline').focus(); p.keyboard.press('Enter'); p.wait_for_timeout(150)
+    note(p.locator('textarea.text-editor').count() == 0, 'Enter on a layers row opened the text editor')
+    p.keyboard.press('Escape'); p.keyboard.press('Escape')
+    # 3 a picture dropped while typing: the typing and the picture are separate undo steps
+    head = find(app.doc(), slot='headline')[0]; app.select(head); p.keyboard.press('Enter'); p.wait_for_timeout(100); p.keyboard.type('New words')
+    drop_file(app, image_file(OUT / 'ray.png', 300, 200, (10, 200, 10)), 900, 1300); p.keyboard.press('Control+End'); p.keyboard.type(' more')
+    p.keyboard.press('Control+Enter'); p.wait_for_timeout(150); p.keyboard.press('Escape')
+    p.keyboard.press('Control+z'); p.wait_for_timeout(100); d = app.doc()
+    note(node(app, id=head['id'])['text'] == 'New words', f'first undo: {node(app, id=head["id"])["text"]!r}')
+    note(any(n['kind'] == 'image' and n['asset'] for n in d['nodes']), 'first undo also removed the dropped picture')
+    p.keyboard.press('Control+z'); p.keyboard.press('Control+z'); p.wait_for_timeout(100)
+    note(node(app, id=head['id'])['text'] == head['text'], f'three undos did not restore the headline: {node(app, id=head["id"])["text"]!r}')
+    # 9 cut of a locked object
+    p.keyboard.press('Escape'); acc = find(app.doc(), slot='accent')[0]; app.select(acc); p.keyboard.press('Control+Shift+L'); p.wait_for_timeout(100)
+    n0 = len(app.doc()['nodes']); p.keyboard.press('Control+x'); p.wait_for_timeout(100)
+    note(p.locator('.toast').inner_text() != 'Cut', 'Cut toast on a locked object'); p.keyboard.press('Control+v'); p.wait_for_timeout(100)
+    note(len(app.doc()['nodes']) == n0, 'a locked object was pasted as an unlocked copy')
+    # 11 hide on a locked row is refused
+    p.locator('button[aria-label="Layers"]').click(); p.wait_for_timeout(200)
+    note(p.locator('.layer', has_text='Rectangle').locator('button[aria-label="Hide"]').is_disabled(), 'Hide offered on a locked layer')
+    p.keyboard.press('Escape'); p.keyboard.press('Control+Shift+L')
+    # 12 redo of a hide drops the selection
+    p.locator('button[aria-label="Layers"]').click(); p.wait_for_timeout(200)
+    p.locator('.layer', has_text='Rectangle').locator('button[aria-label="Hide"]').click(); p.keyboard.press('Escape')
+    p.keyboard.press('Control+z'); p.wait_for_timeout(100); app.select(node(app, id=acc['id'])); p.keyboard.press('Control+Shift+z'); p.wait_for_timeout(150)
+    note(p.locator('.toolbar button[aria-label="Delete"]').is_disabled(), 'a hidden object stayed selected after redo')
+    valid(app)
+
+
+def ruth_review(app):
+    """Ruth replays the reviewer's colour, paste, ink and New reports."""
+    p = app.page
+    # 6 undo of a custom hue does not leave the swatch on a missing row
+    app.start({'ratio': 'square', 'comp': 'cover', 'guide': 'thirds', 'hue': 210, 'dark': False})
+    p.keyboard.press('c'); p.wait_for_timeout(200); f = p.locator('.colour-panel input.field'); f.click(); f.fill('#ff0000'); p.keyboard.press('Enter'); p.wait_for_timeout(100)
+    p.locator('.colour-panel button', has_text='Add as hue').click(); p.wait_for_timeout(150)
+    p.keyboard.press('Escape'); p.keyboard.press('Escape'); p.keyboard.press('Control+z'); p.wait_for_timeout(150)
+    p.keyboard.press('r'); p.wait_for_timeout(150); fill = app.doc()['nodes'][-1]['fill']
+    note(not str(fill.get('row', '')).startswith('c'), f'new rectangle filled from a removed custom row: {fill}')
+    # 10 contrast "use" recolours only the text
+    head = find(app.doc(), slot='headline')[0]; acc = find(app.doc(), slot='accent')[0]
+    app.select(head); p.keyboard.press('c'); p.wait_for_timeout(150); p.locator('.colour-panel .roles button', has_text='Ground').click(); p.wait_for_timeout(100)
+    p.keyboard.down('Shift'); app.click_unit(*app.node_centre(acc)); p.keyboard.up('Shift'); p.wait_for_timeout(150)
+    acc_fill = node(app, id=acc['id'])['fill']
+    use = p.locator('.colour-panel .contrast button', has_text='use')
+    if use.count(): use.click(); p.wait_for_timeout(150)
+    note(node(app, id=acc['id'])['fill'] == acc_fill, f'contrast fix recoloured the rectangle too: {node(app, id=acc["id"])["fill"]}')
+    note(node(app, id=head['id'])['fill'] != {'role': 'ground'}, 'contrast fix did not apply to the text')
+    p.keyboard.press('Escape'); p.keyboard.press('Escape')
+    # 5 paste after New with another ratio lands on the canvas
+    app.select(find(app.doc(), slot='body')[0]); p.keyboard.press('Control+c')
+    p.locator('button.wordmark').click(); p.wait_for_timeout(300)
+    for _ in range(5): p.keyboard.press('ArrowRight')   # square -> banner
+    note('Banner' in p.locator('.card').nth(0).inner_text(), f'dial ratio: {p.locator(".card").nth(0).inner_text()}')
+    p.locator('.dial .dial-actions button', has_text='New').click(); p.wait_for_timeout(500)
+    # 8 New then Mod+Z brings the old design back
+    p.keyboard.press('Control+z'); p.wait_for_timeout(300)
+    note(app.doc()['sizes'][0]['ratio'] == 'square', f'Mod+Z right after New did not bring the last design back: {app.doc()["sizes"][0]["ratio"]}')
+    p.keyboard.press('Control+Shift+z'); p.wait_for_timeout(200); p.keyboard.press('Escape')
+    p.keyboard.press('Control+v'); p.wait_for_timeout(150); r = app.frame(app.doc()['nodes'][-1])
+    note(r['y'] >= -1 and r['y'] + r['h'] <= 1000 / 3 + 1, f'pasted into a banner off the canvas: {r}')
+    # 4 arrowhead on a rotated line keeps the line; 7 on a locked line it is just a new stroke
+    p.keyboard.press('Escape'); p.keyboard.press('p'); p.wait_for_timeout(100)
+
+    def stroke(pts):
+        p.mouse.move(*app.to_px(*pts[0])); p.mouse.down()
+        for a, b in zip(pts, pts[1:]):
+            for t in range(1, 13): p.mouse.move(*app.to_px(a[0] + (b[0] - a[0]) * t / 12, a[1] + (b[1] - a[1]) * t / 12))
+        p.wait_for_timeout(700); p.mouse.up(); p.wait_for_timeout(500)
+    stroke([(400, 160), (600, 160)]); line = app.doc()['nodes'][-1]; note(line.get('form') == 'line', f'line: {line.get("form")}')
+    p.keyboard.press('Escape'); app.select(node(app, id=line['id'])); r = app.frame(node(app, id=line['id'])); k = app.scale(); cx = r['x'] + r['w'] / 2
+    app.drag_unit((cx, r['y'] - 44 / k), (cx + 300, r['y'] + r['h'] / 2 + 3), steps=14, shift=True)
+    f = node(app, id=line['id'])['frames']['main']; note(abs(f['rot'] - 90) < 1e-6, f'line rotation {f["rot"]}')
+    c = (f['rect']['x'] + f['rect']['w'] / 2, f['rect']['y'] + f['rect']['h'] / 2)
+    p.keyboard.press('Escape'); p.keyboard.press('p'); p.wait_for_timeout(100)
+    end = (c[0], c[1] + 100)     # the far end after a 90° turn
+    stroke([(end[0] - 25, end[1] - 25), end, (end[0] + 25, end[1] - 25)])
+    a = node(app, id=line['id']); fa = a['frames']['main']
+    note(a.get('form') == 'arrow', f'arrowhead not merged on the rotated line: {a.get("form")}')
+    b = fa['rect']; tall = b['h'] > b['w'] if abs(fa['rot']) < 1 else b['w'] > b['h']
+    note(tall, f'arrow on a rotated line turned sideways: {fa}')
+    p.keyboard.press('Escape'); app.select(node(app, id=line['id'])); p.keyboard.press('Control+Shift+L'); p.keyboard.press('Escape'); p.keyboard.press('p'); p.wait_for_timeout(100)
+    n0 = len(app.doc()['nodes']); stroke([(end[0] - 25, end[1] - 25), end, (end[0] + 25, end[1] - 25)])
+    note(len(app.doc()['nodes']) == n0 + 1, 'an arrowhead on a locked line was not kept as its own stroke')
+    p.keyboard.press('Escape'); valid(app)
+
+
 PERSONAS = [maya_social, priya_print, layla_scripts, kai_keyboard, sam_sketch, cleo_colour, pat_power, ren_returning, sol_small, chaos,
             ines_photos, tom_worksheet, ivy_icons, max_sizes, quinn_quota, ula_interrupts, dee_dark,
             rio_rotation, vic_migrated, ari_arrows, gus_grid, hana_help, zed_stress, lou_layers, nia_reratio,
             tess_two_tabs, theo_touch, eve_parity, mo_reduced_motion, bea_cutout,
             kim_dial, fay_extremes, lin_locks, pia_exports, ola_undo_ui, uma_crop, xia_dial_keys,
-            ken_retina, rae_linked_text, sid_async]
+            ken_retina, rae_linked_text, sid_async,
+            noor_hidden, zara_paste_sizes, cara_dial_back, mae_mouse_export, dan_picker,
+            ray_review, ruth_review]
 
 
 def main():

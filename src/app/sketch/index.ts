@@ -1,6 +1,6 @@
 import type { DocNode, InkForm, InkNode, KuraDoc } from '../../core/document';
 import type { Point } from '../../core/geometry';
-import { absolutePaths, classify, inkFrame, inPoly, isScribble, resample, smooth, touches, bbox, type P, type Recognised } from '../../core/ink';
+import { absolutePaths, addStroke, classify, inkFrame, inPoly, isScribble, refitFrame, resample, smooth, touches, bbox, type P, type Recognised } from '../../core/ink';
 import { addNodes, removeNodes, updateNodes } from '../../core/ops';
 import { LINE_HEIGHT } from '../../core/fit';
 import { newId } from '../store';
@@ -18,7 +18,8 @@ export function installSketch(ed: Editor): SketchTools {
   const pt = (p: Point): P => [p.x, p.y];
   const toPoints = (pts: P[]) => pts.map(([x, y]) => ({ x, y }));
   const show = (pts: P[] | undefined) => { ed.live = { ...emptyLive(), sketch: { live: pts && toPoints(pts) } }; ed.invalidate(); };
-  const inks = () => ed.visible().filter((n): n is InkNode => n.kind === 'ink').map(n => { const f = ed.frame(n); return { id: n.id, form: n.form, rect: f.rect, rot: f.rot, paths: absolutePaths(n.paths, f.rect, f.rot), ...(crossed.has(n.id) ? { cross: crossed.get(n.id) } : {}) }; });
+  // Locked strokes are not targets: an arrowhead or a diagonal drawn on them is just a new stroke.
+  const inks = () => ed.visible().filter((n): n is InkNode => n.kind === 'ink' && !n.locked).map(n => { const f = ed.frame(n); return { id: n.id, form: n.form, rect: f.rect, rot: f.rot, paths: absolutePaths(n.paths, f.rect, f.rot), ...(crossed.has(n.id) ? { cross: crossed.get(n.id) } : {}) }; });
   const context = () => {
     const c = ed.canvas(), boxes = ed.visible().map(n => ed.box(n)), lines = ed.anchors().flatMap(a => a.kind === 'line' ? [a] : []);
     return {
@@ -57,12 +58,12 @@ export function installSketch(ed: Editor): SketchTools {
     }
     if (r.type === 'head') {
       const line = doc.nodes.find(n => n.id === r.line);
-      if (line?.kind === 'ink') {
-        const f = ed.frame(line), merged = inkNode([...absolutePaths(line.paths, f.rect, f.rot), r.clean], line.stroke, 'arrow', line.id), a = f.rect, b = merged.frames[ed.sizeId].rect;
-        // The paths are shared by every size: move each other size's frame by the same relative change as this one.
-        const frames = Object.fromEntries(Object.entries(line.frames).map(([id, o]) => [id, id === ed.sizeId ? { ...o, rect: b } : { ...o, rect: {
-          x: o.rect.x + (b.x - a.x) * o.rect.w / a.w, y: o.rect.y + (b.y - a.y) * o.rect.h / a.h, w: b.w * o.rect.w / a.w, h: b.h * o.rect.h / a.h } }]));
-        ed.commit(updateNodes(doc, [line.id], n => ({ ...merged, fill: (n as InkNode).fill, frames })), 'Arrow'); return;
+      if (line?.kind === 'ink' && !line.locked) {
+        // The head joins the line in its own unrotated space; the paths are shared by every size, so each size's frame
+        // takes the same relative change and keeps its rotation.
+        const f = ed.frame(line), out = addStroke(line.paths, f, r.clean, line.stroke);
+        const frames = Object.fromEntries(Object.entries(line.frames).map(([id, o]) => [id, refitFrame(o, f.rect, out.rect)]));
+        ed.commit(updateNodes(doc, [line.id], n => ({ ...n, paths: out.paths, form: 'arrow', frames }) as InkNode), 'Arrow'); return;
       }
     }
     if (r.type === 'line' && r.rect) {

@@ -23,8 +23,9 @@ it('locks, unlocks and hides per size', () => {
   const d = base();
   const locked = setLocked(d, ['a'], true); expect(locked.nodes[0].locked).toBe(true);
   expect('locked' in setLocked(locked, ['a', 'b'], false).nodes[1]).toBe(false);
-  const hidden = setHidden(d, 'main', ['b'], true); expect(hidden.nodes[1].frames.main.hidden).toBe(true);
-  expect('hidden' in setHidden(hidden, 'main', ['b'], false).nodes[1].frames.main).toBe(false);
+  const hidden = setHidden(d, 'main', ['a', 'b'], true); expect(hidden.nodes[0].frames.main.hidden).toBe(true);
+  expect(hidden.nodes[1].frames.main.hidden).toBeUndefined();   // locked: hidden is frame geometry
+  expect('hidden' in setHidden(hidden, 'main', ['a'], false).nodes[0].frames.main).toBe(false);
   expect(validateDocument(hidden)).toBe(true);
 });
 it('reorders by the shared array order', () => {

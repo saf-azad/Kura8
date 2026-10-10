@@ -17,13 +17,13 @@ export function exportSheet(ed: Editor): HTMLElement {
   const title = h('span', {}, 'Export');
   const sheet = h('div', { className: 'sheet', hidden: true, role: 'dialog', 'aria-label': 'Export' }, h('div', { className: 'grabber' }),
     h('div', { className: 'body' }, box, h('div', { className: 'controls' }, h('header', {}, title, close), formatSeg, scaleSeg, sizeText, groundRow, notes, button)));
-  let format: Format = 'png', scale: ExportScale | null = null, transparent = false, working = false, wasOpen = false;
+  let format: Format = 'png', scale: ExportScale | null = null, transparent = false, working = false, wasOpen = false, shown: string | null = null;
   const choice = (): ExportChoice => ({ format, scale: scale!, ground: !(format === 'png' && transparent && ed.doc.ground === null) });
   noGround.addEventListener('click', () => { transparent = !transparent; ed.invalidate(); });
   button.addEventListener('click', e => { if (e.detail < 2) void go(); });   // a double-click downloads once
   sheet.addEventListener('keydown', e => { if (e.key === 'Enter' && !(e.target instanceof HTMLButtonElement && e.target !== button)) { e.preventDefault(); void go(); } });
   async function go(): Promise<void> {
-    if (working || !scale || ed.store.ui.panel !== 'export') return;
+    if (working || !scale || ed.store.ui.panel !== 'export' || ('dpi' in scale && !ratioById(ed.spec().ratio).mm)) return;
     working = true; button.classList.add('working'); label.textContent = 'Exporting';
     try {
       const c = choice(), blob = await render(ed.doc, ed.sizeId, c);
@@ -38,7 +38,9 @@ export function exportSheet(ed: Editor): HTMLElement {
     sheet.hidden = !open; sheet.inert = !open;
     if (!open) { wasOpen = false; return; }
     const ratio = ed.spec().ratio, r = ratioById(ratio);
-    if (!wasOpen) { wasOpen = true; scale = r.mm ? { dpi: 300 } : { scale: 1 }; setTimeout(() => button.focus(), 0); }
+    // Opening, or the active size changing shape under the open sheet (a size pill, Undo, another tab), starts from that
+    // ratio's default: 300 dpi only exists for print sizes.
+    if (!wasOpen || ratio !== shown) { if (!wasOpen) setTimeout(() => button.focus(), 0); wasOpen = true; shown = ratio; scale = r.mm ? { dpi: 300 } : { scale: 1 }; }
     const options: [ExportScale, string][] = [...(r.mm ? [[{ dpi: 300 }, '300 dpi'] as [ExportScale, string]] : []), [{ scale: 1 }, '1×'], [{ scale: 2 }, '2×'], [{ scale: 3 }, '3×']];
     if (!scale || !withinPixelLimit(exportSize(ratio, scale))) scale = options.find(([o]) => withinPixelLimit(exportSize(ratio, o)))![0];
     const vector = format === 'svg', s = summary(ed.doc, ed.sizeId), unfilled = ed.doc.ground === null;

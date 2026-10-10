@@ -7,7 +7,7 @@ import { resolve } from '../core/palette';
 import { defaultShapeSize, shapeLibrary, ICON_SHAPE } from '../core/shapes';
 import { BASELINE, FONT_METRICS, LINE_HEIGHT, textBox, typeScale, crossing, syncTextHeights, type TypeScale } from '../core/fit';
 import { addNodes, duplicateNodes, nodeById, nudge, pasteNodes, removeNodes, reorder, setFill, setGround, setHidden, setLocked, updateNodes, type Order } from '../core/ops';
-import { reRatio, flagsFor } from '../core/reratio';
+import { reRatio, reRatioFrames, flagsFor } from '../core/reratio';
 import { addSize, removeSize } from '../core/sizes';
 import { nearestCell, containIn, CENTRE } from '../core/images';
 import { direction, fontStack, physicalAlign } from '../core/script';
@@ -41,6 +41,7 @@ export class Editor {
   readonly tween = new Tween();
   /** Shown instead of the store document while a tween or a lift runs. */ display: KuraDoc | null = null;
   clip: DocNode[] = [];
+  private clipSizes: SizeSpec[] = [];
   private pasteCount = 0;
   private addCount = 0;
   private bitmaps = new Map<string, ImageBitmap | null>();
@@ -179,7 +180,14 @@ export class Editor {
     this.beforeAfter.querySelectorAll('button').forEach(btn => btn.setAttribute('aria-pressed', String((btn.dataset.cut === '1') === !!n.cutout)));
   }
   // editing actions
-  commit(doc: KuraDoc, message?: string, key?: string): void { this.store.commit(doc, { key }); if (message) toast(message); }
+  commit(doc: KuraDoc, message?: string, key?: string): void {
+    // Something lands while text is being typed (a dropped picture, a finished cut-out): the typing so far becomes its
+    // own undo step first, and the rest of the typing is measured from after this change.
+    const typing = this.textarea && this.textBefore && this.textBefore !== this.store.doc;
+    if (typing) this.store.commit(this.doc, { before: this.textBefore });
+    this.store.commit(doc, { key }); if (message) toast(message);
+    if (this.textarea) this.textBefore = this.doc;
+  }
   select(ids: string[]): void { this.store.setUI({ sel: ids }); }
   private nextOffset(): number { return (this.addCount++ % 6) * 20; }
   /** Frames for a new node in every size: the rect in the active size, its vertical position scaled in the others. */
@@ -252,12 +260,30 @@ export class Editor {
     if (!r.ids.length) return;
     this.commit(r.doc, 'Duplicated'); this.select(r.ids);
   }
-  copy(message: string | null = 'Copied'): void { const s = this.selected(); if (!s.length) return; this.clip = structuredClone(s); this.pasteCount = 0; if (message) toast(message); }
-  cut(): void { if (!this.selected().length) return; this.copy(null); this.remove(); toast('Cut'); }
+  /** Locked objects are not copied (locks refuse duplication), so neither copy nor cut carries them. */
+  copy(message: string | null = 'Copied'): boolean {
+    const s = this.selected().filter(n => !n.locked); if (!s.length) return false;
+    this.clip = structuredClone(s); this.clipSizes = structuredClone(this.doc.sizes); this.pasteCount = 0; if (message) toast(message); return true;
+  }
+  cut(): void { if (this.copy(null)) { this.remove(); toast('Cut'); } }
   paste(): void {
     if (!this.clip.length) { toast('Nothing to paste'); return; }
-    const r = pasteNodes(this.doc, this.clip, newId, ++this.pasteCount);
+    const r = pasteNodes(this.doc, this.clipFor(this.doc.sizes), newId, ++this.pasteCount);
     this.commit(r.doc, 'Pasted'); this.select(r.ids);
+  }
+  /** The clip with a frame for every target size: a size whose shape changed since the copy (or that the copy never
+   * had, like a new design's `main`) gets the frame re-ratioed from the size it was copied in. */
+  private clipFor(sizes: SizeSpec[]): DocNode[] {
+    const from = this.clipSizes, doc = { ...this.doc, nodes: this.clip };
+    if (!from.length) return this.clip;
+    let nodes = this.clip;
+    for (const s of sizes) {
+      const src = from.find(x => x.id === s.id);
+      if (src && src.ratio === s.ratio) continue;
+      const base = src ?? from[0], { frames } = reRatioFrames({ ...doc, sizes: from }, base, { ratio: s.ratio, guide: s.guide }, measure);
+      nodes = nodes.map(n => ({ ...n, frames: { ...n.frames, [s.id]: frames[n.id] } }));
+    }
+    return nodes;
   }
   selectAll(): void { this.select(this.visible().map(n => n.id)); }
   toggleLock(): void {
@@ -371,7 +397,11 @@ export class Editor {
     this.store.setUI({ editing: id, sel: [id], armed: null });
     this.positionTextarea(); area.focus(); area.select();
     area.addEventListener('input', () => { const cur = nodeById(this.doc, id); if (cur?.kind === 'text') { this.store.set(updateNodes(this.doc, [id], n => ({ ...n, text: area.value }))); this.positionTextarea(); } });
-    area.addEventListener('keydown', e => { if (e.key === 'Escape' || e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); e.stopPropagation(); this.finishText(); this.overlay.focus(); } });
+    area.addEventListener('keydown', e => {
+      if (e.key === 'Escape' || e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); e.stopPropagation(); this.finishText(); this.overlay.focus(); }
+      // Nothing typed yet, so the field has nothing to undo: Mod+Z undoes the document (New's "Undo brings the last one back").
+      else if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'z' && area.value === node.text) { e.preventDefault(); e.stopPropagation(); this.finishText(); this.overlay.focus(); this.undo(); }
+    });
     area.addEventListener('blur', () => this.finishText());
     this.textBefore = before;
   }

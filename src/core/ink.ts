@@ -1,4 +1,4 @@
-import type { Rect } from './geometry';
+import { center, rotatePoint, type Rect } from './geometry';
 import type { InkForm } from './document';
 /** Sketch recogniser: classifies one pen stroke as a line, arrow, closed shape, text-line wave or arrowhead, and cleans it towards that form. */
 export type P = [number, number];
@@ -183,6 +183,20 @@ export function inkFrame(paths: P[][], stroke: number): { rect: Rect; paths: P[]
 export function absolutePaths(paths: P[][], rect: Rect, rot: number): P[][] {
   const cx = rect.x + rect.w / 2, cy = rect.y + rect.h / 2, a = rot * Math.PI / 180, cs = Math.cos(a), sn = Math.sin(a);
   return paths.map(p => p.map(([u, v]): P => { const dx = rect.x + u * rect.w - cx, dy = rect.y + v * rect.h - cy; return [cx + dx * cs - dy * sn, cy + dx * sn + dy * cs]; }));
+}
+/** Adds a stroke drawn in absolute coordinates to an ink node shown in frame `f`, keeping its rotation: the stroke is
+ * turned into the node's unrotated space and the frame refitted. Returns the new normalised paths and the refitted
+ * rect before any pivot shift (use `refitFrame` to place it in each size). */
+export function addStroke(paths: P[][], f: { rect: Rect; rot: number }, stroke: P[], width: number): { paths: P[][]; rect: Rect } {
+  const c = center(f.rect), local = stroke.map(([x, y]): P => { const q = rotatePoint({ x, y }, c, -f.rot); return [q.x, q.y]; });
+  return inkFrame([...absolutePaths(paths, f.rect, 0), local], width);
+}
+/** A size's frame after its node's paths were refitted from rect `a` to rect `b` (in the edited size's unrotated space):
+ * the same relative change, then a shift so the strokes already there stay put although the rotation pivot moved. */
+export function refitFrame<F extends { rect: Rect; rot: number }>(o: F, a: Rect, b: Rect): F {
+  const kx = o.rect.w / a.w, ky = o.rect.h / a.h, r = { x: o.rect.x + (b.x - a.x) * kx, y: o.rect.y + (b.y - a.y) * ky, w: b.w * kx, h: b.h * ky };
+  const c0 = center(o.rect), c1 = center(r), d = { x: c0.x - c1.x, y: c0.y - c1.y }, q = rotatePoint({ x: d.x, y: d.y }, { x: 0, y: 0 }, o.rot);
+  return { ...o, rect: { ...r, x: r.x + d.x - q.x, y: r.y + d.y - q.y } };
 }
 /** Eraser hit test: does a circle of radius `r` at `p` touch any segment of the paths, widened by half the stroke? */
 export const touches = (paths: P[][], p: P, r: number, stroke: number): boolean => paths.some(pa => pa.some((q, i) => i > 0 && dist(segP(p, pa[i - 1], q), p) < r + stroke / 2));

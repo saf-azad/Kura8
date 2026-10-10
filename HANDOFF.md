@@ -61,6 +61,11 @@ Append-only. New entries supersede named old entries; do not edit history. Forma
 - **D-042** 2026-10-10 fable — Sketch: recognition runs only after holding still for 420 ms at the end of a stroke, as in the prototype; a wave becomes a body-size text node "Text"; an arrowhead drawn at a line's end merges into it as an arrow; the first diagonal across a rectangle stroke is remembered in memory only, and the second diagonal turns both into an empty image frame. Why: no new document fields for transient sketch state.
 - **D-043** 2026-10-10 fable — Retire the Phase 0 editor controls audit from the dev branch (it lives at `study-v1`) and rewrite `scripts/browser_audit.py` for Phase 1. Supersedes D-024's audit scope for the dev branch. Why: the old audits drive the study arms, which no longer exist here.
 - **D-044** 2026-10-10 safwat — "Execute plan and merge and deploy": build M1–M15 in one session, merge to `main` and deploy. Deployment is the existing Vercel Git integration, which builds `main` for production. Why: explicit session request.
+- **D-045** 2026-10-10 safwat — "Run these debugs and loop: imagine different people using this for different cases; whenever you find a bug, log it, patch it, keep going." Persona sweep after the Phase 1 merge; findings are logged in `docs/qa/2026-10-10-persona-sweep.md` and the harness is `scripts/persona_sweep.py`. Why: explicit session request.
+- **D-046** 2026-10-10 fable — Gestures: Escape during a move, resize or rotate restores the document; during a marquee it restores the selection; during a pen stroke it drops the stroke and the eraser gives back what it took. Shift on an already-selected object drops it from the selection on release, and only when the pointer did not move, so Shift-drag constrains the selection instead. Two finger or pen taps on one object within 400 ms count as a double-click. Why: persona sweep B2, B5, B13.
+- **D-047** 2026-10-10 fable — Text baseline: canvas and SVG set every line on the alphabetic baseline `BASELINE` em below the line's middle (the middle of Space Grotesk's em square, ascent 0.98, descent 0.29), carried in the text scene op as `baseline`; the HTML text editor is lifted by the CSS difference. Supersedes SVG `dominant-baseline="central"`. Why: the SVG sat 7 % of the size lower than the PNG and text jumped on edit (B10, B11).
+- **D-048** 2026-10-10 fable — Two tabs: a tab follows the other tab's save (the `storage` event): it takes that document, drops its undo history and any pending save, and says "Updated from another tab". Why: a stale tab silently saved over newer work (B12).
+- **D-049** 2026-10-10 fable — Small editing rules from the sweep: new text boxes record history only when finished with text; text heights are re-measured in every size after text edits; several dropped images take distinct nearest cells; background removal switches only the image it ran on (the cut-out stays stored per asset); async results whose image was deleted or locked meanwhile record nothing; closing a panel that holds focus, or a mouse click on a toolbar, corner or dial button, gives the keyboard back to the canvas or dial; faded controls keep their tooltips; re-ratio flags draw only while still true. Why: persona sweep B1, B3, B4, B6–B9, B14, B15.
 
 ## Next steps
 
@@ -89,6 +94,7 @@ Follow-ups, each session-sized:
 - [ ] Push the `study-v1` tag once Safwat agrees.
 - [ ] Test on Safari and Firefox (the audit covers Chromium only): IndexedDB in private mode, `OffscreenCanvas.convertToBlob`, canvas `direction`, `roundRect`.
 - [ ] A focus-point control for image crops (the document already stores `focus`).
+- [ ] Run `scripts/persona_sweep.py` next to the audit before each merge; add a persona for each new feature.
 
 ### Study (frozen at `study-v1`)
 
@@ -131,6 +137,9 @@ Follow-ups, each session-sized:
 - Cross-origin isolation headers would allow multithreaded WASM inference for background removal where WebGPU is unavailable.
 - A smaller CPU model for background removal needs static quantisation; revisit BiRefNet_lite when ORT's WebGPU EP splits wide Concat nodes.
 - Autosave failures now show a toast; quota behaviour with many large images is untested beyond the audit.
+- Background removal on the WASM path runs on the main thread, so for several seconds the scan line, input and autosave wait; running ORT in a worker (`env.wasm.proxy`) needs the runtime loader rework.
+- Handles more than 64 px outside the canvas are out of reach (the overlay margin); the object can still be dragged or nudged back.
+- Pasting plain text from the system clipboard does nothing; the prototype's paste is Kura8's own clipboard only.
 
 ## Browser audit
 

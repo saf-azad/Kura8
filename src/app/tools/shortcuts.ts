@@ -27,7 +27,8 @@ export function installShortcuts(ed: Editor): void {
   const mac = isMac(navigator.platform);
   document.addEventListener('keydown', e => {
     const ui = ed.store.ui;
-    if (ui.screen !== 'editor' || !ed.store.doc || e.isComposing || isEditingTarget(e.target)) return;
+    // A key a focused control already handled (a layers row, a ratio segment) is not also a shortcut.
+    if (ui.screen !== 'editor' || !ed.store.doc || e.isComposing || e.defaultPrevented || isEditingTarget(e.target)) return;
     if (ui.panel === 'export') { if (e.key === 'Escape') { e.preventDefault(); ed.openPanel(null); } return; }
     if (ui.panel === 'keys' && (e.key === 'Escape' || e.key === '?')) { e.preventDefault(); ed.openPanel(null); return; }
     if (primaryModifier(e, mac)) {

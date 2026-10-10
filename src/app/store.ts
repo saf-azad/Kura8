@@ -2,6 +2,7 @@ import { migrate, serialiseDocument, type ColourRef, type CompId, type InlineIma
 import type { GuideId } from '../core/guides/types';
 import { emptyHistory, record, redo, undo, type History } from '../core/history';
 import type { Flag } from '../core/reratio';
+import { rows } from '../core/palette';
 // One store holds the document and the editor's UI state. Documents are immutable, so a history step is a
 // reference. Commits record history and schedule the 500 ms autosave of the one current document.
 export type Tool = 'pen' | 'erase' | 'lasso';
@@ -52,8 +53,8 @@ export class Store {
     const before = o.before === undefined ? this.doc : o.before;
     if (before && before !== doc) this.history = record(this.history, before, { now: performance.now(), key: o.key });
     this.doc = doc;
-    const ids = new Set(doc.nodes.map(n => n.id)), sel = this.ui.sel.filter(id => ids.has(id));
-    this.ui = { ...this.ui, sel, flags: o.keepFlags ? this.ui.flags : this.ui.flags.filter(f => ids.has(f.id)), size: doc.sizes.some(s => s.id === this.ui.size) ? this.ui.size : doc.sizes[0].id };
+    const ids = new Set(doc.nodes.map(n => n.id));
+    this.ui = { ...this.ui, flags: o.keepFlags ? this.ui.flags : this.ui.flags.filter(f => ids.has(f.id)), ...this.tidy(doc) };
     this.scheduleSave(); this.emit({ doc: true, ui: true });
   }
   undo(): boolean { return this.step(undo); }
@@ -63,8 +64,7 @@ export class Store {
     const r = fn(this.history, this.doc);
     if (!r) return false;
     this.history = r.history; this.doc = r.value;
-    const ids = new Set(r.value.nodes.map(n => n.id));
-    this.ui = { ...this.ui, sel: this.ui.sel.filter(id => ids.has(id)), editing: null, flags: [], size: r.value.sizes.some(s => s.id === this.ui.size) ? this.ui.size : r.value.sizes[0].id };
+    this.ui = { ...this.ui, editing: null, flags: [], ...this.tidy(r.value) };
     this.scheduleSave(); this.emit({ doc: true, ui: true });
     return true;
   }
@@ -72,9 +72,16 @@ export class Store {
    * it goes, and a pending save of the replaced document is dropped rather than written over the newer one. */
   adopt(doc: KuraDoc): void {
     clearTimeout(this.saveTimer); this.doc = doc; this.history = emptyHistory();
-    const ids = new Set(doc.nodes.map(n => n.id));
-    this.ui = { ...this.ui, sel: this.ui.sel.filter(id => ids.has(id)), editing: null, flags: [], size: doc.sizes.some(s => s.id === this.ui.size) ? this.ui.size : doc.sizes[0].id };
+    this.ui = { ...this.ui, editing: null, flags: [], ...this.tidy(doc) };
     this.emit({ doc: true, ui: true });
+  }
+  /** UI state that must follow a new document: the active size, a selection without deleted or hidden objects, and
+   * swatches that do not point at a custom row the document no longer has. */
+  private tidy(doc: KuraDoc): Pick<UI, 'size' | 'sel' | 'swatch' | 'armed'> {
+    const size = doc.sizes.some(s => s.id === this.ui.size) ? this.ui.size : doc.sizes[0].id, all = rows(doc.palette);
+    const shown = new Set(doc.nodes.filter(n => n.frames[size] && !n.frames[size].hidden).map(n => n.id));
+    const known = (ref: ColourRef) => !('row' in ref) || ref.row in all;
+    return { size, sel: this.ui.sel.filter(id => shown.has(id)), swatch: known(this.ui.swatch) ? this.ui.swatch : { role: 'accent' }, armed: this.ui.armed && known(this.ui.armed) ? this.ui.armed : null };
   }
   /** The saved document's storage key, for listening to other tabs. */
   static readonly docKey = KEYS.doc;

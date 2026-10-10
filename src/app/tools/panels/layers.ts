@@ -6,7 +6,7 @@ export function layersPanel(ed: Editor): HTMLElement {
   const list = h('div', { style: 'display:flex;flex-direction:column;gap:2px' });
   const panel = h('div', { className: 'panel layers-panel', hidden: true, role: 'dialog', 'aria-label': 'Layers' }, h('h3', { style: 'padding:4px 8px 6px' }, 'Top of the stack first'), list);
   let built = '';
-  const mini = (label: string, icon: string, on: boolean, go: () => void) => { const b = h('button', { type: 'button', title: label, 'aria-label': label, className: on ? '' : 'off', html: icon }); b.addEventListener('click', e => { e.stopPropagation(); go(); }); return b; };
+  const mini = (label: string, icon: string, on: boolean, go: () => void, disabled = false) => { const b = h('button', { type: 'button', title: disabled ? `${label} (unlock first)` : label, 'aria-label': label, className: on ? '' : 'off', html: icon, disabled }); b.addEventListener('click', e => { e.stopPropagation(); go(); }); return b; };
   ed.chrome.push({ update() {
     const open = ed.store.ui.panel === 'layers';
     panel.hidden = !open; panel.inert = !open; panel.style.maxHeight = `${window.innerHeight - 160}px`;
@@ -21,7 +21,7 @@ export function layersPanel(ed: Editor): HTMLElement {
         h('span', { className: 'name', style: hidden ? 'opacity:.45' : '' }, layerName(n)),
         mini('Bring forward', ICON.up, i < doc.nodes.length - 1, () => ed.reorder('forward', [n.id])),
         mini('Send backward', ICON.down, i > 0, () => ed.reorder('backward', [n.id])),
-        mini(hidden ? 'Show' : 'Hide', ICON.eye, !hidden, () => ed.setHidden(n.id, !hidden)),
+        mini(hidden ? 'Show' : 'Hide', ICON.eye, !hidden, () => ed.setHidden(n.id, !hidden), !!n.locked),
         mini(n.locked ? 'Unlock' : 'Lock', ICON.padlock, !!n.locked, () => ed.setLock(n.id, !n.locked)));
       const pick = (shift: boolean) => ed.select(shift ? (sel.has(n.id) ? [...sel].filter(x => x !== n.id) : [...sel, n.id]) : [n.id]);
       row.addEventListener('click', e => pick(e.shiftKey));

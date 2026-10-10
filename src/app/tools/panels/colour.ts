@@ -2,6 +2,7 @@ import type { ColourRef, RowId, Step } from '../../../core/document';
 import { addCustom, contrast, hexToHsv, hsvToHex, hueSwatch, HUES, passingShade, rows, resolve } from '../../../core/palette';
 import type { Editor } from '../../editor';
 import { h, toast } from '../../ui';
+import { setFill } from '../../../core/ops';
 // Colour (M8): roles, the 7-step shade row, the 12 hues plus neutral and custom hues (5g), any colour by SV picker or
 // hex, the contrast check with the nearest passing shade (5h), and the light/dark ground with a hold preview (5i).
 // A swatch fills the selection; with nothing selected it arms paint (5e).
@@ -104,7 +105,7 @@ export function colourPanel(ed: Editor): HTMLElement {
       contrastBox.classList.toggle('hidden', ratio >= 4.5);
       if (ratio < 4.5) {
         const use = h('button', { type: 'button', title: 'Use the nearest passing shade' }, 'use');
-        use.addEventListener('click', () => { if (fix) { ed.applySwatch(fix.ref); toast(`Contrast ${fix.ratio.toFixed(1)} : 1`); } });
+        use.addEventListener('click', () => { if (fix && !text.locked) { ed.store.setUI({ swatch: fix.ref }); ed.store.commit(setFill(ed.doc, [text.id], fix.ref)); toast(`Contrast ${fix.ratio.toFixed(1)} : 1`); } });
         contrastBox.replaceChildren(h('span', { className: 'muted' }, 'Contrast'), h('span', {}, `${ratio.toFixed(1)} : 1  fails`), h('span'),
           ...(fix ? [h('span', { className: 'muted' }, 'Nearest pass'), h('span', {}, `${fix.ratio.toFixed(1)} : 1`), use] : [h('span', { className: 'muted' }, 'No shade on this row passes')]));
       }
