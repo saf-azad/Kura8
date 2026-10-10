@@ -20,7 +20,7 @@ Resolve scope, design and feature questions in this order:
 
 1. **Structure from geometry, content stays open.** Layouts (D-029) place slots on guide lines and cells; they never choose content, and every placed block stays fully editable. No template library, no stored designs, no generated content.
 2. **The guide system is the product.** Guides, layouts, type scale, snapping and re-ratio are anchor geometry. Engineering concentrates in `src/core/`.
-3. **No AI.** No machine learning, LLM, generation or suggestion anywhere, with one exception by Safwat's decision (D-019): the on-device background remover, which processes the pixels of one image and never touches position, size or content choice. Deterministic geometry (snapping, sketch clean-up, layout maths) is allowed. Handwriting recognition is not built (D-030, `docs/drafts/handwriting.md`).
+3. **No AI.** No machine learning, LLM, generation or suggestion anywhere, with one exception by Safwat's decision (D-019): the on-device background remover, which processes the pixels of one image and never touches position, size or content choice. Deterministic geometry (snapping, sketch clean-up, layout maths) and deterministic pixel maths on the person's own photo (adjustments, filters, duotone; D-045) are allowed. Handwriting recognition is not built (D-030, `docs/drafts/handwriting.md`).
 4. **Nothing leaves the machine.** No request leaves the deployment at run time. Fonts, icons, model weights and runtimes are served from the app's own origin. Every dependency, font, icon set and weight file carries a permissive licence (D-021).
 5. **The interface stays out of the way.** Paper visual language (see Interface). Feedback is cursor changes, snap lines, flashes and short toasts for confirmations and errors. The help bar is opt-in and off by default. No onboarding tour, no empty-state suggestions; the only first-open motion is the 5d lift.
 6. **Phase 1 only.** If it is absent from Phase 1 scope, do not build it. Record temptations under Deferred in `HANDOFF.md`.
@@ -35,13 +35,14 @@ Everything working in `Kura8 Prototype.dc.html` and the refinement cards 5a–5z
 - **Guides:** thirds, golden, quarters (id `divisions`), with type-scale factors 1.5, φ, √2.
 - **Colour:** ground/ink/accent roles from hue, 7-step shade rows, custom 14th hue (5g), contrast check with nearest passing shade (5h), dark mirror (5i), armed paint (5e), SV picker and hex.
 - **Objects:** text, library shapes (41), Phosphor icons (5s–5u), images with working copy and kept original (5n), empty image frames and drop-to-fill (5p), non-destructive background removal with Before/After (5o), ink from sketch tools.
+- **Canva parity (D-045, `docs/canva-parity.md`):** crop with focus and zoom, flip, photo adjustments (brightness, contrast, saturation, warmth, tint, blur, sharpen, vignette), ten one-tap filters, duotone in palette roles, shape frames for photos, fill page, multi-photo collage into cells; opacity, drop shadow and border on any object, shape gradients, eyedropper; six OFL fonts, italic, underline, uppercase, letter and line spacing; align, distribute, groups and copy style.
 - **Editing:** select, multi-select, marquee, select all; move, resize, rotate; snapping v2 with Alt bypass (5j, 5k, 5m); angle snapping; Shift constraints; nudge (5l); copy, cut, paste, duplicate; z-order; lock; hide; delete; undo/redo; text editing with autofit (5q) and scripts/RTL (5r).
-- **Panels:** toolbar, shapes and icons, colour, layers, grid, guides toggle, change ratio, shortcuts, export, opt-in help bar, toasts.
+- **Panels:** toolbar, shapes and icons, colour, layers, grid, guides toggle, change ratio, shortcuts, export, opt-in help bar, toasts; edit image, effects, font and position (D-045), crop bar.
 - **Sketch:** pen with hold-to-clean, scribble-to-delete, eraser, lasso.
 - **Export:** PNG, JPG, SVG, PDF; scale or 300 dpi (5x); hidden count (5y); No ground (5z); icon licences in SVG metadata (5u).
 - **Persistence:** autosave of the one current document to `localStorage`, image assets to IndexedDB.
 
-Out of scope: handwriting recognition, user zoom/pan, groups, free crop, per-size z-order, file open/save or a file manager, accounts, collaboration, telemetry, vector PDF, image adjustments beyond background removal, booleans, pen/path editing beyond ink strokes, mobile layout.
+Out of scope: handwriting recognition, user zoom/pan, per-size z-order, file open/save or a file manager, accounts, collaboration, telemetry, vector PDF, generative or learned photo edits (Magic Eraser, Expand, Edit, Enhance), template and stock libraries, pages, animation, curved text, booleans, pen/path editing beyond ink strokes, mobile layout.
 
 ## Stack
 
@@ -50,7 +51,7 @@ D-002 governs the stack. Supersede it explicitly before changing it.
 - Strict TypeScript, Vite, Vitest, npm. No UI framework: vanilla DOM/SVG chrome, HTML canvas 2D document.
 - `src/core/` has zero DOM access and zero runtime dependencies. Every function depends only on its inputs and is fully unit tested.
 - The app layer's only runtime dependency is `onnxruntime-web` (MIT), imported lazily by `src/app/tools/background.ts` alone (D-022). Model weights (ISNet, Apache-2.0; float16 derived in Node from the pinned checkpoint, D-023) and the ORT wasm are written to `public/` as 16 MB parts by `scripts/prepare-model.mjs`.
-- Space Grotesk (`@fontsource/space-grotesk`, OFL-1.1) is a devDependency bundled by Vite. Phosphor fill icons (`@phosphor-icons/core`, MIT) are a devDependency baked into gitignored `public/icons/` by `scripts/prepare-icons.mjs`. Both prepare scripts run before `npm run dev` and `npm run build`.
+- Space Grotesk (`@fontsource/space-grotesk`, OFL-1.1) is a devDependency bundled by Vite, and so are the five text faces of D-045 (`@fontsource/montserrat`, `playfair-display`, `bebas-neue`, `space-mono`, `caveat`, all OFL-1.1), fetched from the origin only when text uses them. Phosphor fill icons (`@phosphor-icons/core`, MIT) are a devDependency baked into gitignored `public/icons/` by `scripts/prepare-icons.mjs`. Both prepare scripts run before `npm run dev` and `npm run build`.
 - Renderer behind the `Renderer` interface for a later CanvasKit/Skia swap. No CanvasKit in Phase 1.
 
 ## Repository layout (target)
@@ -61,6 +62,7 @@ docs/
   plans/2026-10-10-phase1-dial.md
   design/2026-10-10-dial/      designer's sources, reference only
   drafts/handwriting.md
+  canva-parity.md               Canva task list and audit results (D-045)
 src/
   core/
     geometry.ts  document.ts  ratios.ts  palette.ts  snap.ts
@@ -68,12 +70,13 @@ src/
     compositions.ts  fit.ts  relayout.ts  reratio.ts  sizes.ts
     scene.ts  ops.ts  history.ts  ink.ts  images.ts  script.ts
     shapes.ts  icons.ts  dial.ts  export.ts
+    look.ts  arrange.ts  style.ts
   app/
-    store.ts  assets.ts  editor.ts  measure.ts  ui.ts  paper-icons.ts
+    store.ts  assets.ts  editor.ts  measure.ts  ui.ts  paper-icons.ts  fonts.ts  looks.ts
     dial/
     canvas/{renderer,overlay,interaction,resize,tween}.ts
     tools/{toolbar,background,shortcuts}.ts
-    tools/panels/{shapes,icons,colour,layers,grid,ratio,keys,export}.ts
+    tools/panels/{shapes,icons,colour,layers,grid,ratio,keys,export,image,effects,font,arrange}.ts
     sketch/
     export/
   main.ts
@@ -81,6 +84,7 @@ src/
 scripts/
   prepare-model.mjs  onnx-fp16.mjs  prepare-icons.mjs
   browser_audit.py   Phase 1 audit (M15); the Phase 0 audits live at study-v1
+  canva_audit.py     Canva parity audit (D-045), one step per task in docs/canva-parity.md
 public/                generated, gitignored: ort/ models/ icons/
 tests/                 mirrors core, plus useful app tests
 ```
@@ -97,7 +101,8 @@ Canvas width is always 1000 units; height is `1000 * ratio.h / ratio.w`. Pixels 
 export type Point = { x: number; y: number };
 export type Size = { w: number; h: number };
 export type Rect = { x: number; y: number; w: number; h: number };
-export type Measure = (text: string, size: number, weight: 400 | 700, width: number) => string[];
+export type TextStyle = { font?: string; italic?: boolean; spacing?: number };   // absent keys are the defaults
+export type Measure = (text: string, size: number, weight: 400 | 700, width: number, style?: TextStyle) => string[];
 ```
 
 Core never measures text itself. Functions that need line breaks take an injected `Measure`; the app passes a cached canvas measurer, tests pass a fixed-width fake.
@@ -118,10 +123,17 @@ export type ColourRef = { role: Role } | { row: RowId; step: Step } | { hex: str
 export type Palette = { hue: number | null; dark: boolean; custom: string[]; accent?: string };
 export type Frame = { rect: Rect; rot: number; fontSize?: number; hidden?: boolean };
 export type Slot = 'image' | 'accent' | 'headline' | 'body';
-type Base = { id: string; locked?: boolean; slot?: Slot; frames: Record<string, Frame> };
-export type TextNode = Base & { kind: 'text'; text: string; weight: 400 | 700; align: 'start' | 'center' | 'end'; fill: ColourRef; fit?: boolean };
-export type ShapeNode = Base & { kind: 'shape'; shape: string; fill: ColourRef; icon?: { set: string; name: string; d: string; licence: string } };
-export type ImageNode = Base & { kind: 'image'; asset: string | null; cutout?: boolean; focus?: Point };
+export type Shadow = { x: number; y: number; blur: number; fill: ColourRef; alpha: number };      // units; page-fixed offset
+export type Outline = { fill: ColourRef; width: number };                                           // inside border; around letters on text
+export type Gradient = { to: ColourRef; angle: number };                                            // from fill to `to`; 0° left to right
+export type AdjustKey = 'brightness' | 'contrast' | 'saturation' | 'warmth' | 'tint' | 'blur' | 'sharpen' | 'vignette';
+export type Adjust = Partial<Record<AdjustKey, number>>;                                           // −100…100; blur, sharpen, vignette 0…100
+export type FontId = 'space-grotesk' | 'montserrat' | 'playfair-display' | 'bebas-neue' | 'space-mono' | 'caveat';
+type Base = { id: string; locked?: boolean; slot?: Slot; group?: string; opacity?: number; shadow?: Shadow; flipX?: boolean; flipY?: boolean; frames: Record<string, Frame> };
+export type TextNode = Base & { kind: 'text'; text: string; weight: 400 | 700; align: 'start' | 'center' | 'end'; fill: ColourRef; fit?: boolean;
+  font?: FontId; italic?: boolean; underline?: boolean; upper?: boolean; spacing?: number; leading?: number; outline?: Outline };   // spacing −200…800 thousandths of an em; leading 0.5–3
+export type ShapeNode = Base & { kind: 'shape'; shape: string; fill: ColourRef; icon?: { set: string; name: string; d: string; licence: string }; outline?: Outline; gradient?: Gradient };
+export type ImageNode = Base & { kind: 'image'; asset: string | null; cutout?: boolean; focus?: Point; zoom?: number; adjust?: Adjust; duotone?: { dark: ColourRef; light: ColourRef }; mask?: string; outline?: Outline };
 export type InkNode = Base & { kind: 'ink'; paths: [number, number][][]; stroke: number; fill: ColourRef; form?: 'line' | 'arrow' | 'rect' | 'ellipse' | 'tri' };
 export type DocNode = TextNode | ShapeNode | ImageNode | InkNode;
 export type SizeSpec = { id: string; ratio: RatioId; guide: GuideId | null; comp: CompId | null };
@@ -131,10 +143,11 @@ export type KuraDoc = { version: 2; id: string; createdAt: string; palette: Pale
 - Content (text, fill, weight, align, shape, icon, asset, cutout, paths, stroke, lock) lives on the node. Geometry (rect, rotation, font size, hidden) lives in `frames[sizeId]`. Linked sizes (5w) follow from this: content edits show in every size, geometry stays local. Adding or deleting a node affects every size; `hidden` leaves a node out of one size. Array order is the one shared draw order.
 - Colours resolve through the palette. Dark mode maps row step `s` to `6 − s`; `{ hex }` never mirrors. A custom hue (5g) adds row `c{n}` at the seven lightness steps, with the step nearest the pasted hex replaced by it exactly.
 - `ground: null` means unfilled: the editor draws the palette ground and PNG export offers No ground (5z).
-- `asset: null` is an empty image frame. Assets are IndexedDB keys (SHA-256 of the bytes) holding original, working copy and optional cutout; `cutout` chooses which one shows (5o). The cover crop is derived from the frame and `focus` (default centre), never stored.
+- `asset: null` is an empty image frame. Assets are IndexedDB keys (SHA-256 of the bytes) holding original, working copy and optional cutout; `cutout` chooses which one shows (5o). The cover crop is derived from the frame, `focus` (default centre) and `zoom` (1–10, default 1), never stored; crop mode changes the frame, focus and zoom together so the picture stays put on the page (D-045). `mask` is a shape-library key the photo is clipped to; `adjust` and `duotone` are a look applied to the pixels at draw time (`src/core/look.ts`), never baked into the asset.
+- Effects (D-045) are content on the node, shared by every size: `opacity`, `shadow`, `flipX`/`flipY`, `outline`, `gradient`. A `group` id joins nodes that select, move and align as one; copies of a whole group get a new id. Every new field is optional, so version 2 documents from before D-045 stay valid.
 - Never stored: effective font size, overflow and off-canvas flags, crop rects, physical alignment, text direction, guide anchors.
 - Icons are shape nodes with `shape: 'icon'` and the path inline in `icon.d` (100 × 100 box); every other `shape` is a key of the 41-shape library in `shapes.ts`.
-- Text geometry: `frame.fontSize` is the set size; `textBox` derives lines, effective size and drawn height with line height 1.15. For `fit` text `rect.h` is the box the size steps down to fit; otherwise the drawn height is the measured height.
+- Text geometry: `frame.fontSize` is the set size; `textBox` derives lines, effective size and drawn height with line height `leading` (default 1.15), measuring the face, italic and letter spacing; `upper` uppercases at draw time and the stored text keeps its case. For `fit` text `rect.h` is the box the size steps down to fit; otherwise the drawn height is the measured height.
 - `createdAt` is ISO. Text frame width is wrap width; height is derived from `Measure`. Absent `locked`/`hidden` means false. Locks prevent geometry/property edits, deletion and duplication; locked nodes stay selectable.
 - `migrate(x)` turns a version-1 document into version 2 with one size, `comp: null`, a neutral palette and `ground: null`; hex colours become `{ hex }`, `left`/`right` become `start`/`end`, shapes are renamed (rectangle→rect, ellipse→circle, triangle→tri, star→star5, arrow→arrowR) and each image `src` becomes asset `v1-<nodeId>` returned for the app to store.
 
@@ -203,7 +216,7 @@ Paper visual language, values copied from `docs/design/2026-10-10-dial/_ds/…/t
 
 ## Keyboard controls
 
-Mod is Command on Mac and Ctrl elsewhere. Keep D-026 bindings: Mod+D duplicate, Mod+B bold, Mod+Shift+L lock, Mod+Shift+E export, Mod+Enter finish text. Add Mod+C/X/V clipboard, Mod+A select all, Mod+Z undo, Mod+Shift+Z and Mod+Y redo, Mod+] / Mod+[ forward/backward, Mod+Shift+] / Mod+Shift+[ front/back. Tools: T text, R rectangle, O ellipse, S shapes, I image, P pen, E eraser, L lasso, C colour, G guides, ? shortcuts. Arrows move 1 unit; Shift+Arrow moves one grid cell when the grid is on, otherwise 10 units (5l); keyboard moves never snap. Delete/Backspace removes unlocked selection; Enter edits text; Escape disarms paint, then closes the panel, then leaves the tool, then deselects. Hold Alt while dragging to bypass snapping (5j); Shift constrains drag axis, corner aspect and rotation steps. Shortcuts never intercept typing controls, composition or native modifier combinations. On the dial: arrows turn/focus rings, Enter starts.
+Mod is Command on Mac and Ctrl elsewhere. Keep D-026 bindings: Mod+D duplicate, Mod+B bold, Mod+Shift+L lock, Mod+Shift+E export, Mod+Enter finish text. Add Mod+C/X/V clipboard, Mod+A select all, Mod+Z undo, Mod+Shift+Z and Mod+Y redo, Mod+] / Mod+[ forward/backward, Mod+Shift+] / Mod+Shift+[ front/back. Tools: T text, R rectangle, O ellipse, S shapes, I image, P pen, E eraser, L lasso, C colour, G guides, ? shortcuts. D-045 adds Mod+G group, Mod+Shift+G ungroup, Mod+I italic, Mod+U underline, Mod+Alt+C and Mod+Alt+V copy and paste style (by physical key), and double-click a photo to crop it (Enter or Escape finishes; an empty frame still opens the file picker). Arrows move 1 unit; Shift+Arrow moves one grid cell when the grid is on, otherwise 10 units (5l); keyboard moves never snap. Delete/Backspace removes unlocked selection; Enter edits text; Escape finishes a crop or cancels the eyedropper, then disarms paint, then closes the panel, then leaves the tool, then deselects. Hold Alt while dragging to bypass snapping (5j); Shift constrains drag axis, corner aspect and rotation steps. Shortcuts never intercept typing controls, composition or native modifier combinations. On the dial: arrows turn/focus rings, Enter starts.
 
 ## Study (frozen)
 
@@ -214,7 +227,7 @@ Tag `study-v1` (4061227) is the Phase 0 study build: wheel → guide entry, `?mo
 1. `npm test` passes with core at 100 % line coverage; every snapping rule has a named test.
 2. `npm run build` yields a static bundle running from `vite preview` without app console errors and without off-origin requests.
 3. Dial → editor works for all 6 ratios × 6 layouts × 3 guides, with hub previews, 5b reopen and the 5f round trip.
-4. Every refinement 5a–5z and every prototype tool (except handwriting) is checked by a named step of the Phase 1 browser audit.
+4. Every refinement 5a–5z and every prototype tool (except handwriting) is checked by a named step of the Phase 1 browser audit, and every task in `docs/canva-parity.md` by a named step of `scripts/canva_audit.py`.
 5. Exports open at exact sizes (A4 2480 × 3508), PNG No ground has real transparency, SVG parses with licence metadata, PDF header and page size are valid.
 6. Reload restores the document and its images; undo/redo, re-ratio flags and linked-size edits behave as specified.
 7. HANDOFF status says "Phase 1 build complete" and lists only follow-up decisions.
