@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { typeScale, fitText, textBox, crossing, textHeight, LINE_HEIGHT } from '../src/core/fit';
+import { typeScale, fitText, textBox, crossing, textHeight, syncTextHeights, LINE_HEIGHT } from '../src/core/fit';
 import { PHI } from '../src/core/guides/golden';
-import { fakeMeasure, frame } from './helpers';
+import { fakeMeasure, frame, doc, rectNode, textNode } from './helpers';
 import type { TextNode } from '../src/core/document';
 const text = (t: string, fit?: boolean): TextNode => ({ id: 't', kind: 'text', text: t, weight: 700, align: 'start', fill: { role: 'ink' }, frames: {}, ...(fit ? { fit } : {}) });
 describe('type scale', () => {
@@ -40,5 +40,19 @@ describe('autofit (5q)', () => {
     const lines = [{ id: 'line-y-2', at: 666 }, { id: 'line-y-1', at: 333 }, { id: 'edge-bottom', at: 1000 }];
     expect(crossing({ x: 0, y: 100, w: 10, h: 200 }, 600, lines)).toEqual({ id: 'line-y-1', at: 333 });
     expect(crossing({ x: 0, y: 100, w: 10, h: 200 }, 200, lines)).toBeNull();
+  });
+});
+describe('stored text heights', () => {
+  it('follow the measured lines of non-autofit text in every size, leaving autofit text, other nodes and missing frames alone', () => {
+    const story = { id: 's2', ratio: 'story' as const, guide: 'golden' as const, comp: null };
+    const t = textNode('t', frame(0, 0, 120, 5, { fontSize: 20 }), 'one two three four'), withStory = { ...t, frames: { ...t.frames, s2: frame(0, 0, 1000, 5, { fontSize: 20 }) } };
+    const fit = textNode('f', frame(0, 0, 100, 40, { fontSize: 20 }), 'a b c d e f g', { fit: true } as never), bare = textNode('b', frame(0, 0, 100, 5, { fontSize: 20 }), 'x');
+    const d = { ...doc([withStory, fit, bare, rectNode('r', frame(0, 0, 10, 10))]), sizes: [doc().sizes[0], story] };
+    const out = syncTextHeights(d, ['t', 'f', 'b', 'r'], fakeMeasure);
+    expect(out.nodes[0].frames.main.rect.h).toBeCloseTo(textHeight(fakeMeasure('one two three four', 20, 400, 120).length, 20));
+    expect(out.nodes[0].frames.s2.rect.h).toBeCloseTo(textHeight(1, 20));
+    expect(out.nodes[1]).toBe(fit); expect(out.nodes[3]).toBe(d.nodes[3]);
+    expect(out.nodes[2].frames.s2).toBeUndefined(); expect(out.nodes[2].frames.main.rect.h).toBeCloseTo(textHeight(1, 20));
+    expect(syncTextHeights(d, [], fakeMeasure).nodes[0]).toBe(withStory);
   });
 });

@@ -1,7 +1,8 @@
 import type { Measure, Rect, Size } from './geometry';
-import type { Frame, TextNode } from './document';
+import type { Frame, KuraDoc, TextNode } from './document';
 import type { GuideId } from './guides/types';
 import { scaleFactorOf } from './guides';
+import { canvasSize } from './ratios';
 export const LINE_HEIGHT = 1.15;
 export const textHeight = (lines: number, size: number): number => Math.max(1, lines) * size * LINE_HEIGHT;
 /** Guide-derived type scale: body base (28 units, less on short canvases) times the guide factor 1.5, φ or √2; no guide uses 1.25. */
@@ -31,6 +32,16 @@ export function textBox(node: TextNode, frame: Frame, measure: Measure, scale: T
   }
   const lines = measure(node.text, set, node.weight, rect.w);
   return { size: set, lines, overflow: false, rect: { ...rect, h: textHeight(lines.length, set) } };
+}
+/** After a content, weight or size edit, the stored height of non-autofit text follows its measured lines in every size. */
+export function syncTextHeights(doc: KuraDoc, ids: string[], measure: Measure): KuraDoc {
+  const pick = new Set(ids);
+  return { ...doc, nodes: doc.nodes.map(n => {
+    if (!pick.has(n.id) || n.kind !== 'text' || n.fit) return n;
+    const frames = { ...n.frames };
+    for (const s of doc.sizes) { const f = frames[s.id]; if (f) frames[s.id] = { ...f, rect: textBox(n, f, measure, typeScale(s.guide, canvasSize(s.ratio))).rect }; }
+    return { ...n, frames };
+  }) };
 }
 /** First horizontal guide line (or the bottom edge) a grown text block crosses below its box, for the overlay mark (5q). */
 export function crossing(box: Rect, height: number, lines: { id: string; at: number }[]): { id: string; at: number } | null {
