@@ -4,7 +4,7 @@ Rolling state for the Ratio Phase 0 build. Read in full at session start; rewrit
 
 ## Status
 
-The merged editor includes the six-shape library, colour picker plus validated hex entry, object locks, platform-aware keyboard controls and Shift drag/resize constraints. All 50 unit tests pass with 100% core line coverage, and the production build succeeds. Chromium checks cover all 15 ratio/guide paths, both original study-condition interaction flows, all export sizes and JSON reload without console errors. The new controls audit verifies all six coloured shape PNG/JSON exports, Mac and PC shortcut dispatch/labels, locks and reload recovery, text input guards, and Shift constraints in both conditions. Screenshots are under private/editor-controls-audit/. The existing private demo at https://ratio-phase-zero.alazadsafwat.chatgpt.site has not been redeployed with these changes. Remote main's background remover and transparency fix are now integrated; locked images cannot start removal and any in-flight result is discarded if the image becomes locked. Local decision IDs were reconciled with the remote log (D-027). Study protocol, content approval and pilot remain Safwat's next decisions.
+The merged editor includes the six-shape library, colour picker plus validated hex entry, object locks, platform-aware keyboard controls and Shift drag/resize constraints. All 50 unit tests pass with 100% core line coverage, and the production build succeeds. Chromium checks cover all 15 ratio/guide paths, both original study-condition interaction flows, all export sizes and JSON reload without console errors. The new controls audit verifies all six coloured shape PNG/JSON exports, Mac and PC shortcut dispatch/labels, locks and reload recovery, text input guards, and Shift constraints in both conditions. Screenshots are under private/editor-controls-audit/. The existing private demo at https://ratio-phase-zero.alazadsafwat.chatgpt.site has not been redeployed with these changes. Remote main's background remover and transparency fix are now integrated; locked images cannot start removal and any in-flight result is discarded if the image becomes locked. Local decision IDs were reconciled with the remote log (D-027). Study protocol, content approval and pilot remain Safwat's next decisions. On 2026-10-10 Safwat supplied the designer's Kura8 dial handoff (prototype, editor turns and refinements 5a–5z) and chose to freeze the study build and start Phase 1 (D-028–D-031). A draft implementation plan is in docs/plans/2026-10-10-phase1-dial.md. Nothing from it is built yet; the code is unchanged from 4061227 and awaits plan approval. On this session's Node 22.22 container, 48 of 50 tests pass; the two tests in tests/onnx-fp16.test.ts fail with `Float16Array is not defined` because that global needs Node 24 or newer, so the result depends on the environment and was not caused by this session's documentation-only changes.
 
 ## Decision log
 
@@ -42,6 +42,11 @@ Append-only. New entries supersede named old entries; do not edit history. Forma
 
 - **D-027** 2026-09-16 astra — Integrate remote main before the authorised push. Preserve remote D-019–D-023; renumber the colliding local audit/shapes entries to D-024–D-026 and update their references. Preserve both feature sets; locked images disable removal and discard any in-flight cut-out result. Why: merge the two independently completed branches without dropping history or bypassing object locks.
 
+- **D-028** 2026-10-10 safwat — Freeze the Phase 0 study build at tag `study-v1` (4061227) for the pilot and start Phase 1 on the dev branch. The guide/blank arms and `?mode=`/`?s=` leave the new code and live on at the tag. Why: explicit session answer when the designer's Kura8 dial handoff arrived; the new scope cannot share a build with an unrun study.
+- **D-029** 2026-10-10 safwat — Include the dial's Layout ring (cover, split, stack, poster, frame, band), which opens the canvas pre-arranged on the chosen guide. Supersedes decision rule 1 ("no preset arrangement of content"). Why: explicit session answer.
+- **D-030** 2026-10-10 safwat — Drop the prototype's handwriting tool for now and keep its spec as a draft document in the repo. Rule 4 (no LLM) stands. Why: explicit session answer; the prototype's recogniser calls an LLM that only exists inside Claude artifacts.
+- **D-031** 2026-10-10 safwat — Phase 1 scope is everything working in the Kura8 Prototype plus the refinement cards 5a–5z. Why: explicit session answer. The Paper visual language (Space Grotesk, #ECF0F3 ground, 2px strokes) is assumed from the prototype and is part of the plan awaiting approval.
+
 ## Next steps
 
 - [x] Scaffold Vite vanilla-ts, Vitest, strict tsconfig, scripts and folder layout.
@@ -59,8 +64,16 @@ Append-only. New entries supersede named old entries; do not edit history. Forma
 - [x] Shape library, exact colour input, object locks, platform-aware shortcuts and Shift constraints (D-025/D-026).
 - [ ] Safwat: approve the fixed content pack and define participants per condition, blinded raters, rating scale and success margin.
 - [ ] Run the pilot with those criteria; enable multiple downloads in each study browser and collect both PNG and JSON per participant.
+- [ ] Safwat: approve docs/plans/2026-10-10-phase1-dial.md (Phase 1 dial editor, milestones M0–M15) and its three marked defaults.
+- [ ] M0 freeze and re-charter: tag study-v1, copy the design files into docs/design/, write the handwriting draft, remove study code, rewrite AGENTS.md for Phase 1. Then M1–M15 in plan order.
 
 ## Open questions for Safwat
+
+- Approve the Phase 1 plan (docs/plans/2026-10-10-phase1-dial.md), including the proposed resolutions of conflicts between the prototype and the refinement cards.
+- Starting copy for layouts: default is "Headline" and "Body text" placeholders with empty image frames. Keep, or use real sample copy?
+- Destination labels for the six ratios (5a only names four): default is Post 1:1, Portrait 4:5, Slide 16:9, Story 9:16, Print A4, Banner 3:1.
+- 5x says social ratios export 1080 wide; default keeps 16:9 at 1920 and banner at 1500, with A4 at 300 dpi (2480 × 3508).
+- Pushing the `study-v1` tag to GitHub needs your OK.
 
 - Study protocol: participants per condition, raters, scale and margin for the thesis holding.
 - Whether study needs undo. It remains out of scope. Run a pilot of two or three people without it and decide from behaviour.
