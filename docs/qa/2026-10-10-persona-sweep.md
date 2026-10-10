@@ -23,6 +23,14 @@ Exploratory browser runs after the Phase 1 merge, one scripted person per job, a
 | 2 | Quinn | Full storage: save warning, recovery after space frees, reload |
 | 2 | Ula | Changing their mind mid-gesture: undo, Delete and Escape during drags, undo/redo storms |
 | 2 | Dee | Dark ground: hold-to-preview light, tap, undo, JPG ground |
+| 3 | Rio | Rotation: rotated text editing, Shift rotate, rotated side handle, PNG and SVG |
+| 3 | Vic | A Phase 0 document: migration, editing, dial, export |
+| 3 | Ari | Ink annotations: held line, arrowhead merge, recolour, SVG, a linked square size |
+| 3 | Gus | Grid: snapping to 20, setting kept over reload, slider keys |
+| 3 | Hana | Opt-in help bar: hover help, sketch hint, closing |
+| 3 | Zed | 280+ objects: drag, select all, nudge, undo, saved size |
+| 3 | Lou | Layers by keyboard: Enter selects, lock, Delete refused, reorder |
+| 3 | Nia | Re-ratio flags, then fixing the flagged object |
 
 ## Bugs fixed
 
@@ -33,6 +41,8 @@ Exploratory browser runs after the Phase 1 merge, one scripted person per job, a
 - **B5** (Ula) Escape during a drag deselected the object while the drag carried on and was committed on release. Escape now cancels the gesture: move, resize and rotate restore the document, a marquee restores the selection, a pen stroke is dropped and the eraser gives back what it took. `src/app/canvas/interaction.ts`, `src/app/sketch/index.ts`.
 - **B6** (Ines) Dropping several images at once stacked them 20 units apart from one cell, so near an edge they ran off the canvas. Each image now takes the next nearest free cell; past the last cell they step down-right and stay on the canvas. `src/app/editor.ts`.
 - **B7** (Ivy) Closing a panel while focus was inside it (Escape in the icon search) left focus in the hidden field, so a quick next key was typed into it instead of running its shortcut. Closing a panel that holds focus now returns focus to the canvas. `src/app/editor.ts`.
+- **B8** (Nia) A re-ratio flag kept its dashed outline after the object was moved back onto the canvas. Flags are now drawn only while the object still sits off the canvas or overflows. `src/app/editor.ts`.
+- **B9** (Hana) Faded controls ignored the pointer, so neither their tooltip nor the help bar could explain them, and the export sheet's "Larger than browsers can export" note on disabled sizes never showed. Faded controls are hoverable again; disabled buttons still ignore clicks and a faded segment group stays inert. `src/style.css`.
 - The dial's any-colour picker now also releases its listeners on `pointercancel`.
 
 ## Checked and left as designed
@@ -41,4 +51,5 @@ Exploratory browser runs after the Phase 1 merge, one scripted person per job, a
 - Autofit stops at body size; longer text then overflows with the crossing mark (5q).
 - Enter on selected text opens it with all text selected.
 - The colour panel covers the top-left of tall canvases; canvas taps underneath it reach the panel.
+- A version 1 document without images stays in its old form in storage until the first save (any edit, or leaving the page); it migrates again on every load until then.
 - Handles more than 64 px outside the canvas are out of reach (the overlay margin); the object can still be moved back with a drag or the arrows. Recorded under Deferred.

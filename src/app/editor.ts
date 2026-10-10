@@ -154,7 +154,7 @@ export class Editor {
       size: this.canvas(), scale: this.scale, guides: ui.guides ? this.anchors() : null, guideInk: this.colour({ role: 'ink' }), grid: ui.grid.on ? ui.grid.size : null, dark: this.palette().dark,
       hits: this.live.hits, lines: this.live.lines, near: this.live.near, pull: this.live.pull, angle: this.live.angle,
       boxes: this.display ? [] : this.boxes(), marquee: this.live.marquee,
-      flags: this.doc.nodes.filter(n => flagged.has(n.id) && !this.frame(n).hidden).map(n => ({ rect: this.box(n), rot: this.frame(n).rot })), crossings,
+      flags: this.doc.nodes.filter(n => flagged.has(n.id) && flagsFor(n, this.frame(n), measure, this.canvas(), this.spec().guide).length).map(n => ({ rect: this.box(n), rot: this.frame(n).rot })), crossings,
       sketch: { ...this.live.sketch, stroke: this.inkWidth(), ink: this.colour({ role: 'ink' }) },
       scan: scan ? { rect: this.box(scan), rot: this.frame(scan).rot, t: ((performance.now() - this.scan!.t0) % 900) / 900 } : null,
     });

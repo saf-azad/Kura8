@@ -769,8 +769,184 @@ def dee_dark(app):
     app.close_panels(); valid(app)
 
 
+
+# ------------------------------------------------------------------------------------------------ round 3
+def rio_rotation(app):
+    """Rio sets type and shapes at angles."""
+    p = app.page
+    app.start({'ratio': 'square', 'comp': 'poster', 'guide': 'golden', 'hue': 15, 'dark': False})
+    head = find(app.doc(), slot='headline')[0]; app.select(head); r = app.frame(head); k = app.scale(); cx = r['x'] + r['w'] / 2
+    app.drag_unit((cx, r['y'] - 44 / k), (cx + 400, r['y'] - 44 / k + 400), alt=True)
+    h = node(app, id=head['id']); rot = h['frames']['main']['rot']; note(abs(rot) > 20, f'headline did not rotate: {rot}')
+    p.keyboard.press('Enter'); p.wait_for_timeout(150)
+    tf = p.locator('textarea.text-editor').evaluate('e => e.style.transform')
+    note(f'{rot:.4f}'[:6] in tf.replace(' ', ''), f'editor not rotated with the text: {tf} vs {rot}')
+    p.keyboard.press('Control+End'); p.keyboard.type(' at an angle'); p.keyboard.press('Control+Enter'); p.wait_for_timeout(100)
+    note(node(app, id=head['id'])['text'].endswith(' at an angle'), 'typing into rotated text')
+    # rotated shape: a side handle resizes along the shape's own axis and keeps the rotation
+    p.keyboard.press('Escape'); p.keyboard.press('r'); p.wait_for_timeout(150); sq = app.doc()['nodes'][-1]; r = app.frame(sq); cx, cy = r['x'] + r['w'] / 2, r['y'] + r['h'] / 2
+    app.drag_unit((cx, r['y'] - 44 / k), (cx + 300, cy), steps=16, shift=True)
+    f = node(app, id=sq['id'])['frames']['main']; note(abs(f['rot'] - 90) < 1e-6, f'Shift rotate to 90: {f["rot"]}')
+    w0, h0 = f['rect']['w'], f['rect']['h']
+    ex, ey = cx, cy + w0 / 2   # at 90° the local east handle sits below the centre on screen
+    app.drag_unit((ex, ey), (ex, ey + 60), alt=True)
+    f2 = node(app, id=sq['id'])['frames']['main']; note(abs(f2['rect']['w'] - w0 - 60) < 2 and abs(f2['rect']['h'] - h0) < .5 and abs(f2['rot'] - 90) < 1e-6, f'rotated side resize: {f["rect"]} -> {f2["rect"]} rot {f2["rot"]}')
+    p.keyboard.press('Escape'); path = app.export('png'); im = Image.open(path).convert('RGB'); fr = f2['rect']; s = 1080 / 1000
+    px = im.getpixel((int((fr['x'] + fr['w'] / 2) * s), int((fr['y'] + fr['h'] / 2) * s)))
+    note(max(px) - min(px) > 40, f'rotated square missing in export: {px}')
+    app.close_panels()
+    path = app.export('svg'); t = path.read_text(); note('rotate(' in t, 'svg has no rotation')
+    app.close_panels(); valid(app)
+
+
+def vic_migrated(app):
+    """Vic opens a Phase 0 document and keeps working."""
+    p = app.page; app.reset()
+    v1 = {'version': 1, 'id': 'zz99', 'ratio': 'landscape', 'guide': 'golden', 'createdAt': '2026-09-01T10:00:00.000Z', 'nodes': [
+        {'id': 't1', 'type': 'text', 'rect': {'x': 100, 'y': 80, 'w': 500, 'h': 60}, 'text': 'Old title', 'fontSize': 48, 'weight': 700, 'align': 'right', 'color': '#123456'},
+        {'id': 'r1', 'type': 'rect', 'rect': {'x': 650, 'y': 300, 'w': 200, 'h': 120}, 'fill': '#FF8800', 'shape': 'ellipse', 'locked': True}]}
+    p.evaluate(f'localStorage.setItem("kura8:doc", {json.dumps(json.dumps(v1))}); localStorage.setItem("kura8:lifted", "true")'); p.goto(BASE); p.wait_for_timeout(1200)
+    note(p.locator('canvas.overlay').is_visible(), 'v1 document did not open in the editor')
+    p.keyboard.press('g'); p.keyboard.press('g'); p.evaluate('dispatchEvent(new Event("pagehide"))')  # a v1 doc without images is written back on the next save
+    d = app.doc(); t = find(d, id='t1')[0]; note(t['align'] == 'end' and t['fill'] == {'hex': '#123456'}, f'text migration {t}')
+    note(find(d, id='r1')[0]['shape'] == 'circle' and find(d, id='r1')[0].get('locked'), 'shape migration')
+    app.select(t); p.keyboard.press('Enter'); p.wait_for_timeout(150); p.keyboard.press('Control+End'); p.keyboard.type('!'); p.keyboard.press('Control+Enter'); p.wait_for_timeout(100)
+    note(node(app, id='t1')['text'] == 'Old title!', 'editing migrated text')
+    p.keyboard.press('Escape'); p.keyboard.press('c'); p.wait_for_timeout(200)
+    note(p.locator('.colour-panel .hues button').count() >= 13, 'colour panel on a neutral migrated palette')
+    p.keyboard.press('Escape')
+    p.locator('button.wordmark').click(); p.wait_for_timeout(400); note(p.locator('.dial').is_visible(), 'dial from a migrated doc')
+    p.locator('.dial .dial-actions button', has_text='Back to canvas').click(); p.wait_for_timeout(300)
+    path = app.export('png'); note(png_size(path)[0] == (1920, 1080), 'migrated export size'); app.close_panels(); valid(app)
+
+
+def ari_arrows(app):
+    """Ari annotates with ink lines and arrows."""
+    p = app.page
+    app.start({'ratio': 'landscape', 'comp': 'frame', 'guide': 'divisions', 'hue': 200, 'dark': False})
+    p.keyboard.press('p'); p.wait_for_timeout(100); n0 = len(app.doc()['nodes'])
+
+    def stroke(pts, hold=True):
+        p.mouse.move(*app.to_px(*pts[0])); p.mouse.down()
+        for a, b in zip(pts, pts[1:]):
+            for t in range(1, 13): p.mouse.move(*app.to_px(a[0] + (b[0] - a[0]) * t / 12, a[1] + (b[1] - a[1]) * t / 12))
+        if hold: p.wait_for_timeout(700)
+        p.mouse.up(); p.wait_for_timeout(500)
+    stroke([(150, 450), (420, 452)])
+    line = app.doc()['nodes'][-1]; note(line['kind'] == 'ink' and line.get('form') == 'line', f'held stroke not a line: {line.get("form")}')
+    stroke([(395, 430), (422, 452), (395, 474)])
+    d = app.doc(); arrow = node(app, id=line['id'])
+    note(arrow and arrow.get('form') == 'arrow' and len(d['nodes']) == n0 + 1, f'arrowhead not merged: form {arrow and arrow.get("form")}, added {len(d["nodes"]) - n0}')
+    p.keyboard.press('Escape'); p.wait_for_timeout(100)
+    app.select(node(app, id=line['id'])); p.keyboard.press('c'); p.wait_for_timeout(200)
+    p.locator('.colour-panel .roles button', has_text='Accent').click(); p.wait_for_timeout(100)
+    note(node(app, id=line['id'])['fill'] == {'role': 'accent'}, 'recolouring ink'); p.keyboard.press('Escape')
+    path = app.export('svg'); t = path.read_text(); note(t.count('<path') >= 1 and 'stroke' in t, 'ink not in svg'); app.close_panels()
+    p.locator('button[aria-label="Add a linked size"]').click(); p.wait_for_timeout(200); p.locator('.ratio-panel g[aria-label="Add Post 1:1"]').click(); p.wait_for_timeout(300)
+    d = app.doc(); valid(app, d); f = node(app, id=line['id'])['frames'][d['sizes'][1]['id']]['rect']
+    note(f['x'] >= 0 and f['x'] + f['w'] <= 1000 and f['y'] >= 0 and f['y'] + f['h'] <= 1000, f'arrow off canvas in the square size: {f}')
+
+
+def gus_grid(app):
+    """Gus lays things out on a grid."""
+    p = app.page
+    app.start({'ratio': 'square', 'comp': 'split', 'guide': 'thirds', 'hue': 90, 'dark': False})
+    p.locator('button[aria-label="Snap grid"]').click(); p.wait_for_timeout(150)
+    p.locator('.grid-panel .presets button', has_text='20').click(); p.keyboard.press('Escape'); p.wait_for_timeout(100)
+    p.keyboard.press('r'); p.wait_for_timeout(150); r = app.doc()['nodes'][-1]; f = app.frame(r)
+    c = (f['x'] + f['w'] / 2, f['y'] + f['h'] / 2)
+    app.drag_unit(c, (c[0] - 117, c[1] + 83))
+    g = app.frame(node(app, id=r['id'])); lines = [1000 / 3, 2000 / 3, 500, 0, 1000]
+    on = lambda v: abs(v / 20 - round(v / 20)) < 1e-6 or any(abs(v - l) < 1e-6 for l in lines)
+    note(on(g['x']) or on(g['x'] + g['w']) or on(g['x'] + g['w'] / 2), f'x not on the grid: {g}')
+    p.reload(); p.wait_for_timeout(700)
+    p.locator('button[aria-label="Snap grid"]').click(); p.wait_for_timeout(150)
+    note(p.locator('.grid-panel .switch').get_attribute('aria-checked') == 'true' and p.locator('.grid-panel .presets button[aria-pressed="true"]').inner_text() == '20', 'grid setting not kept over reload')
+    app.select(node(app, id=r['id'])); p.locator('button[aria-label="Snap grid"]').click(); p.wait_for_timeout(150)
+    p.locator('.grid-panel input[type=range]').focus(); p.keyboard.press('ArrowRight'); p.wait_for_timeout(100)
+    note('25 units' in p.locator('.grid-panel').inner_text(), f'range arrow: {p.locator(".grid-panel").inner_text()}')
+    note(app.frame(node(app, id=r['id'])) == g, 'arrow on the grid slider moved the selection')
+    p.keyboard.press('Escape')
+
+
+def hana_help(app):
+    """Hana turns on the help bar to learn the tools."""
+    p = app.page
+    app.start({'ratio': 'portrait', 'comp': 'cover', 'guide': 'thirds', 'hue': 0, 'dark': False})
+    note(p.locator('.help-box').get_attribute('hidden') is not None, 'help bar on by default')
+    p.locator('.help button').click(); p.wait_for_timeout(150); note(p.locator('.help-box').get_attribute('hidden') is None, 'help bar did not open')
+    p.locator('.toolbar button[aria-label="Duplicate"]').hover(); p.wait_for_timeout(200)
+    note('Copies the selection' in p.locator('.help-box').inner_text(), f'help text for Duplicate: {p.locator(".help-box").inner_text()!r}')
+    p.locator('button[aria-label="Layers"]').hover(); p.wait_for_timeout(200)
+    note('Lists every object' in p.locator('.help-box').inner_text(), 'help text for Layers')
+    p.mouse.move(700, 500); p.keyboard.press('p'); p.wait_for_timeout(250)
+    note('Hold still' in p.locator('.help-box').inner_text(), f'sketch hint: {p.locator(".help-box").inner_text()!r}')
+    p.keyboard.press('Escape'); p.wait_for_timeout(150)
+    note('Hold still' not in p.locator('.help-box').inner_text(), 'sketch hint stayed after leaving the tool')
+    p.locator('.help button').click(); p.wait_for_timeout(100); note(p.locator('.help-box').get_attribute('hidden') is not None, 'help bar did not close')
+
+
+def zed_stress(app):
+    """Zed fills the canvas with hundreds of objects."""
+    p = app.page
+    app.start({'ratio': 'square', 'comp': 'cover', 'guide': 'thirds', 'hue': 45, 'dark': False})
+    p.keyboard.press('r'); p.wait_for_timeout(100)
+    for _ in range(7): p.keyboard.press('Control+a'); p.keyboard.press('Control+d'); p.wait_for_timeout(50)
+    d = app.doc(); n = len(d['nodes']); note(n > 250, f'only {n} nodes')
+    size = len(json.dumps(d)); note(size < 1_500_000, f'saved doc is {size} bytes')
+    p.keyboard.press('Escape'); acc = find(d, slot='accent')[0]; r = app.frame(acc)
+    t0 = time.time(); app.drag_unit((r['x'] + 5, r['y'] + 5), (r['x'] + 205, r['y'] + 105), steps=30); dt = time.time() - t0
+    note(dt < 6, f'30-step drag among {n} objects took {dt:.1f}s')
+    t0 = time.time(); p.keyboard.press('Control+a'); p.keyboard.press('ArrowRight'); p.keyboard.press('Control+z'); p.wait_for_timeout(100); dt = time.time() - t0
+    note(dt < 3, f'select all + nudge + undo took {dt:.1f}s')
+    p.keyboard.press('Escape'); valid(app)
+
+
+def lou_layers(app):
+    """Lou manages the stack from the layers panel with the keyboard."""
+    p = app.page
+    app.start({'ratio': 'square', 'comp': 'stack', 'guide': 'golden', 'hue': 240, 'dark': False})
+    p.locator('button[aria-label="Layers"]').click(); p.wait_for_timeout(200)
+    rows = p.locator('.layer'); n = rows.count()
+    rows.nth(1).focus(); p.keyboard.press('Enter'); p.wait_for_timeout(120)
+    note('on' in (p.locator('.layer').nth(1).get_attribute('class') or ''), 'Enter on a layer row did not select it')
+    p.locator('.layer').nth(1).locator('button[aria-label="Lock"]').click(); p.wait_for_timeout(100)
+    d = app.doc(); note(len([x for x in d['nodes'] if x.get('locked')]) == 1, 'lock from layers')
+    p.keyboard.press('Delete'); p.wait_for_timeout(100); note(len(app.doc()['nodes']) == len(d['nodes']), 'Delete removed a locked layer')
+    p.locator('.layer').nth(n - 1).locator('button[aria-label="Bring forward"]').click(); p.wait_for_timeout(100)
+    note(p.locator('.layer').count() == n, 'layer count changed')
+    p.keyboard.press('Escape'); p.wait_for_timeout(100); note(p.locator('.layers-panel:not([hidden])').count() == 0, 'Escape did not close layers')
+
+
+def nia_reratio(app):
+    """Nia re-ratios a design and fixes what got flagged."""
+    p = app.page
+    app.start({'ratio': 'landscape', 'comp': 'band', 'guide': 'thirds', 'hue': 330, 'dark': False})
+    p.keyboard.press('r'); p.wait_for_timeout(100); r = app.doc()['nodes'][-1]
+    app.drag_unit(app.node_centre(r), (900, 480), alt=True)
+    p.keyboard.press('Escape')
+    p.locator('.corner .sizes button').nth(0).click(); p.wait_for_timeout(200)
+    p.locator('.ratio-panel g[aria-label="Change to Banner 3:1"]').click(); p.wait_for_timeout(300); p.keyboard.press('Escape')
+    t = p.locator('.toast').inner_text(); note('flagged' in t, f'no flag count after re-ratio: {t!r}')
+    f = app.frame(node(app, id=r['id'])); note(f['y'] + f['h'] > 1000 / 3 + .5 or f['x'] + f['w'] > 1000.5, f'rect should be off canvas: {f}')
+    dpr = p.evaluate('devicePixelRatio')
+
+    def outline_px(fr):
+        k = app.scale()
+        return p.evaluate('''([x, y]) => { const g = document.querySelector('canvas.overlay').getContext('2d'), d = g.getImageData(x, y, 1, 1).data; return [d[0], d[1], d[2], d[3]]; }''',
+                          [int((fr['x'] * k + 64) * dpr), int(((fr['y'] + fr['h'] / 2) * k + 64) * dpr)])
+    p.wait_for_timeout(150); before = outline_px(f)
+    note(before[3] > 0, f'no flag outline drawn on the flagged rect: {before}')
+    app.drag_unit((f['x'] + 10, f['y'] + 10), (100, 60), alt=True); p.wait_for_timeout(150)
+    f2 = app.frame(node(app, id=r['id'])); note(f2['y'] + f2['h'] <= 1000 / 3 + 1, f'moved rect still off: {f2}')
+    p.keyboard.press('Escape'); p.wait_for_timeout(200)
+    after = outline_px(f2)
+    note(after[3] == 0, f'flag outline still drawn after the object was moved back onto the canvas: {after}')
+
+
 PERSONAS = [maya_social, priya_print, layla_scripts, kai_keyboard, sam_sketch, cleo_colour, pat_power, ren_returning, sol_small, chaos,
-            ines_photos, tom_worksheet, ivy_icons, max_sizes, quinn_quota, ula_interrupts, dee_dark]
+            ines_photos, tom_worksheet, ivy_icons, max_sizes, quinn_quota, ula_interrupts, dee_dark,
+            rio_rotation, vic_migrated, ari_arrows, gus_grid, hana_help, zed_stress, lou_layers, nia_reratio]
 
 
 def main():
@@ -779,7 +955,7 @@ def main():
         exe = os.environ.get('CHROMIUM') or next((str(x) for x in Path('/opt/pw-browsers').glob('chromium-*/chrome-linux/chrome')), None)
         browser = pw.chromium.launch(executable_path=exe) if exe else pw.chromium.launch()
         for fn in PERSONAS:
-            if only and only not in fn.__name__: continue
+            if only and not any(o in fn.__name__ for o in only.split(',')): continue
             persona[0] = fn.__name__; print(f'== {fn.__name__}: {fn.__doc__}')
             app = App(browser); k = len(ba.errors)
             try: fn(app)
