@@ -29,6 +29,7 @@ const tips = installTips();
 const loaded = loadDocument();
 const store = new Store(loaded?.doc ?? null);
 void navigator.storage?.persist?.().catch(() => false);
+addEventListener('pagehide', () => store.save());
 let saveWarned = false;
 store.on(() => { if (store.saveFailed && !saveWarned) { saveWarned = true; toast('Couldn’t save in this browser; export to keep your work', 3000); } if (!store.saveFailed) saveWarned = false; });
 async function restoreAssets(): Promise<void> {

@@ -78,7 +78,9 @@ export class Store {
   save(onError?: () => void): boolean {
     if (!this.doc) return true;
     if (this.paused) { this.scheduleSave(); return true; }
-    const ok = write(KEYS.doc, serialiseDocument(this.doc));
+    let json: string;
+    try { json = serialiseDocument(this.doc); } catch (e) { console.warn('Not saved: invalid document', e); return false; }
+    const ok = write(KEYS.doc, json);
     if (!ok && !this.warned) { this.warned = true; onError?.(); this.emit({ ui: true }); }
     if (ok) this.warned = false;
     return ok;

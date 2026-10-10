@@ -446,7 +446,7 @@ def s_5i(app):
     check(sum(corner_pixel()) < 150, 'dark ground not drawn')
 
 
-@step('5q autofit steps the size down the type scale and marks where it crosses a guide')
+@step('5q autofit steps the size down the type scale; a manual size change turns it off')
 def s_5q(app):
     app.start(SQUARE); p = app.page; head = find(app.doc(), slot='headline')[0]; app.select(head)
     p.locator('.toolbar button[data-tip="Autofit"], .toolbar button[title="Autofit"]').click()
@@ -700,6 +700,21 @@ def s_text_resize(app):
     h3 = find(app.doc(), slot='headline')[0]['frames']['main']; check(h3['fontSize'] > f['fontSize'] * 1.3, f'corner did not scale the font: {h3}')
 
 
+@step('text controls: bold, align start/centre/end, smaller and larger')
+def s_text_controls(app):
+    app.start(SQUARE); p = app.page; head = find(app.doc(), slot='headline')[0]; app.select(head)
+    p.keyboard.press('Control+b'); check(find(app.doc(), slot='headline')[0]['weight'] == 400, 'bold off')
+    p.keyboard.press('Control+b'); check(find(app.doc(), slot='headline')[0]['weight'] == 700, 'bold on')
+    align = p.locator('.toolbar button[aria-label="Align"]')
+    seen = []
+    for _ in range(3): align.click(); seen.append(find(app.doc(), slot='headline')[0]['align'])
+    check(seen == ['center', 'end', 'start'], f'align cycle {seen}')
+    size = head['frames']['main']['fontSize']; p.locator('.toolbar button[aria-label="Smaller"]').click()
+    check(find(app.doc(), slot='headline')[0]['frames']['main']['fontSize'] < size, 'smaller')
+    p.locator('.toolbar button[aria-label="Larger"]').click(); p.locator('.toolbar button[aria-label="Larger"]').click()
+    check(find(app.doc(), slot='headline')[0]['frames']['main']['fontSize'] > size, 'larger')
+
+
 @step('help bar is off by default and explains the hovered control when on')
 def s_help(app):
     app.start(SQUARE); p = app.page
@@ -736,7 +751,7 @@ def s_migrate(app):
 
 def main():
     steps = [s_load, s_5a, s_dial_keys, s_dial_drag, s_5b, s_5c, s_5d, s_tool_keys, s_select_move, s_5j, s_5k, s_5l, s_5m, s_edit_ops, s_layers, s_5e, s_5f,
-             s_5g, s_5h, s_5i, s_5q, s_5r, s_5n, s_5p, s_5s, s_5t, s_5u, s_shapes, s_5v, s_5w, s_5x, s_sizes, s_5y, s_5z, s_sketch, s_sketch_forms, s_text_resize, s_help, s_reload, s_migrate, s_matrix, s_5o]
+             s_5g, s_5h, s_5i, s_5q, s_5r, s_5n, s_5p, s_5s, s_5t, s_5u, s_shapes, s_5v, s_5w, s_5x, s_sizes, s_5y, s_5z, s_sketch, s_sketch_forms, s_text_resize, s_text_controls, s_help, s_reload, s_migrate, s_matrix, s_5o]
     only = os.environ.get('ONLY')
     with sync_playwright() as pw:
         exe = os.environ.get('CHROMIUM') or next((str(x) for x in Path('/opt/pw-browsers').glob('chromium-*/chrome-linux/chrome')), None)
