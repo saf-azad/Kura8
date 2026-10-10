@@ -216,5 +216,5 @@ input[type=range]{width:100%;accent-color:#000;margin:0}
 .crop-bar{position:absolute;z-index:5;transform:translate(-50%,8px);background:var(--paper);align-items:center}
 .crop-bar button{height:28px;padding:0 12px}
 .crop-bar input{width:110px}
-.toolbar .panel{white-space:normal}
+.toolbar .panel .icon-note{white-space:normal}
 .pill[aria-pressed=true]{background:var(--ink);color:var(--white)}

@@ -423,6 +423,7 @@ def s_5f(app):
 @step('5g a pasted hex becomes a custom hue for this file')
 def s_5g(app):
     app.start(SQUARE); p = app.page; acc = find(app.doc(), slot='accent')[0]; app.select(acc); p.keyboard.press('c')
+    p.wait_for_selector('.colour-panel:not([hidden])')  # the panel opens on the next frame; typing before that is lost
     hexf = p.locator('.colour-panel input.field'); hexf.fill('#9CABC2'); p.wait_for_timeout(100)
     p.locator('.colour-panel button', has_text='+ Add as hue').click(); d = app.doc()
     check(d['palette']['custom'] == ['#9cabc2'], f'custom {d["palette"]["custom"]}')
