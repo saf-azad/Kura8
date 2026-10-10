@@ -3,14 +3,14 @@ import type { KuraDoc } from './document';
 import { canvasSize } from './ratios';
 import { resolve } from './palette';
 import { shapeLibrary, shapeOutline, ICON_SHAPE } from './shapes';
-import { LINE_HEIGHT, textBox, typeScale } from './fit';
+import { BASELINE, LINE_HEIGHT, textBox, typeScale } from './fit';
 import { direction, fontStack, physicalAlign } from './script';
 import { CENTRE } from './images';
 // The draw list both the canvas renderer and SVG export consume: colours resolved, text wrapped, alignment made
 // physical, paths in each node's local box. Every op draws in a box of rect.w × rect.h rotated `rot` degrees about the rect centre.
 export type SceneOp =
   | { kind: 'shape'; id: string; rect: Rect; rot: number; fill: string; d: string; scale?: [number, number] }
-  | { kind: 'text'; id: string; rect: Rect; rot: number; fill: string; size: number; weight: 400 | 700; align: 'left' | 'center' | 'right'; dir: 'ltr' | 'rtl'; font: string; lines: string[]; lineHeight: number }
+  | { kind: 'text'; id: string; rect: Rect; rot: number; fill: string; size: number; weight: 400 | 700; align: 'left' | 'center' | 'right'; dir: 'ltr' | 'rtl'; font: string; lines: string[]; lineHeight: number; /** Line top to alphabetic baseline. */ baseline: number }
   | { kind: 'image'; id: string; rect: Rect; rot: number; asset: string | null; cutout: boolean; focus: Point }
   | { kind: 'ink'; id: string; rect: Rect; rot: number; fill: string; stroke: number; paths: [number, number][][] };
 /** `filled` is false when the ground was never filled (5z); `hidden` counts nodes hidden in this size (5y); `empty` counts empty image frames. */
@@ -28,7 +28,7 @@ export function buildScene(doc: KuraDoc, sizeId: string, measure: Measure): Scen
       ops.push({ kind: 'shape', id: n.id, rect, rot, fill: resolve(n.fill, p), ...outline });
     } else if (n.kind === 'text') {
       const box = textBox(n, f, measure, scale), dir = direction(n.text);
-      ops.push({ kind: 'text', id: n.id, rect: box.rect, rot, fill: resolve(n.fill, p), size: box.size, weight: n.weight, align: physicalAlign(n.align, dir), dir, font: fontStack(n.text), lines: box.lines, lineHeight: box.size * LINE_HEIGHT });
+      ops.push({ kind: 'text', id: n.id, rect: box.rect, rot, fill: resolve(n.fill, p), size: box.size, weight: n.weight, align: physicalAlign(n.align, dir), dir, font: fontStack(n.text), lines: box.lines, lineHeight: box.size * LINE_HEIGHT, baseline: box.size * (LINE_HEIGHT / 2 + BASELINE) });
     } else if (n.kind === 'image') {
       if (!n.asset) empty++;
       ops.push({ kind: 'image', id: n.id, rect, rot, asset: n.asset, cutout: !!n.cutout, focus: n.focus ?? CENTRE });

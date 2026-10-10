@@ -944,9 +944,134 @@ def nia_reratio(app):
     note(after[3] == 0, f'flag outline still drawn after the object was moved back onto the canvas: {after}')
 
 
+# ------------------------------------------------------------------------------------------------ round 4
+def tess_two_tabs(app):
+    """Tess has Kura8 open in two tabs."""
+    p = app.page
+    app.start({'ratio': 'square', 'comp': 'cover', 'guide': 'thirds', 'hue': 120, 'dark': False})
+    b = app.ctx.new_page(); b.goto(BASE); b.wait_for_timeout(800)
+    p.bring_to_front(); p.keyboard.press('r'); p.wait_for_timeout(900)
+    a_rect = app.doc()['nodes'][-1]['id']
+    b.bring_to_front(); b.wait_for_timeout(300); b.keyboard.press('o'); b.wait_for_timeout(900)
+    d = app.doc(); ids = [n['id'] for n in d['nodes']]
+    note(a_rect in ids, 'an edit in one tab silently erased the rectangle added in the other tab')
+    note(any(n.get('shape') == 'circle' for n in d['nodes']), 'second tab edit missing')
+    b.close()
+
+
+def cdp_touch(app, pts, hold_ms=0):
+    s = app.ctx.new_cdp_session(app.page)
+    px = [app.to_px(*q) for q in pts]
+    s.send('Input.dispatchTouchEvent', {'type': 'touchStart', 'touchPoints': [{'x': px[0][0], 'y': px[0][1]}]})
+    for x, y in px[1:]: s.send('Input.dispatchTouchEvent', {'type': 'touchMove', 'touchPoints': [{'x': x, 'y': y}]}); app.page.wait_for_timeout(16)
+    if hold_ms: app.page.wait_for_timeout(hold_ms)
+    s.send('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []}); app.page.wait_for_timeout(250)
+    s.detach()
+
+
+def theo_touch(app):
+    """Theo uses a touchscreen laptop."""
+    p = app.page
+    ctx = app.ctx.browser.new_context(viewport={'width': 1280, 'height': 800}, has_touch=True, accept_downloads=True)
+    old = app.ctx; app.ctx = ctx; app.page = ctx.new_page(); p = app.page
+    p.on('pageerror', lambda e: ba.errors.append(f'pageerror: {e}'))
+    try:
+        app.start({'ratio': 'square', 'comp': 'split', 'guide': 'thirds', 'hue': 60, 'dark': False})
+        acc = find(app.doc(), slot='accent')[0]; r = app.frame(acc); c = (r['x'] + r['w'] / 2, r['y'] + r['h'] / 2)
+        p.touchscreen.tap(*app.to_px(*c)); p.wait_for_timeout(150)
+        note(p.locator('.info').inner_text().startswith('Rectangle'), f'tap did not select: {p.locator(".info").inner_text()!r}')
+        cdp_touch(app, [(c[0] + i * 12, c[1] + i * 7) for i in range(12)])
+        r2 = app.frame(node(app, id=acc['id'])); note(abs(r2['x'] - r['x']) > 50, f'touch drag did not move: {r} -> {r2}')
+        head = find(app.doc(), slot='headline')[0]; hc = app.node_centre(head)
+        p.touchscreen.tap(*app.to_px(*hc)); p.wait_for_timeout(60); p.touchscreen.tap(*app.to_px(*hc)); p.wait_for_timeout(300)
+        note(p.locator('textarea.text-editor').count() == 1, 'double tap on text did not open the editor')
+        p.keyboard.press('Escape'); p.keyboard.press('Escape'); p.keyboard.press('p'); p.wait_for_timeout(100); n0 = len(app.doc()['nodes'])
+        cdp_touch(app, [(100 + i * 10, 800 + 20 * math.sin(i / 2)) for i in range(30)])
+        note(len(app.doc()['nodes']) == n0 + 1, 'touch pen stroke not added')
+        p.keyboard.press('Escape')
+    finally:
+        ctx.close(); app.ctx = old; app.page = old.pages[0]
+
+
+def eve_parity(app):
+    """Eve checks the SVG matches the PNG for a busy design."""
+    p = app.page
+    app.start({'ratio': 'portrait', 'comp': 'frame', 'guide': 'golden', 'hue': 200, 'dark': False})
+    frame = find(app.doc(), slot='image')[0]; drop_file(app, image_file(OUT / 'eve.png', 1200, 900, (210, 90, 30)), *app.node_centre(frame))
+    p.keyboard.press('Escape'); p.keyboard.press('t'); p.wait_for_timeout(150); p.keyboard.type('שלום עולם'); p.keyboard.press('Control+Enter'); p.keyboard.press('Escape')
+    p.keyboard.press('t'); p.wait_for_timeout(150); p.keyboard.type('Centred line\nsecond line'); p.keyboard.press('Control+Enter')
+    p.locator('.toolbar button[aria-label="Align"]').click(); p.keyboard.press('Escape')
+    p.keyboard.press('o'); p.wait_for_timeout(100); ell = app.doc()['nodes'][-1]; r = app.frame(ell); k = app.scale(); cx = r['x'] + r['w'] / 2
+    app.drag_unit((cx, r['y'] - 44 / k), (cx + 200, r['y'] + 60), alt=True); p.keyboard.press('Escape')
+    head = find(app.doc(), slot='headline')[0]; app.select(head); r = app.frame(head); cx = r['x'] + r['w'] / 2
+    app.drag_unit((cx, r['y'] - 44 / k), (cx + 40, r['y'] - 44 / k + 3), alt=True); p.keyboard.press('Escape')
+    png = app.export('png'); app.close_panels(); svgp = app.export('svg'); app.close_panels()
+    svg_text = svgp.read_text()
+    data = p.evaluate('''async (svg) => {
+      const img = new Image(); img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); await img.decode(); await new Promise(r => setTimeout(r, 300));
+      const c = document.createElement('canvas'); c.width = 1080; c.height = 1350; const g = c.getContext('2d'); g.drawImage(img, 0, 0, 1080, 1350);
+      return c.toDataURL('image/png');
+    }''', svg_text)
+    import base64
+    a = Image.open(png).convert('RGB'); b = Image.open(io.BytesIO(base64.b64decode(data.split(',')[1]))).convert('RGB')
+    from PIL import ImageChops
+    diff = ImageChops.difference(a, b).convert('L'); diff.save(OUT / 'eve-diff.png')
+    W, H = a.size; cells = []
+    for gy in range(0, H, 90):
+        for gx in range(0, W, 90):
+            region = diff.crop((gx, gy, gx + 90, gy + 90)); hist = region.histogram(); n = sum(hist)
+            mean = sum(i * v for i, v in enumerate(hist)) / n
+            if mean > 12: cells.append((gx, gy, round(mean, 1)))
+    note(not cells, f'SVG and PNG differ in {len(cells)} regions, worst {sorted(cells, key=lambda c: -c[2])[:5]}')
+
+
+def mo_reduced_motion(app):
+    """Mo has reduced motion turned on."""
+    p = app.page; p.emulate_media(reduced_motion='reduce')
+    app.reset(); p.goto(BASE); p.wait_for_timeout(300)
+    p.keyboard.press('Enter'); p.wait_for_timeout(150)
+    note(p.evaluate('localStorage.getItem("kura8:lifted")') == 'true', 'lift flag not set under reduced motion')
+    p.keyboard.press('Escape'); p.keyboard.press('Escape')
+    p.locator('button.wordmark').click(); p.wait_for_timeout(200)
+    p.keyboard.press('ArrowDown'); p.keyboard.press('ArrowRight'); p.locator('.dial .dial-actions button', has_text='Go').click(); p.wait_for_timeout(120)
+    d = json.loads(p.evaluate('localStorage.getItem("kura8:doc")') or 'null'); p.wait_for_timeout(700); d2 = app.doc()
+    note(d2['sizes'][0]['comp'] == 'split', 'Go did not apply')
+    p.keyboard.press('p'); p.wait_for_timeout(100)
+    rect = [(600, 100), (850, 100), (850, 300), (600, 300), (600, 102)]
+    p.mouse.move(*app.to_px(*rect[0])); p.mouse.down()
+    for a, b in zip(rect, rect[1:]):
+        for t in range(1, 11): p.mouse.move(*app.to_px(a[0] + (b[0] - a[0]) * t / 10, a[1] + (b[1] - a[1]) * t / 10))
+    p.wait_for_timeout(700); p.mouse.up(); p.wait_for_timeout(400)
+    note(app.doc()['nodes'][-1].get('form') == 'rect', 'hold-to-clean under reduced motion')
+    p.emulate_media(reduced_motion='no-preference')
+
+
+def bea_cutout(app):
+    """Bea removes the background from one copy of a photo."""
+    p = app.page
+    app.start({'ratio': 'square', 'comp': 'cover', 'guide': 'thirds', 'hue': 0, 'dark': False})
+    img = OUT / 'bea.png'
+    im = Image.new('RGB', (480, 480), (235, 235, 230))
+    for x in range(160, 320):
+        for y in range(120, 400): im.putpixel((x, y), (40, 60, 160))
+    im.save(img)
+    frame = find(app.doc(), slot='image')[0]; drop_file(app, img, *app.node_centre(frame))
+    app.select(node(app, id=frame['id'])); p.keyboard.press('Control+d'); p.wait_for_timeout(200)
+    copy = app.doc()['nodes'][-1]; note(copy['kind'] == 'image' and copy['asset'] == node(app, id=frame['id'])['asset'], 'duplicate image')
+    p.locator('.toolbar button[aria-label="Remove background"]').click()
+    for _ in range(240):
+        p.wait_for_timeout(1000)
+        if node(app, id=copy['id']).get('cutout'): break
+    note(node(app, id=copy['id']).get('cutout') is True, 'background removal did not finish on the copy')
+    note(not node(app, id=frame['id']).get('cutout'), 'removing the background of one copy also cut out the other copy')
+    p.keyboard.press('Control+z'); p.wait_for_timeout(200)
+    note(not node(app, id=copy['id']).get('cutout'), 'undo of background removal')
+
+
 PERSONAS = [maya_social, priya_print, layla_scripts, kai_keyboard, sam_sketch, cleo_colour, pat_power, ren_returning, sol_small, chaos,
             ines_photos, tom_worksheet, ivy_icons, max_sizes, quinn_quota, ula_interrupts, dee_dark,
-            rio_rotation, vic_migrated, ari_arrows, gus_grid, hana_help, zed_stress, lou_layers, nia_reratio]
+            rio_rotation, vic_migrated, ari_arrows, gus_grid, hana_help, zed_stress, lou_layers, nia_reratio,
+            tess_two_tabs, theo_touch, eve_parity, mo_reduced_motion, bea_cutout]
 
 
 def main():

@@ -31,6 +31,11 @@ Exploratory browser runs after the Phase 1 merge, one scripted person per job, a
 | 3 | Zed | 280+ objects: drag, select all, nudge, undo, saved size |
 | 3 | Lou | Layers by keyboard: Enter selects, lock, Delete refused, reorder |
 | 3 | Nia | Re-ratio flags, then fixing the flagged object |
+| 4 | Tess | Two tabs on the same document |
+| 4 | Theo | Touchscreen: tap, drag, double tap, pen |
+| 4 | Eve | A busy design exported to PNG and SVG, compared pixel by pixel |
+| 4 | Mo | Reduced motion: first open, Go, hold-to-clean |
+| 4 | Bea | Background removal on one of two copies of a photo |
 
 ## Bugs fixed
 
@@ -43,6 +48,12 @@ Exploratory browser runs after the Phase 1 merge, one scripted person per job, a
 - **B7** (Ivy) Closing a panel while focus was inside it (Escape in the icon search) left focus in the hidden field, so a quick next key was typed into it instead of running its shortcut. Closing a panel that holds focus now returns focus to the canvas. `src/app/editor.ts`.
 - **B8** (Nia) A re-ratio flag kept its dashed outline after the object was moved back onto the canvas. Flags are now drawn only while the object still sits off the canvas or overflows. `src/app/editor.ts`.
 - **B9** (Hana) Faded controls ignored the pointer, so neither their tooltip nor the help bar could explain them, and the export sheet's "Larger than browsers can export" note on disabled sizes never showed. Faded controls are hoverable again; disabled buttons still ignore clicks and a faded segment group stays inert. `src/style.css`.
+- **B10** (Eve) SVG text sat about 7 % of its size lower than in the editor and the PNG: the canvas drew lines on `textBaseline = 'middle'` and the SVG on `dominant-baseline="central"`, which Chromium places from different font metrics. Both now draw on the alphabetic baseline at one position from the scene (`baseline`, from Space Grotesk's em square, `BASELINE` in `src/core/fit.ts`), so the PNG is unchanged and the SVG matches it. `src/core/scene.ts`, `src/core/export.ts`, `src/app/canvas/renderer.ts`.
+- **B11** (Eve, then measured) Text jumped down by the same 7 % when editing started, because the HTML editor sets lines by CSS line-box rules. The editor is lifted by the difference, rotation origin included. `src/app/editor.ts`.
+- **B12** (Tess) With Kura8 open in two tabs, an edit in the stale tab saved over the other tab's work. Every tab now follows the latest save: it takes the other tab's document, drops its own undo history and pending save, and says "Updated from another tab". `src/app/store.ts`, `src/main.ts`.
+- **B13** (Theo) A double tap with a finger or pen did not open text for editing or an empty frame's picker; browsers do not reliably send `dblclick` for taps. Two taps on the same object, released without moving within 400 ms, now count as a double-click. `src/app/canvas/interaction.ts`.
+- **B14** (Bea) Removing the background of one copy of a photo switched every copy of it to the cut-out. Only the image it was asked for switches; the cut-out is stored once, so the copies can show it with their own After toggle. `src/app/editor.ts`.
+- The sketch clean-up morph is skipped under reduced motion, like the lift and the Go tween.
 - The dial's any-colour picker now also releases its listeners on `pointercancel`.
 
 ## Checked and left as designed

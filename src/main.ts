@@ -1,7 +1,7 @@
 import '@fontsource/space-grotesk/400.css';
 import '@fontsource/space-grotesk/700.css';
 import './style.css';
-import { createDocument, type KuraDoc } from './core/document';
+import { createDocument, migrate, type KuraDoc } from './core/document';
 import { canvasSize } from './core/ratios';
 import { layout, starterNodes, STARTER } from './core/compositions';
 import { relayout } from './core/relayout';
@@ -30,6 +30,14 @@ const loaded = loadDocument();
 const store = new Store(loaded?.doc ?? null);
 void navigator.storage?.persist?.().catch(() => false);
 addEventListener('pagehide', () => store.save());
+// Kura8 open in two tabs: the last save wins and every other tab follows it, instead of a stale tab later saving over it.
+addEventListener('storage', e => {
+  if (e.key !== Store.docKey || !e.newValue || e.newValue === (store.doc && JSON.stringify(store.doc))) return;
+  let next: KuraDoc;
+  try { next = migrate(JSON.parse(e.newValue)).doc; } catch { return; }
+  editor?.finishText(); store.adopt(next); editor?.invalidate();
+  toast('Updated from another tab', 1800);
+});
 let saveWarned = false;
 store.on(() => { if (store.saveFailed && !saveWarned) { saveWarned = true; toast('Couldn’t save in this browser; export to keep your work', 3000); } if (!store.saveFailed) saveWarned = false; });
 /** Writes a migrated version 1 document's inline images to IndexedDB; the v2 document is saved only when all of them landed. */

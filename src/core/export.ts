@@ -20,8 +20,8 @@ function op(o: SceneOp, image: (o: Extract<SceneOp, { kind: 'image' }>) => SvgIm
   if (o.kind === 'shape') return `${open}<path fill-rule="evenodd" fill="${o.fill}"${o.scale ? ` transform="scale(${n2(o.scale[0])} ${n2(o.scale[1])})"` : ''} d="${o.d}"/></g>`;
   if (o.kind === 'text') {
     const x = o.align === 'left' ? 0 : o.align === 'center' ? r.w / 2 : r.w, anchor = o.align === 'center' ? 'middle' : (o.align === 'left') === (o.dir === 'ltr') ? 'start' : 'end';
-    const spans = o.lines.map((line, i) => `<tspan x="${n2(x)}" y="${n2(i * o.lineHeight + o.lineHeight / 2)}">${escapeXml(line)}</tspan>`).join('');
-    return `${open}<text font-family="${o.font.replace(/"/g, '\'')}" font-weight="${o.weight}" font-size="${n2(o.size)}" fill="${o.fill}" text-anchor="${anchor}" dominant-baseline="central"${o.dir === 'rtl' ? ' direction="rtl"' : ''} xml:space="preserve">${spans}</text></g>`;
+    const spans = o.lines.map((line, i) => `<tspan x="${n2(x)}" y="${n2(i * o.lineHeight + o.baseline)}">${escapeXml(line)}</tspan>`).join('');
+    return `${open}<text font-family="${o.font.replace(/"/g, '\'')}" font-weight="${o.weight}" font-size="${n2(o.size)}" fill="${o.fill}" text-anchor="${anchor}"${o.dir === 'rtl' ? ' direction="rtl"' : ''} xml:space="preserve">${spans}</text></g>`;
   }
   if (o.kind === 'ink') return `${open}<path fill="none" stroke="${o.fill}" stroke-width="${n2(o.stroke)}" stroke-linecap="round" stroke-linejoin="round" d="${o.paths.map(p => 'M' + p.map(([u, v]) => `${n2(u)} ${n2(v)}`).join('L')).join('')}"/></g>`;
   const img = o.asset ? image(o) : undefined;

@@ -37,6 +37,12 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
     for (const box of ed.boxes()) for (const { handle, at } of handlePoints(box, ed.scale)) if (Math.hypot(at.x - p.x, at.y - p.y) <= (HANDLE_PX / 2 + 4) * px()) return { id: box.id, handle };
     return null;
   };
+  // Browsers do not reliably send dblclick for a double tap with a finger or pen, so taps are paired here.
+  let tap: { id: string; t: number; x: number; y: number } | null = null, doubled = 0;
+  const open = (n: DocNode | undefined): void => {
+    if (n?.kind === 'text' && !n.locked) ed.editText(n.id);
+    else if (n?.kind === 'image' && !n.locked) ed.pickImage(n.id);
+  };
   el.addEventListener('pointerdown', e => {
     if (e.button !== 0 || drag) return;
     const p = ed.toUnits(e), ui = ed.store.ui;
@@ -145,6 +151,12 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
   const finish = (e: PointerEvent) => {
     if (sketch.active()) { sketch.up(e, ed.toUnits(e)); return; }
     const d = drag; drag = null; ed.live = emptyLive();
+    if (e.pointerType !== 'mouse' && e.type === 'pointerup') {
+      // A second tap on the same object, released without moving, opens it like a double-click.
+      const n = d?.kind === 'move' && !d.moved ? ed.hitTest(ed.toUnits(e)) : undefined, now = performance.now();
+      if (n && tap?.id === n.id && now - tap.t < 400 && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) < 24) { tap = null; doubled = now; ed.invalidate(); open(n); return; }
+      tap = n ? { id: n.id, t: now, x: e.clientX, y: e.clientY } : null;
+    }
     if (!d) return;
     if (d.kind === 'marquee') { ed.invalidate(); return; }
     if (d.last && ed.doc !== d.last) { ed.invalidate(); return; }
@@ -166,10 +178,8 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
   el.addEventListener('pointercancel', finish);
   el.addEventListener('pointerleave', () => { if (ed.store.ui.tool) sketch.leave(); });
   el.addEventListener('dblclick', e => {
-    if (ed.store.ui.tool || ed.store.ui.armed) return;
-    const n: DocNode | undefined = ed.hitTest(ed.toUnits(e));
-    if (n?.kind === 'text' && !n.locked) ed.editText(n.id);
-    else if (n?.kind === 'image' && !n.locked) ed.pickImage(n.id);
+    if (ed.store.ui.tool || ed.store.ui.armed || performance.now() - doubled < 600) return;
+    open(ed.hitTest(ed.toUnits(e)));
   });
   function hover(p: Point): void {
     const ui = ed.store.ui;

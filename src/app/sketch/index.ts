@@ -5,6 +5,7 @@ import { addNodes, removeNodes, updateNodes } from '../../core/ops';
 import { LINE_HEIGHT } from '../../core/fit';
 import { newId } from '../store';
 import { emptyLive, type Editor } from '../editor';
+import { reducedMotion } from '../canvas/tween';
 // Sketch tools (M12): the pen cleans a stroke when you hold still at its end (420 ms), scribbling over objects deletes
 // them, a rectangle crossed by both diagonals becomes an image frame, a wave becomes a text line; eraser and lasso.
 // Recognition is deterministic geometry (src/core/ink.ts); handwriting is not built (D-030).
@@ -34,7 +35,8 @@ export function installSketch(ed: Editor): SketchTools {
     if (!r) return;
     d.done = true; d.rec = r; d.recAt = performance.now();
     try { navigator.vibrate?.(6); } catch { /* not supported */ }
-    // Morph the drawn stroke into its clean form over 240 ms.
+    // Morph the drawn stroke into its clean form over 240 ms (at once with reduced motion).
+    if (reducedMotion()) { show(r.clean); return; }
     const t0 = performance.now(), step = (now: number) => {
       if (drag !== d) return;
       const t = Math.min(1, (now - t0) / 240), k = 1 - (1 - t) ** 3;

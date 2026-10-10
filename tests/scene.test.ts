@@ -2,7 +2,7 @@ import { it, expect } from 'vitest';
 import { buildScene } from '../src/core/scene';
 import { svg, pdf, licences, escapeXml, pageSize } from '../src/core/export';
 import { resolve } from '../src/core/palette';
-import { LINE_HEIGHT } from '../src/core/fit';
+import { BASELINE, FONT_METRICS, LINE_HEIGHT } from '../src/core/fit';
 import { fakeMeasure, doc, frame, rectNode, textNode } from './helpers';
 import type { DocNode } from '../src/core/document';
 const icon: DocNode = { id: 'o', kind: 'shape', shape: 'icon', fill: { hex: '#123456' }, icon: { set: 'phosphor', name: 'coffee', d: 'M0 0L100 100Z', licence: 'MIT' }, frames: { main: frame(0, 0, 50, 50) } };
@@ -19,7 +19,7 @@ it('builds a draw list with resolved colours, wrapped text, physical alignment a
   expect(s.hidden).toBe(1); expect(s.empty).toBe(1);
   expect(s.ops.map(o => o.id)).toEqual(['r', 't', 'a', 'i', 'e', 'k', 'o', 'bad']);
   expect(s.ops[0]).toEqual({ kind: 'shape', id: 'r', rect: { x: 10, y: 20, w: 100, h: 50 }, rot: 15, fill: resolve({ role: 'accent' }, d.palette), d: 'M0 0H100V50H0Z' });
-  expect(s.ops[1]).toMatchObject({ kind: 'text', lines: ['one', 'two'], align: 'left', dir: 'ltr', size: 50, lineHeight: 50 * LINE_HEIGHT, rect: { h: 100 * LINE_HEIGHT } });
+  expect(s.ops[1]).toMatchObject({ kind: 'text', lines: ['one', 'two'], align: 'left', dir: 'ltr', size: 50, lineHeight: 50 * LINE_HEIGHT, baseline: 50 * (LINE_HEIGHT / 2 + BASELINE), rect: { h: 100 * LINE_HEIGHT } });
   expect(s.ops[2]).toMatchObject({ align: 'right', dir: 'rtl' });
   expect(s.ops[3]).toEqual({ kind: 'image', id: 'i', rect: { x: 0, y: 0, w: 200, h: 100 }, rot: 0, asset: 'k', cutout: true, focus: { x: .5, y: .5 } });
   expect(s.ops[5]).toMatchObject({ kind: 'ink', stroke: 4, paths: [[[0, 0], [100, 20]]] });
@@ -35,7 +35,11 @@ it('writes SVG with explicit tspans, licence metadata (5u) and optional ground (
   expect(out.startsWith('<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1000 1000">')).toBe(true);
   expect(out).toContain('<metadata><licences xmlns="urn:kura8:licences"><icon name="coffee" set="phosphor" licence="MIT" source="https://github.com/phosphor-icons/core"/></licences></metadata>');
   expect(out).toContain('<defs><style>@font-face{}</style></defs>'); expect(out).toContain(`<rect width="1000" height="1000" fill="${s.ground}"/>`);
-  expect(out).toContain('<tspan x="0" y="28.75">one</tspan><tspan x="0" y="86.25">two</tspan>');
+  // Lines sit on the alphabetic baseline at the middle of Space Grotesk's em square, as the canvas draws them.
+  expect(BASELINE).toBeCloseTo((FONT_METRICS.ascent - FONT_METRICS.descent) / (2 * (FONT_METRICS.ascent + FONT_METRICS.descent))); expect(BASELINE).toBeCloseTo(.2717, 4);
+  const ys = [...out.matchAll(/<tspan x="0" y="([\d.]+)">(one|two)<\/tspan>/g)].map(m => Number(m[1]));
+  expect(ys[0]).toBeCloseTo(50 * (LINE_HEIGHT / 2 + BASELINE), 2); expect(ys[1]).toBeCloseTo(50 * (LINE_HEIGHT * 1.5 + BASELINE), 2);
+  expect(out).not.toContain('dominant-baseline');
   expect(out).toContain('direction="rtl"'); expect(out).toContain('مساحة بين &lt;&amp;&gt;'); expect(out).toContain(`font-family="'Space Grotesk', system-ui, sans-serif"`);
   expect(out).toContain('viewBox="0 100 400 200" preserveAspectRatio="none"><image href="data:image/png;base64,AA" width="400" height="400"/>');
   expect(out).toContain('d="M0 0L100 20"'); expect(out).toContain('transform="scale(0.5 0.5)"');

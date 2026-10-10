@@ -4,6 +4,11 @@ import type { GuideId } from './guides/types';
 import { scaleFactorOf } from './guides';
 import { canvasSize } from './ratios';
 export const LINE_HEIGHT = 1.15;
+/** Space Grotesk's vertical metrics (em). */
+export const FONT_METRICS = { ascent: .98, descent: .29 };
+/** Where each line's alphabetic baseline sits below the line's middle (em): the middle of the font's em square, as
+ * canvas `textBaseline = 'middle'` places it. Canvas, SVG and the text editor all set lines on this baseline. */
+export const BASELINE = (FONT_METRICS.ascent - FONT_METRICS.descent) / (2 * (FONT_METRICS.ascent + FONT_METRICS.descent));
 export const textHeight = (lines: number, size: number): number => Math.max(1, lines) * size * LINE_HEIGHT;
 /** Guide-derived type scale: body base (28 units, less on short canvases) times the guide factor 1.5, φ or √2; no guide uses 1.25. */
 export type TypeScale = { factor: number; body: number; headline: number; steps: number[] };

@@ -68,6 +68,16 @@ export class Store {
     this.scheduleSave(); this.emit({ doc: true, ui: true });
     return true;
   }
+  /** Another tab saved the document: take its version. The undo history describes a document that no longer exists, so
+   * it goes, and a pending save of the replaced document is dropped rather than written over the newer one. */
+  adopt(doc: KuraDoc): void {
+    clearTimeout(this.saveTimer); this.doc = doc; this.history = emptyHistory();
+    const ids = new Set(doc.nodes.map(n => n.id));
+    this.ui = { ...this.ui, sel: this.ui.sel.filter(id => ids.has(id)), editing: null, flags: [], size: doc.sizes.some(s => s.id === this.ui.size) ? this.ui.size : doc.sizes[0].id };
+    this.emit({ doc: true, ui: true });
+  }
+  /** The saved document's storage key, for listening to other tabs. */
+  static readonly docKey = KEYS.doc;
   setUI(patch: Partial<UI>): void {
     this.ui = { ...this.ui, ...patch };
     if ('guides' in patch || 'grid' in patch) write(KEYS.prefs, { guides: this.ui.guides, grid: this.ui.grid });

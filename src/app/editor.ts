@@ -5,7 +5,7 @@ import { guideById } from '../core/guides';
 import { canvasSize, ratioById, ratioNumbers } from '../core/ratios';
 import { resolve } from '../core/palette';
 import { defaultShapeSize, shapeLibrary, ICON_SHAPE } from '../core/shapes';
-import { LINE_HEIGHT, textBox, typeScale, crossing, syncTextHeights, type TypeScale } from '../core/fit';
+import { BASELINE, FONT_METRICS, LINE_HEIGHT, textBox, typeScale, crossing, syncTextHeights, type TypeScale } from '../core/fit';
 import { addNodes, duplicateNodes, nodeById, nudge, pasteNodes, removeNodes, reorder, setFill, setGround, setHidden, setLocked, updateNodes, type Order } from '../core/ops';
 import { reRatio, flagsFor } from '../core/reratio';
 import { addSize, removeSize } from '../core/sizes';
@@ -346,7 +346,8 @@ export class Editor {
     try {
       const blob = await runRemoval(record.working);
       await assets.setCutout(asset, blob); this.forgetBitmap(asset); this.cutouts.add(asset);
-      this.commit(updateNodes(this.doc, this.doc.nodes.filter(x => x.kind === 'image' && x.asset === asset).map(x => x.id), x => ({ ...x, cutout: true }) as ImageNode), 'Background removed');
+      // The cut-out is stored once per asset; only the image it was asked for switches to it (copies keep their Before/After).
+      this.commit(updateNodes(this.doc, nodeById(this.doc, n.id)?.kind === 'image' ? [n.id] : [], x => ({ ...x, cutout: true }) as ImageNode), 'Background removed');
     } catch (e) { console.warn(e); toast('Background removal is unavailable here', 2200); }
     finally { this.scan = null; this.store.setUI({ removing: null }); }
   }
@@ -375,7 +376,9 @@ export class Editor {
     const area = this.textarea, id = this.store.ui.editing, node = id && this.store.doc ? nodeById(this.doc, id) : undefined;
     if (!area || node?.kind !== 'text') return;
     const f = this.frame(node), box = textBox(node, f, measure, this.typeScale()), k = this.scale, dir = direction(node.text || 'a');
-    area.style.cssText = `left:${box.rect.x * k}px;top:${box.rect.y * k}px;width:${box.rect.w * k}px;height:${(box.rect.h + box.size * .4) * k}px;transform:rotate(${f.rot}deg);transform-origin:${box.rect.w * k / 2}px ${box.rect.h * k / 2}px;`
+    // CSS sets a line's baseline (ascent − descent) / 2 below its middle; lift the editor so its text sits where the canvas draws it.
+    const lift = ((FONT_METRICS.ascent - FONT_METRICS.descent) / 2 - BASELINE) * box.size * k;
+    area.style.cssText = `left:${box.rect.x * k}px;top:${box.rect.y * k - lift}px;width:${box.rect.w * k}px;height:${(box.rect.h + box.size * .4) * k}px;transform:rotate(${f.rot}deg);transform-origin:${box.rect.w * k / 2}px ${box.rect.h * k / 2 + lift}px;`
       + `font:${node.weight} ${box.size * k}px ${fontStack(node.text)};line-height:${LINE_HEIGHT};text-align:${physicalAlign(node.align, dir)};color:${this.colour(node.fill)};caret-color:${this.colour(node.fill)}`;
   }
   finishText(): void {
