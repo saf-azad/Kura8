@@ -8,7 +8,7 @@ import { emptyLive, type Editor } from '../editor';
 // Sketch tools (M12): the pen cleans a stroke when you hold still at its end (420 ms), scribbling over objects deletes
 // them, a rectangle crossed by both diagonals becomes an image frame, a wave becomes a text line; eraser and lasso.
 // Recognition is deterministic geometry (src/core/ink.ts); handwriting is not built (D-030).
-export type SketchTools = { down(e: PointerEvent, p: Point): boolean; move(e: PointerEvent, p: Point): void; up(e: PointerEvent, p: Point): void; leave(): void; active(): boolean };
+export type SketchTools = { down(e: PointerEvent, p: Point): boolean; move(e: PointerEvent, p: Point): void; up(e: PointerEvent, p: Point): void; leave(): void; active(): boolean; cancel(): void };
 type PenDrag = { kind: 'pen'; pts: P[]; ax: number; ay: number; done: boolean; rec: Recognised | null; recAt: number };
 type Drag = PenDrag | { kind: 'erase'; before: KuraDoc; hit: boolean } | { kind: 'lasso'; pts: P[] };
 export function installSketch(ed: Editor): SketchTools {
@@ -128,5 +128,11 @@ export function installSketch(ed: Editor): SketchTools {
       ed.commit(addNodes(ed.doc, [inkNode([smooth(d.pts)], ed.inkWidth())]));
     },
     leave() { if (!drag && ed.live.sketch.eraser) { ed.live = emptyLive(); ed.invalidate(); } },
+    /** Escape mid-stroke: drop the stroke, give back what the eraser took, keep the lasso's selection. */
+    cancel() {
+      const d = drag; drag = null; clearTimeout(holdTimer);
+      if (d?.kind === 'erase' && d.hit) ed.store.set(d.before);
+      ed.live = emptyLive(); ed.invalidate();
+    },
   };
 }

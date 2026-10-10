@@ -5,7 +5,7 @@ import { guideById } from '../core/guides';
 import { canvasSize, ratioById, ratioNumbers } from '../core/ratios';
 import { resolve } from '../core/palette';
 import { defaultShapeSize, shapeLibrary, ICON_SHAPE } from '../core/shapes';
-import { LINE_HEIGHT, textBox, typeScale, crossing, type TypeScale } from '../core/fit';
+import { LINE_HEIGHT, textBox, typeScale, crossing, syncTextHeights, type TypeScale } from '../core/fit';
 import { addNodes, duplicateNodes, nodeById, nudge, pasteNodes, removeNodes, reorder, setFill, setGround, setHidden, setLocked, updateNodes, type Order } from '../core/ops';
 import { reRatio, flagsFor } from '../core/reratio';
 import { addSize, removeSize } from '../core/sizes';
@@ -193,9 +193,14 @@ export class Editor {
     this.store.setUI({ sel: nodes.map(n => n.id), armed: null, panel: this.store.ui.panel === 'colour' ? null : this.store.ui.panel });
   }
   centred(w: number, hgt: number): Rect { const c = this.canvas(), o = this.nextOffset(); return { x: (c.w - w) / 2 + o, y: (c.h - hgt) / 2 + o, w, h: hgt }; }
+  /** A new text box records no history until it is finished with some text; left empty it simply goes away. */
   addText(): void {
+    this.finishText();
     const c = this.canvas(), size = this.typeScale().headline, w = c.w * .5, node: TextNode = { id: newId(), kind: 'text', text: 'Text', weight: 700, align: 'start', fill: { role: 'ink' }, frames: this.framesFor(this.centred(w, size * LINE_HEIGHT), { fontSize: size }) };
-    this.add([node]); this.editText(node.id);
+    const before = this.doc;
+    this.store.set(addNodes(before, [node]));
+    this.store.setUI({ sel: [node.id], armed: null, panel: this.store.ui.panel === 'colour' ? null : this.store.ui.panel });
+    this.editText(node.id, before);
   }
   addShape(key: string): void {
     const def = shapeLibrary[key], s = defaultShapeSize(def.ar, this.canvas()), swatch = this.store.ui.swatch;
@@ -219,14 +224,20 @@ export class Editor {
   async placeFiles(files: File[], at: Point | null, target: string | null = null): Promise<void> {
     const images = files.filter(f => /^image\/(png|jpeg|webp|gif)$/.test(f.type));
     if (!images.length) { if (files.length) toast('Choose a PNG, JPEG, WebP or GIF image'); return; }
-    const hit = target ? nodeById(this.doc, target) : at ? this.hitTest(at) : undefined;
+    const hit = target ? nodeById(this.doc, target) : at ? this.hitTest(at) : undefined, c = this.canvas(), p = at ?? { x: c.w / 2, y: c.h / 2 };
+    // Several images go to the nearest cells, one each; past the last cell they step down-right, kept on the canvas.
+    let free = this.cells(), added = 0;
     for (const [i, file] of images.entries()) {
       let stored: { key: string; natural: Size };
       try { stored = await assets.putImage(file, this.maxExport()); } catch { toast('That image could not be read'); continue; }
       if (i === 0 && hit?.kind === 'image' && !hit.locked) { this.commit(updateNodes(this.doc, [hit.id], n => ({ ...n, asset: stored.key, cutout: false, focus: CENTRE }) as ImageNode), 'Filled'); this.select([hit.id]); continue; }
-      const c = this.canvas(), p = at ?? { x: c.w / 2, y: c.h / 2 }, cells = this.cells();
-      const rect = cells.length ? nearestCell(p, cells, c) : containIn(nearestCell(p, [], c), stored.natural);
-      if (i > 0) { rect.x += 20 * i; rect.y += 20 * i; }
+      let rect: Rect;
+      if (free.length) { rect = nearestCell(p, free, c); free = free.filter(r => r.x !== rect.x || r.y !== rect.y || r.w !== rect.w || r.h !== rect.h); }
+      else {
+        rect = this.cells().length ? nearestCell(p, this.cells(), c) : containIn(nearestCell(p, [], c), stored.natural);
+        const o = 20 * added; rect = { ...rect, x: Math.max(0, Math.min(c.w - rect.w, rect.x + o)), y: Math.max(0, Math.min(c.h - rect.h, rect.y + o)) };
+      }
+      added++;
       this.add([{ id: newId(), kind: 'image', asset: stored.key, frames: this.framesFor(rect) }], 'Image');
     }
   }
@@ -277,7 +288,7 @@ export class Editor {
     this.commit(setFill(this.doc, [node.id], armed));
   }
   setPalette(patch: Partial<Palette>, message?: string): void { this.commit({ ...this.doc, palette: { ...this.doc.palette, ...patch } }, message); }
-  editOne(fn: (n: DocNode) => DocNode, key?: string): void { const n = this.one(); if (n && !n.locked) this.store.commit(updateNodes(this.doc, [n.id], fn), { key }); }
+  editOne(fn: (n: DocNode) => DocNode, key?: string): void { const n = this.one(); if (n && !n.locked) this.store.commit(syncTextHeights(updateNodes(this.doc, [n.id], fn), [n.id], measure), { key }); }
   fontStep(dir: 1 | -1): void {
     const n = this.one(); if (n?.kind !== 'text') return;
     const f = this.frame(n), size = textBox(n, f, measure, this.typeScale()).size, next = Math.max(6, size + dir * Math.max(2, Math.round(size * .1)));
@@ -316,7 +327,13 @@ export class Editor {
     this.store.setUI({ size: id, flags, sel: [] });
   }
   setGuides(on: boolean): void { this.store.setUI({ guides: on }); toast(on ? 'Guides on' : 'Guides off'); }
-  openPanel(panel: PanelId | null): void { this.store.setUI({ panel: this.store.ui.panel === panel ? null : panel }); }
+  /** Opens a panel, or closes it when it is already open. Focus left inside a closing panel goes back to the canvas, so the
+   * next key is a shortcut rather than typing into a hidden field. */
+  openPanel(panel: PanelId | null): void {
+    const next = this.store.ui.panel === panel ? null : panel, a = document.activeElement;
+    if (next !== this.store.ui.panel && a instanceof HTMLElement && a.closest('.panel, .sheet, .modal')) this.overlay.focus({ preventScroll: true });
+    this.store.setUI({ panel: next });
+  }
   setTool(tool: Tool | null): void { this.finishText(); this.live = emptyLive(); this.store.setUI({ tool, panel: null, armed: null, sel: tool ? [] : this.store.ui.sel }); }
   // background removal (5o)
   async removeBackground(): Promise<void> {
@@ -341,11 +358,11 @@ export class Editor {
     if (r?.cutout) { this.cutouts.add(n.asset); this.invalidate(); }
   }
   // text editing
-  editText(id: string): void {
+  editText(id: string, from?: KuraDoc): void {
     const node = nodeById(this.doc, id);
     if (node?.kind !== 'text' || node.locked) return;
     this.finishText();
-    const before = this.doc, area = h('textarea', { className: 'text-editor', 'aria-label': 'Edit text', spellcheck: 'false', dir: 'auto' });
+    const before = from ?? this.doc, area = h('textarea', { className: 'text-editor', 'aria-label': 'Edit text', spellcheck: 'false', dir: 'auto' });
     area.value = node.text; this.textarea = area; this.stack.append(area);
     this.store.setUI({ editing: id, sel: [id], armed: null });
     this.positionTextarea(); area.focus(); area.select();
@@ -368,9 +385,12 @@ export class Editor {
     area.remove(); this.store.setUI({ editing: null });
     const node = id ? nodeById(this.doc, id) : undefined;
     if (!node || node.kind !== 'text') return;
-    if (!node.text.trim()) { this.store.commit(removeNodes(this.doc, [node.id]), { before: before ?? undefined }); this.select([]); return; }
-    const f = this.frame(node), b = this.box(node);
-    const synced = node.fit ? this.doc : updateNodes(this.doc, [node.id], n => ({ ...n, frames: { ...n.frames, [this.sizeId]: { ...f, rect: { ...f.rect, h: b.h } } } }));
+    if (!node.text.trim()) {
+      const next = removeNodes(this.doc, [node.id]);
+      if (before && !nodeById(before, node.id)) this.store.set(next); else this.store.commit(next, { before: before ?? undefined });
+      this.select([]); return;
+    }
+    const synced = syncTextHeights(this.doc, [node.id], measure);
     if (before && JSON.stringify(nodeById(before, node.id)) !== JSON.stringify(nodeById(synced, node.id))) this.store.commit(synced, { before }); else this.store.set(synced);
   }
   // 5d: on the first open ever, blocks lift 2px one after another, once.

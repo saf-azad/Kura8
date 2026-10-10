@@ -64,8 +64,8 @@ export function showDial(root: HTMLElement, host: DialHost): { paint(): void; de
   const picker = (el: HTMLElement, kind: 'sv' | 'h') => el.addEventListener('pointerdown', e => {
     e.preventDefault(); el.setPointerCapture(e.pointerId); const r = el.getBoundingClientRect();
     const at = (ev: PointerEvent) => { const fx = Math.max(0, Math.min(1, (ev.clientX - r.left) / r.width)), fy = Math.max(0, Math.min(1, (ev.clientY - r.top) / r.height)); pickHsv = kind === 'sv' ? { ...pickHsv, s: Math.round(fx * 100), v: Math.round((1 - fy) * 100) } : { ...pickHsv, h: Math.round(fx * 359) }; host.set({ accent: hsvToHex(pickHsv.h, pickHsv.s, pickHsv.v) }); };
-    at(e); const move = (ev: PointerEvent) => at(ev), up = () => { el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); };
-    el.addEventListener('pointermove', move); el.addEventListener('pointerup', up);
+    at(e); const move = (ev: PointerEvent) => at(ev), up = () => { el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up); };
+    el.addEventListener('pointermove', move); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
   });
   picker(sv, 'sv'); picker(hueBar, 'h');
   const light = h('button', { type: 'button', title: 'Light ground', 'aria-label': 'Light ground' }, h('i', { style: 'background:#ECF0F3' })), dark = h('button', { type: 'button', title: 'Dark ground', 'aria-label': 'Dark ground' }, h('i', { style: 'background:#000' }));
@@ -83,6 +83,8 @@ export function showDial(root: HTMLElement, host: DialHost): { paint(): void; de
     h('div', {}, h('span', { className: 'muted', style: 'margin-right:5px' }, 'Start'), h('span', { className: 'key' }, 'Enter')));
   const screen = h('div', { className: 'dial' }, h('div', { className: 'wordmark' }, 'Kura8'), h('div', { className: 'readout-cards' }, ...cards), wheelBox, any, actions, hints);
   root.replaceChildren(screen);
+  // Mouse clicks leave no focused button behind, so Enter still starts and arrows still turn the focused ring.
+  screen.addEventListener('click', e => { if (e.detail > 0) (e.target as Element).closest<HTMLElement>('button')?.blur(); });
   function pick(key: RingKey, i: number): void { const r = RINGS.find(x => x.key === key)!; rot[key] = rotationFor(rot[key], i, r.n); host.set(patchFor(key, i)); }
   // ring dragging
   const angleAt = (e: PointerEvent) => { const r = wheel.getBoundingClientRect(); return Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2)) * 180 / Math.PI; };

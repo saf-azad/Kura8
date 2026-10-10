@@ -14,7 +14,7 @@ import type { SketchTools } from '../sketch';
 // `last` is the document this drag last wrote; anything else committed meanwhile (Delete, undo, a finished background
 // removal) ends the drag rather than being overwritten from `before`.
 type Drag =
-  | { kind: 'move'; ids: string[]; start: Point; before: KuraDoc; last?: KuraDoc; frames: Record<string, Frame>; box: Rect; rot: number; moved: boolean; held?: { x?: string; y?: string } }
+  | { kind: 'move'; ids: string[]; start: Point; before: KuraDoc; last?: KuraDoc; frames: Record<string, Frame>; box: Rect; rot: number; moved: boolean; held?: { x?: string; y?: string }; toggle: string | null }
   | { kind: 'resize'; id: string; handle: Handle; before: KuraDoc; last?: KuraDoc; frame: Frame; box: Rect; size: number; moved: boolean }
   | { kind: 'rotate'; id: string; c: Point; a0: number; r0: number; before: KuraDoc; last?: KuraDoc; held: number | null; moved: boolean }
   | { kind: 'marquee'; start: Point; base: string[] };
@@ -58,19 +58,21 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
       ed.store.setUI({ sel: base, panel: keepPanel });
       drag = { kind: 'marquee', start: p, base }; el.setPointerCapture(e.pointerId); return;
     }
+    // Shift on a selected object drops it from the selection on release, so Shift-dragging it still moves the
+    // selection along one axis.
     let sel = ui.sel;
-    if (e.shiftKey) sel = sel.includes(hit.id) ? sel.filter(x => x !== hit.id) : [...sel, hit.id];
-    else if (!sel.includes(hit.id)) sel = [hit.id];
+    const toggle = e.shiftKey && sel.includes(hit.id) ? hit.id : null;
+    if (e.shiftKey && !toggle) sel = [...sel, hit.id];
+    else if (!e.shiftKey && !sel.includes(hit.id)) sel = [hit.id];
     ed.store.setUI({ sel, panel: keepPanel });
     void ed.checkCutout(hit);
     if (hit.kind === 'image' && hit.asset) ed.preloadRemoval();
-    if (!sel.includes(hit.id)) return;
     const movers = ed.doc.nodes.filter(n => sel.includes(n.id) && !n.locked && !ed.frame(n).hidden);
-    if (!movers.length) return;
+    if (!movers.length) { if (toggle) ed.select(sel.filter(x => x !== toggle)); return; }
     const frames = Object.fromEntries(movers.map(n => [n.id, ed.frame(n)]));
     const single = movers.length === 1 ? movers[0] : null;
     const box = single ? ed.box(single) : unionRect(movers.map(n => rotatedBounds(ed.box(n), ed.frame(n).rot)));
-    drag = { kind: 'move', ids: movers.map(n => n.id), start: p, before: ed.doc, frames, box, rot: single ? ed.frame(single).rot : 0, moved: false };
+    drag = { kind: 'move', ids: movers.map(n => n.id), start: p, before: ed.doc, frames, box, rot: single ? ed.frame(single).rot : 0, moved: false, toggle };
     el.setPointerCapture(e.pointerId); e.preventDefault();
   });
   el.addEventListener('pointermove', e => {
@@ -147,9 +149,19 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
     if (d.kind === 'marquee') { ed.invalidate(); return; }
     if (d.last && ed.doc !== d.last) { ed.invalidate(); return; }
     if (d.moved && ed.doc !== d.before) ed.store.commit(ed.doc, { before: d.before });
+    else if (d.kind === 'move' && !d.moved && d.toggle) ed.select(ed.store.ui.sel.filter(x => x !== d.toggle));
     else if (d.kind === 'move' && !e.shiftKey && ed.store.ui.sel.length > 1) { const hit = ed.hitTest(ed.toUnits(e)); if (hit) ed.select([hit.id]); }
     ed.invalidate();
   };
+  // Escape during a gesture cancels it: the document returns to where the gesture started and the selection stays.
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape' || e.isComposing) return;
+    if (sketch.active()) { sketch.cancel(); }
+    else if (drag?.kind === 'marquee') { ed.select(drag.base); drag = null; }
+    else if (drag) { if (drag.last && ed.doc === drag.last) ed.store.set(drag.before); drag = null; }
+    else return;
+    e.preventDefault(); e.stopPropagation(); ed.live = emptyLive(); ed.invalidate();
+  }, true);
   el.addEventListener('pointerup', finish);
   el.addEventListener('pointercancel', finish);
   el.addEventListener('pointerleave', () => { if (ed.store.ui.tool) sketch.leave(); });

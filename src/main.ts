@@ -78,6 +78,12 @@ function ensureEditor(): Editor {
   const hint = h('button', { type: 'button', className: 'shortcut-hint', title: 'Keyboard shortcuts' }, h('span', { className: 'muted' }, 'Shortcuts'), h('span', { className: 'key' }, '?'));
   hint.addEventListener('click', () => ed.openPanel('keys'));
   editorRoot.append(word, toolbar(ed, panels), corner(ed, panels), hint, keysPanel(ed), exportSheet(ed));
+  // A mouse click on a toolbar or corner button hands the keyboard back to the canvas, so Enter then edits the
+  // selected text instead of pressing that button again; keyboard activation (detail 0) leaves focus where it is.
+  editorRoot.addEventListener('click', e => {
+    const b = (e.target as Element).closest('button');
+    if (e.detail > 0 && b && document.activeElement === b && b.closest('.toolbar, .corner, .corner-stack')) ed.overlay.focus({ preventScroll: true });
+  });
   // Escape or a click outside closes a panel; clicks on the canvas keep the colour, shapes and layers panels open.
   document.addEventListener('pointerdown', e => {
     const t = e.target as Element, panel = store.ui.panel;
