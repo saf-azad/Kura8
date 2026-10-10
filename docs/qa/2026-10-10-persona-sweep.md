@@ -36,6 +36,16 @@ Exploratory browser runs after the Phase 1 merge, one scripted person per job, a
 | 4 | Eve | A busy design exported to PNG and SVG, compared pixel by pixel |
 | 4 | Mo | Reduced motion: first open, Go, hold-to-clean |
 | 4 | Bea | Background removal on one of two copies of a photo |
+| 5 | Kim | Dial: wrap-around, scroll, any-colour accent, Go after turning the colour ring |
+| 5 | Fay | Type extremes: 60 × Larger, minimum size, 20-unit width, blank and trailing lines |
+| 5 | Lin | A locked headline inside select-all drags, nudges, recolours, duplicates, deletes, bold |
+| 5 | Pia | Every export: disabled sizes and their reason, notes, file names, No ground then JPG, filled ground, A4 default |
+| 5 | Ola | Undo across sizes, custom hues and ratio changes |
+| 5 | Uma | Cover crops of a wide photo, corner resize |
+| 5 | Xia | Dial buttons from the keyboard: wordmark, Back to canvas, New |
+| 6 | Ken | 2× display, large window: canvas resolution, handles, rotate knob, export size |
+| 6 | Rae | Long copy edited in a square, checked in a linked banner |
+| 6 | Sid | Clicking again before things finish: double-click Download, delete during background removal |
 
 ## Bugs fixed
 
@@ -53,6 +63,8 @@ Exploratory browser runs after the Phase 1 merge, one scripted person per job, a
 - **B12** (Tess) With Kura8 open in two tabs, an edit in the stale tab saved over the other tab's work. Every tab now follows the latest save: it takes the other tab's document, drops its own undo history and pending save, and says "Updated from another tab". `src/app/store.ts`, `src/main.ts`.
 - **B13** (Theo) A double tap with a finger or pen did not open text for editing or an empty frame's picker; browsers do not reliably send `dblclick` for taps. Two taps on the same object, released without moving within 400 ms, now count as a double-click. `src/app/canvas/interaction.ts`.
 - **B14** (Bea) Removing the background of one copy of a photo switched every copy of it to the cut-out. Only the image it was asked for switches; the cut-out is stored once, so the copies can show it with their own After toggle. `src/app/editor.ts`.
+- **B15** (Sid) When background removal finished after its image had been deleted, it still recorded an empty undo step (the first Undo then did nothing) and said "Background removed"; a picture read into a frame deleted meanwhile did the same with "Filled". Both now check the image is still there and unlocked; a removed image keeps its stored cut-out for later. `src/app/editor.ts`.
+- **B16** (Sid) A double-click on Download saved two files. The second click of a double-click is ignored. `src/app/tools/panels/export.ts`.
 - The sketch clean-up morph is skipped under reduced motion, like the lift and the Go tween.
 - The dial's any-colour picker now also releases its listeners on `pointercancel`.
 
@@ -63,4 +75,5 @@ Exploratory browser runs after the Phase 1 merge, one scripted person per job, a
 - Enter on selected text opens it with all text selected.
 - The colour panel covers the top-left of tall canvases; canvas taps underneath it reach the panel.
 - A version 1 document without images stays in its old form in storage until the first save (any edit, or leaving the page); it migrates again on every load until then.
+- Background removal on the WASM path (no WebGPU) holds the main thread for several seconds, so the scan line, input and autosave wait until it ends; nothing is lost. Recorded under Deferred (run inference in a worker).
 - Handles more than 64 px outside the canvas are out of reach (the overlay margin); the object can still be moved back with a drag or the arrows. Recorded under Deferred.

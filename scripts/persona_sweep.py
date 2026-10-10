@@ -1068,10 +1068,243 @@ def bea_cutout(app):
     note(not node(app, id=copy['id']).get('cutout'), 'undo of background removal')
 
 
+# ------------------------------------------------------------------------------------------------ round 5
+def kim_dial(app):
+    """Kim plays with the dial before starting."""
+    p = app.page
+    app.fresh({'ratio': 'square', 'comp': 'cover', 'guide': 'thirds', 'hue': 210, 'dark': False})
+    for _ in range(7): p.keyboard.press('ArrowRight')
+    note('Portrait 4:5' in p.locator('.card').nth(0).inner_text(), f'ratio ring wraps: {p.locator(".card").nth(0).inner_text()}')
+    g = p.locator('[data-ring="guide"][data-index="0"] > g').bounding_box()
+    p.mouse.move(g['x'] + g['width'] / 2, g['y'] + g['height'] / 2)
+    for _ in range(5): p.mouse.wheel(0, 120); p.wait_for_timeout(160)
+    note(any(n in p.locator('.card').nth(2).inner_text() for n in ['Thirds', 'Golden', 'Quarters']), 'scrolling the guide ring')
+    sv = p.locator('.any-colour .sv').bounding_box(); p.mouse.click(sv['x'] + sv['width'] * .8, sv['y'] + sv['height'] * .2); p.wait_for_timeout(150)
+    note('Custom #' in p.locator('.card').nth(3).inner_text(), f'any colour did not set a custom accent: {p.locator(".card").nth(3).inner_text()}')
+    p.keyboard.press('Enter'); p.wait_for_timeout(600)
+    d = app.doc(); note(d and d['palette'].get('accent'), f'custom accent not in the document: {d and d["palette"]}')
+    p.keyboard.press('Escape'); p.keyboard.press('Escape')
+    p.locator('button.wordmark').click(); p.wait_for_timeout(300)
+    note('Custom #' in p.locator('.card').nth(3).inner_text(), 'dial lost the custom accent on return')
+    for _ in range(3): p.keyboard.press('ArrowDown')
+    p.keyboard.press('ArrowRight'); p.wait_for_timeout(150)
+    note('Custom' not in p.locator('.card').nth(3).inner_text(), 'turning the colour ring kept the custom accent')
+    p.locator('.dial .dial-actions button', has_text='Go').click(); p.wait_for_timeout(500)
+    note(not app.doc()['palette'].get('accent'), f'Go kept the old accent after the ring turned: {app.doc()["palette"]}')
+    valid(app)
+
+
+def fay_extremes(app):
+    """Fay pushes type to its limits."""
+    p = app.page
+    app.start({'ratio': 'square', 'comp': 'stack', 'guide': 'divisions', 'hue': 100, 'dark': False})
+    p.keyboard.press('t'); p.wait_for_timeout(150); p.keyboard.type('A'); p.keyboard.press('Control+Enter'); p.wait_for_timeout(100)
+    t = app.doc()['nodes'][-1]
+    for _ in range(60): toolbar(app, 'Larger').click()
+    t2 = node(app, id=t['id']); f = t2['frames']['main']; note(math.isfinite(f['fontSize']) and f['fontSize'] > 300, f'Larger x60: {f}')
+    for _ in range(80): toolbar(app, 'Smaller').click()
+    f = node(app, id=t['id'])['frames']['main']; note(f['fontSize'] >= 6, f'min size {f}')
+    r = app.frame(node(app, id=t['id'])); app.drag_unit((r['x'] + r['w'], r['y'] + r['h'] / 2), (r['x'] + 2, r['y'] + r['h'] / 2), alt=True)
+    r2 = app.frame(node(app, id=t['id'])); note(r2['w'] >= 19.9, f'text squeezed below 20 wide: {r2}')
+    p.keyboard.press('Escape'); p.keyboard.press('t'); p.wait_for_timeout(150); p.keyboard.type('   '); p.keyboard.press('Control+Enter'); p.wait_for_timeout(100)
+    note(not [n for n in app.doc()['nodes'] if n['kind'] == 'text' and not n['text'].strip()], 'whitespace-only text kept')
+    p.keyboard.press('Escape'); p.keyboard.press('t'); p.wait_for_timeout(150); p.keyboard.type('trailing'); p.keyboard.press('Enter'); p.keyboard.press('Enter'); p.keyboard.press('Control+Enter'); p.wait_for_timeout(100)
+    tr = app.doc()['nodes'][-1]; f = tr['frames']['main']; note(f['rect']['h'] > f['fontSize'] * 1.15 * 2.5, f'trailing blank lines not measured: {f}')
+    path = app.export('svg'); t = path.read_text()
+    import xml.dom.minidom
+    try: xml.dom.minidom.parseString(t)
+    except Exception as e: note(False, f'svg with blank lines does not parse: {e}')
+    app.close_panels(); valid(app)
+
+
+def lin_locks(app):
+    """Lin locks the layout and keeps editing around it."""
+    p = app.page
+    app.start({'ratio': 'portrait', 'comp': 'split', 'guide': 'thirds', 'hue': 20, 'dark': False})
+    head = find(app.doc(), slot='headline')[0]; app.select(head); p.keyboard.press('Control+Shift+L'); p.wait_for_timeout(100)
+    before = node(app, id=head['id'])
+    p.keyboard.press('Control+a'); p.wait_for_timeout(100)
+    acc = find(app.doc(), slot='accent')[0]; r = app.frame(acc)
+    app.drag_unit((r['x'] + r['w'] / 2, r['y'] + r['h'] / 2), (r['x'] + r['w'] / 2 + 60, r['y'] + r['h'] / 2 + 40), alt=True)
+    note(app.frame(node(app, id=head['id'])) == app.frame(before), 'locked headline moved with a multi-select drag')
+    note(app.frame(node(app, id=acc['id']))['x'] != r['x'], 'unlocked accent did not move with the selection')
+    p.keyboard.press('Control+a'); p.keyboard.press('ArrowDown'); note(app.frame(node(app, id=head['id'])) == app.frame(before), 'locked headline nudged')
+    p.keyboard.press('c'); p.wait_for_timeout(150); p.locator('.colour-panel .roles button', has_text='Accent').click(); p.wait_for_timeout(100)
+    note(node(app, id=head['id'])['fill'] == before['fill'], 'locked headline recoloured'); p.keyboard.press('Escape')
+    p.keyboard.press('Control+a'); n = len(app.doc()['nodes']); p.keyboard.press('Control+d'); p.wait_for_timeout(100)
+    d = app.doc(); note(len(d['nodes']) == n + n - 1, f'duplicate of a selection with one locked: {len(d["nodes"]) - n} copies')
+    note(not [x for x in d['nodes'] if x['id'] != head['id'] and x.get('locked')], 'a duplicate came out locked')
+    p.keyboard.press('Control+a'); p.keyboard.press('Delete'); p.wait_for_timeout(100)
+    d = app.doc(); note([x['id'] for x in d['nodes']] == [head['id']], f'delete all left {[x.get("slot") for x in d["nodes"]]}')
+    p.keyboard.press('Control+a'); p.keyboard.press('Control+b'); note(node(app, id=head['id'])['weight'] == before['weight'], 'locked text bolded')
+    p.keyboard.press('Control+z'); p.wait_for_timeout(100); note(len(app.doc()['nodes']) > 1, 'undo delete')
+    valid(app)
+
+
+def pia_exports(app):
+    """Pia exports every way the sheet allows."""
+    p = app.page
+    app.start({'ratio': 'story', 'comp': 'cover', 'guide': 'golden', 'hue': 280, 'dark': False})
+    p.keyboard.press('Control+Shift+E'); p.wait_for_timeout(300)
+    three = p.locator('.sheet .seg[aria-label="Size"] button', has_text='3×')
+    note(three.is_disabled(), 'story 3× (3240 × 5760) should be over the pixel limit')
+    three.hover(); p.wait_for_timeout(200); note('Larger than' in p.locator('.tip').inner_text(), f'no reason on the disabled size: {p.locator(".tip").inner_text()!r}')
+    note('1 empty image frame not included' in p.locator('.sheet .notes').inner_text(), f'notes: {p.locator(".sheet .notes").inner_text()!r}')
+    path = app.export('png', scale='2×'); note(png_size(path)[0] == (2160, 3840), f'story 2× {png_size(path)}')
+    note(path.name == 'kura8-story@2x.png', f'file name {path.name}')
+    path = app.export('png', no_ground=True); im = Image.open(path); note(im.mode == 'RGBA' and im.getpixel((5, 5))[3] == 0, 'No ground not transparent')
+    path = app.export('jpg'); im = Image.open(path); note(im.mode == 'RGB' and im.getpixel((5, 5))[0] > 150, f'JPG after No ground was toggled should keep the ground: {im.getpixel((5, 5))}')
+    path = app.export('pdf'); data = path.read_bytes(); note(data.startswith(b'%PDF') and b'/MediaBox' in data, 'pdf')
+    app.close_panels()
+    # filled ground: No ground hidden, PNG opaque even if it was switched on before
+    p.keyboard.press('c'); p.wait_for_timeout(150); p.locator('.colour-panel .shades button').nth(1).click(); app.click_unit(990, 1700); p.keyboard.press('Escape'); p.keyboard.press('Escape')
+    note(app.doc()['ground'] is not None, 'ground not filled')
+    path = app.export('png'); im = Image.open(path).convert('RGBA'); note(im.getpixel((5, 5))[3] == 255, 'filled ground exported transparent')
+    note(not p.locator('.sheet button[aria-label="No ground"]').is_visible(), 'No ground offered with a filled ground')
+    app.close_panels()
+    p.locator('.corner .sizes button').nth(0).click(); p.wait_for_timeout(150)
+    p.locator('.ratio-panel g[aria-label="Change to Print A4"]').click(); p.wait_for_timeout(300); p.keyboard.press('Escape')
+    p.keyboard.press('Control+Shift+E'); p.wait_for_timeout(300)
+    note(p.locator('.sheet .seg[aria-label="Size"] button[aria-pressed="true"]').inner_text() == '300 dpi', 'A4 does not default to 300 dpi after a ratio change with the sheet closed')
+    app.close_panels()
+
+
+def ola_undo_ui(app):
+    """Ola undoes across sizes, palettes and ratios."""
+    p = app.page
+    app.start({'ratio': 'square', 'comp': 'cover', 'guide': 'thirds', 'hue': 50, 'dark': False})
+    p.locator('button[aria-label="Add a linked size"]').click(); p.wait_for_timeout(200); p.locator('.ratio-panel g[aria-label="Add Story 9:16"]').click(); p.wait_for_timeout(300)
+    note(p.locator('.corner .sizes button[aria-pressed="true"]').inner_text().strip().endswith('9:16'), 'new size not active')
+    p.keyboard.press('Control+z'); p.wait_for_timeout(200)
+    note(len(app.doc()['sizes']) == 1 and p.locator('.corner .sizes button').count() == 1, 'undo add size')
+    note(app.box()['width'] / app.box()['height'] > .95, 'canvas still story-shaped after undoing the size')
+    p.keyboard.press('Control+Shift+z'); p.wait_for_timeout(200); note(len(app.doc()['sizes']) == 2, 'redo add size')
+    # custom hue then undo while its row is shown
+    app.select(find(app.doc(), slot='accent')[0]); p.keyboard.press('c'); p.wait_for_timeout(150)
+    f = p.locator('.colour-panel input.field'); f.click(); f.fill('#12ab34'); p.keyboard.press('Enter'); p.wait_for_timeout(100)
+    p.locator('.colour-panel button', has_text='Add as hue').click(); p.wait_for_timeout(150)
+    k = len(ba.errors)
+    p.keyboard.press('Escape'); p.keyboard.press('Control+z'); p.keyboard.press('Control+z'); p.wait_for_timeout(150)
+    app.select(find(app.doc(), slot='accent')[0]); p.keyboard.press('c'); p.wait_for_timeout(200)
+    note(p.locator('.colour-panel .shades button').count() == 7, 'shade row missing after undoing a custom hue')
+    note(not ba.errors[k:], f'errors {ba.errors[k:]}')
+    p.keyboard.press('Escape'); p.keyboard.press('Escape')
+    # change ratio, undo: flags cleared, canvas back
+    p.locator('.corner .sizes button').nth(0).click(); p.wait_for_timeout(150)
+    p.locator('.ratio-panel g[aria-label="Change to Banner 3:1"]').click(); p.wait_for_timeout(300); p.keyboard.press('Escape')
+    p.keyboard.press('Control+z'); p.wait_for_timeout(200); note(app.doc()['sizes'][0]['ratio'] == 'square', 'undo ratio'); valid(app)
+
+
+def uma_crop(app):
+    """Uma checks how photos crop into frames."""
+    p = app.page
+    app.start({'ratio': 'square', 'comp': 'split', 'guide': 'thirds', 'hue': 0, 'dark': False})
+    img = OUT / 'uma.png'; im = Image.new('RGB', (1600, 400), (20, 20, 200))
+    for x in range(700, 900):
+        for y in range(150, 250): im.putpixel((x, y), (230, 30, 30))
+    im.save(img)
+    frame = find(app.doc(), slot='image')[0]; drop_file(app, img, *app.node_centre(frame))
+    r = app.frame(node(app, id=frame['id']))
+    p.keyboard.press('Escape'); path = app.export('png'); ex = Image.open(path).convert('RGB'); s = 1080 / 1000
+    c = ex.getpixel((int((r['x'] + r['w'] / 2) * s), int((r['y'] + r['h'] / 2) * s)))
+    note(c[0] > 180 and c[2] < 80, f'cover crop not centred on the photo centre: {c}')
+    edge = ex.getpixel((int((r['x'] + 3) * s), int((r['y'] + 3) * s)))
+    note(edge[2] > 150 and edge[0] < 80, f'frame corner not filled by the photo (contain instead of cover?): {edge}')
+    app.close_panels(); app.select(node(app, id=frame['id'])); x0 = app.frame(node(app, id=frame['id']))
+    app.drag_unit((x0['x'] + x0['w'] - 1, x0['y'] + x0['h'] - 1), (x0['x'] + x0['w'] - 120, x0['y'] + x0['h'] - 40), alt=True)
+    x1 = app.frame(node(app, id=frame['id'])); note(abs(x1['w'] / x1['h'] - x0['w'] / x0['h']) < .01, 'image corner resize changed the frame aspect')
+    valid(app)
+
+
+def xia_dial_keys(app):
+    """Xia uses the dial and its buttons from the keyboard."""
+    p = app.page
+    app.start({'ratio': 'square', 'comp': 'cover', 'guide': 'thirds', 'hue': 300, 'dark': False})
+    p.locator('button.wordmark').focus(); p.keyboard.press('Enter'); p.wait_for_timeout(400)
+    note(p.locator('.dial').is_visible(), 'Enter on the wordmark did not open the dial')
+    note(not p.locator('canvas.overlay').is_visible(), 'editor still visible behind the dial')
+    p.locator('.dial .dial-actions button', has_text='Back to canvas').focus(); p.keyboard.press('Enter'); p.wait_for_timeout(300)
+    note(p.locator('canvas.overlay').is_visible(), 'Enter on Back to canvas')
+    p.keyboard.press('r'); p.wait_for_timeout(100); note(app.doc()['nodes'][-1].get('shape') == 'rect', 'shortcuts dead after returning from the dial by keyboard')
+    p.locator('button.wordmark').click(); p.wait_for_timeout(300)
+    p.locator('.dial .dial-actions button', has_text='New').focus(); p.keyboard.press('Enter'); p.wait_for_timeout(500)
+    note(p.locator('textarea.text-editor').count() == 1, 'New from the keyboard did not open the headline for typing')
+    p.keyboard.type('Fresh'); p.keyboard.press('Control+Enter'); note(node(app, text='Fresh'), 'typing after New')
+
+
+# ------------------------------------------------------------------------------------------------ round 6
+def ken_retina(app):
+    """Ken works on a 2× display in a large window."""
+    old = app.ctx
+    ctx = old.browser.new_context(viewport={'width': 1800, 'height': 1100}, device_scale_factor=2, accept_downloads=True)
+    app.ctx = ctx; app.page = ctx.new_page(); p = app.page
+    p.on('pageerror', lambda e: ba.errors.append(f'pageerror: {e}'))
+    try:
+        app.start({'ratio': 'landscape', 'comp': 'split', 'guide': 'golden', 'hue': 160, 'dark': False})
+        cw = p.evaluate('document.querySelector("canvas.doc").width'); bw = app.box()['width']
+        note(abs(cw - bw * 2) < 2, f'document canvas not at device pixels: {cw} for {bw} css px')
+        acc = find(app.doc(), slot='accent')[0]; app.select(acc); r = app.frame(acc)
+        app.drag_unit((r['x'] + r['w'], r['y'] + r['h']), (r['x'] + r['w'] + 50, r['y'] + r['h'] + 30), alt=True)
+        r2 = app.frame(node(app, id=acc['id'])); note(abs(r2['w'] - r['w'] - 50) < 2 and abs(r2['h'] - r['h'] - 30) < 2, f'corner resize at 2×: {r} -> {r2}')
+        k = app.scale(); cx = r2['x'] + r2['w'] / 2
+        app.drag_unit((cx, r2['y'] - 44 / k), (cx + 200, r2['y'] + r2['h'] / 2), steps=14, shift=True)
+        note(abs(node(app, id=acc['id'])['frames']['main']['rot'] - 90) < 1e-6, 'rotate knob at 2×')
+        path = app.export('png'); note(png_size(path)[0] == (1920, 1080), 'export size independent of the display')
+        app.close_panels()
+    finally:
+        ctx.close(); app.ctx = old; app.page = old.pages[0]
+
+
+def rae_linked_text(app):
+    """Rae writes long copy that must work in a square and a banner."""
+    p = app.page
+    app.start({'ratio': 'square', 'comp': 'stack', 'guide': 'thirds', 'hue': 10, 'dark': False})
+    p.locator('button[aria-label="Add a linked size"]').click(); p.wait_for_timeout(200); p.locator('.ratio-panel g[aria-label="Add Banner 3:1"]').click(); p.wait_for_timeout(300)
+    p.locator('.corner .sizes button').nth(0).click(); p.wait_for_timeout(200)
+    body = find(app.doc(), slot='body')[0]; app.select(body); p.keyboard.press('Enter'); p.wait_for_timeout(100)
+    text = ' '.join(['Long copy that keeps going'] * 30)
+    p.keyboard.type(text); p.keyboard.press('Control+Enter'); p.wait_for_timeout(150)
+    d = app.doc(); banner = d['sizes'][1]['id']; b = find(d, slot='body')[0]; fr = b['frames'][banner]['rect']; fs = b['frames'][banner]['fontSize']
+    lines = p.evaluate('''([t, s, w]) => { const g = document.createElement('canvas').getContext('2d'); g.font = `400 ${s}px "Space Grotesk"`; let n = 1, line = ''; for (const word of t.split(' ')) { const next = line ? line + ' ' + word : word; if (line && g.measureText(next).width > w) { n++; line = word; } else line = next; } return n; }''', [text, fs, fr['w']])
+    note(abs(fr['h'] - lines * fs * 1.15) < fs * 1.2, f'banner frame height not re-measured after a square-size edit: {fr} for {lines} lines at {fs}')
+    note(fr['y'] + fr['h'] > 1000 / 3, f'test text should overflow the banner: {fr}')
+    p.locator('.corner .sizes button').nth(1).click(); p.wait_for_timeout(250)
+    dpr = p.evaluate('devicePixelRatio'); k = app.scale()
+    col = p.evaluate('''([x, y0, y1]) => { const g = document.querySelector('canvas.overlay').getContext('2d'); let hit = 0; for (let y = y0; y < y1; y++) if (g.getImageData(x, y, 1, 1).data[3] > 0) hit++; return hit; }''', [int((fr['x'] * k + 64) * dpr), int((fr['y'] * k + 64) * dpr) + 4, int((min(fr['y'] + fr['h'], 1000 / 3) * k + 64) * dpr) - 4])
+    note(col > 3, 'body text running off the banner is not flagged when switching to it')
+
+
+def sid_async(app):
+    """Sid clicks again before things finish."""
+    p = app.page
+    app.start({'ratio': 'square', 'comp': 'cover', 'guide': 'thirds', 'hue': 0, 'dark': False})
+    frame = find(app.doc(), slot='image')[0]; drop_file(app, image_file(OUT / 'sid.png', 640, 480, (40, 90, 200)), *app.node_centre(frame))
+    p.keyboard.press('Control+Shift+E'); p.wait_for_timeout(300)
+    downloads = []
+    p.on('download', lambda d: downloads.append(d))
+    p.locator('.sheet .download').dblclick(); p.wait_for_timeout(2500)
+    note(len(downloads) == 1, f'double-click on Download saved {len(downloads)} files')
+    app.close_panels()
+    app.select(node(app, id=frame['id']))
+    p.locator('.toolbar button[aria-label="Remove background"]').click(); p.wait_for_timeout(300)
+    p.keyboard.press('Delete'); p.wait_for_timeout(200)
+    k = len(ba.errors)
+    p.evaluate('''() => { window.__toasts = []; new MutationObserver(() => window.__toasts.push(document.querySelector('.toast').textContent)).observe(document.querySelector('.toast'), { childList: true, characterData: true, subtree: true }); }''')
+    p.wait_for_timeout(45000)   # WASM inference holds the main thread; give it time to finish
+    p.wait_for_timeout(1500)
+    note(not node(app, id=frame['id']), 'deleted image came back after its removal finished')
+    note('Background removed' not in p.evaluate('window.__toasts'), 'toast claims a removal on a deleted image')
+    p.keyboard.press('Control+z'); p.wait_for_timeout(200)
+    note(node(app, id=frame['id']) is not None, 'one undo did not bring back the deleted image (an empty step was recorded?)')
+    note(not ba.errors[k:], f'errors {ba.errors[k:]}')
+
+
 PERSONAS = [maya_social, priya_print, layla_scripts, kai_keyboard, sam_sketch, cleo_colour, pat_power, ren_returning, sol_small, chaos,
             ines_photos, tom_worksheet, ivy_icons, max_sizes, quinn_quota, ula_interrupts, dee_dark,
             rio_rotation, vic_migrated, ari_arrows, gus_grid, hana_help, zed_stress, lou_layers, nia_reratio,
-            tess_two_tabs, theo_touch, eve_parity, mo_reduced_motion, bea_cutout]
+            tess_two_tabs, theo_touch, eve_parity, mo_reduced_motion, bea_cutout,
+            kim_dial, fay_extremes, lin_locks, pia_exports, ola_undo_ui, uma_crop, xia_dial_keys,
+            ken_retina, rae_linked_text, sid_async]
 
 
 def main():

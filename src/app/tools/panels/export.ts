@@ -20,7 +20,7 @@ export function exportSheet(ed: Editor): HTMLElement {
   let format: Format = 'png', scale: ExportScale | null = null, transparent = false, working = false, wasOpen = false;
   const choice = (): ExportChoice => ({ format, scale: scale!, ground: !(format === 'png' && transparent && ed.doc.ground === null) });
   noGround.addEventListener('click', () => { transparent = !transparent; ed.invalidate(); });
-  button.addEventListener('click', () => void go());
+  button.addEventListener('click', e => { if (e.detail < 2) void go(); });   // a double-click downloads once
   sheet.addEventListener('keydown', e => { if (e.key === 'Enter' && !(e.target instanceof HTMLButtonElement && e.target !== button)) { e.preventDefault(); void go(); } });
   async function go(): Promise<void> {
     if (working || !scale || ed.store.ui.panel !== 'export') return;

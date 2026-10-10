@@ -230,7 +230,8 @@ export class Editor {
     for (const [i, file] of images.entries()) {
       let stored: { key: string; natural: Size };
       try { stored = await assets.putImage(file, this.maxExport()); } catch { toast('That image could not be read'); continue; }
-      if (i === 0 && hit?.kind === 'image' && !hit.locked) { this.commit(updateNodes(this.doc, [hit.id], n => ({ ...n, asset: stored.key, cutout: false, focus: CENTRE }) as ImageNode), 'Filled'); this.select([hit.id]); continue; }
+      const into = i === 0 && hit ? nodeById(this.doc, hit.id) : undefined;   // still there and unlocked after the await
+      if (into?.kind === 'image' && !into.locked) { this.commit(updateNodes(this.doc, [into.id], n => ({ ...n, asset: stored.key, cutout: false, focus: CENTRE }) as ImageNode), 'Filled'); this.select([into.id]); continue; }
       let rect: Rect;
       if (free.length) { rect = nearestCell(p, free, c); free = free.filter(r => r.x !== rect.x || r.y !== rect.y || r.w !== rect.w || r.h !== rect.h); }
       else {
@@ -347,7 +348,9 @@ export class Editor {
       const blob = await runRemoval(record.working);
       await assets.setCutout(asset, blob); this.forgetBitmap(asset); this.cutouts.add(asset);
       // The cut-out is stored once per asset; only the image it was asked for switches to it (copies keep their Before/After).
-      this.commit(updateNodes(this.doc, nodeById(this.doc, n.id)?.kind === 'image' ? [n.id] : [], x => ({ ...x, cutout: true }) as ImageNode), 'Background removed');
+      // If that image was deleted or locked meanwhile, the cut-out is kept for later and nothing is recorded.
+      const still = nodeById(this.doc, n.id);
+      if (still?.kind === 'image' && still.asset === asset && !still.locked) this.commit(updateNodes(this.doc, [n.id], x => ({ ...x, cutout: true }) as ImageNode), 'Background removed');
     } catch (e) { console.warn(e); toast('Background removal is unavailable here', 2200); }
     finally { this.scan = null; this.store.setUI({ removing: null }); }
   }
