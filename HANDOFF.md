@@ -307,7 +307,66 @@ Student-test loop (D-045), session-sized:
 - [x] Loop 6: cohorts Q (verification, 46 sessions), R (12 fresh jobs, 31 sessions) and S (64 adversarial sessions); fixes D-085, D-086.
 - [x] Loop 7: cohorts T (verification, 47 sessions), U (12 fresh jobs, 20 sessions) and V (34 adversarial sessions); fixes D-087, D-088.
 - [x] Loop 8: cohorts W (verification, 31 sessions), X (12 fresh jobs, 19 sessions) and Y (adversarial, 21 scripts); fixes D-089, D-090, D-091.
-- [ ] Loop 9: re-run cohorts against the D-091 build (verify the loop-8 items; fresh jobs; adversarial on keepInRoom in the edited size, editing across toolbar clicks and Undo around the Text tool).
+- [x] Loop 9: cohorts Z (verification, 41 sessions), AA (18 fresh jobs, 30 sessions) and AB (adversarial, 52 sessions) against the D-091 build. Cohort Z found 12 of the 23 loop-8 items fixed, 8 partly fixed and 3 fixed with side effects. The findings below are recorded, not fixed (D-093).
+- [ ] Loop 9 findings (cohort Z, 41 sessions on the D-091 build). Not fixed, by Safwat's decision to stop looping (D-093):
+  - **Stacked contact labels overlap.** On a Post cover, T-click three labels at (60, 690), (60, 760) and (60, 830). Retype the first as "Instagram: instagram.com/usyd.marketing.society" and the second as a linktr.ee link. The first wraps into a five-line column and the second lands on it and on the body.
+  - **A free label under text at the canvas bottom runs off the canvas** and the export cuts it. This happens in cover and landscape split layouts, where text sits right above it. It now grows downwards past the bottom instead of over that text (D-089). The fix should let it widen or shrink there.
+  - **Labels on a pill or rectangle shape spill out.** They shrink only to 37.5 units, or not at all. Photos and poster or story bands work.
+  - **Same width/height and Space evenly push logos off the canvas** with no toast; for example, a wordmark ends at x = 1036–1060. In an A4 sponsor row, Same height makes the logos overlap.
+  - **An untouched T label stays as "Text"** after an icon added from Search icons, after a Layers click, or after Export. It survives Undo and reload.
+  - **Smaller issues:**
+    - A T-click near the right edge of a photo shrinks the label instead of moving it left.
+    - Header labels arrive in a linked Post at 15 units.
+    - A T-click on existing text stacks the new label on it.
+    - A turned label stopped at the top edge gets the "canvas bottom" toast.
+    - A pasted agenda touches the body above it.
+    - Layer names cut joined emoji (👨‍👩‍👧 becomes 👨).
+    - Choosing a typeface while typing a headline shares one Undo step with the typing after it.
+- [ ] Loop 9 findings (cohort AA, 18 fresh jobs in 30 sessions; no console errors or off-origin requests). Not fixed (D-093):
+  - **Hindi in Poppins is clipped at the canvas edge.** A Story poster headline typed as "दिवाली मेला 2026" and then switched to Poppins keeps line breaks measured in the fallback face. The export clips "मेला" with no flag or Export note. Picking Poppins before typing wraps correctly. The likely cause is measurement cached before the face's Devanagari subset loaded; re-measure when a face finishes loading.
+  - **One picture dropped on empty space covers the copy.** It snaps to the nearest guide cell; for example, a QR dropped under an A4 poster's body lands 382 × 382 over the date and venue. It should land at the drop point or avoid copy as batch picks do.
+  - **Hard-to-grab handles:**
+    - After Same height, a logo's bottom-right handle mostly moves the logo; the resize zone sits below the drawn handle and the picture bar covers it.
+    - A line's left end handle moves the line when pressed at its centre.
+  - **A pasted list at the right margin rewraps item by item when made larger.** In an A4 stack, a list at x = 657 keeps its width. Tabs become single spaces, so prices do not line up.
+  - **Stats row.** T-clicked labels in a row slide onto each other. Space evenly then puts one on a dark photo in dark ink.
+  - **Linked sizes from a Slide.**
+    - A Story made from a Slide keeps 17-unit body type and a strip-shaped photo.
+    - Copy added in a linked Post also shows tiny in the Header.
+  - **Keyboard-only use.**
+    - Tab does not reach blocks; Layers does.
+    - C opens Colour without moving focus into it.
+    - The Export sheet does not trap focus.
+  - **Layers keeps a picture's old name after Replace.**
+- [ ] Loop 9 findings (cohort AB, 52 adversarial sessions; no console errors or off-origin requests). Not fixed (D-093):
+  - **Ghost "Text" labels.** An untouched T label is kept as "Text", and exported, after any of these. `dropFresh` should cover them all:
+    - switching the size pill or adding a linked size;
+    - a Layers row click;
+    - opening Export (then Escape or download);
+    - another tab saving.
+  - **Retyped layout text in short, wide linked sizes.** With Post, Story, Slide, Header, Print and Banner (Thirds) and long copy typed in Post:
+    - Cover: the headline runs off Header and Banner over the body, and a long body runs off Slide.
+    - Stack: the headline runs into the picture band in Header and Banner.
+    - Split: the Slide body lands on the accent block.
+    - Poster, band and frame stay clean. `keepInRoom` needs to cover these layouts' rooms in wide sizes.
+  - **A label on an added pill or rectangle does not shrink** when retyped (only the layout accent does). It spills below the shape, becomes a tall URL column, or jumps across a photo column. A label on a turned pill stays at 0°.
+  - **T then a click on existing text** puts the new label on top of it; Canva users expect the click to edit that text.
+  - **A label typed in the gap under the headline covers the body.** Labels arrive at 42, and the gap is about 35.
+  - **A bottom label beside the accent block, retyped long,** becomes a 224-wide column that ends 36 units below the canvas.
+  - **Undo while typing.**
+    - The toolbar Undo while retyping a headline shows stale text, and further typing loses the Undo.
+    - The toolbar Undo while typing a new label deletes the label.
+    - Mod+Z after Bold or Larger while typing deletes a letter instead of undoing the control.
+  - **Letters run as shortcuts** after these controls end an edit:
+    - Enter in the hex field, or Tab out of the size field;
+    - Export then Escape;
+    - Layers rename or click, Lock or Duplicate;
+    - adding a size, shape or icon.
+    For example, "rot" then adds a rectangle, a circle and a label.
+  - **Two tabs.** After "Updated from another tab", Undo reverts the other tab's edit.
+  - **Smaller issues:**
+    - Dragging a pending T label selects its text instead of moving it.
+    - 2,000 pasted characters in a T label run off the canvas.
 - [ ] Linked sizes from a wide ratio turn photo frames into tall strips (the layout's own slot shape) and keep banner-size type in a story; consider type growth on taller sizes and contained cut-outs.
 - [ ] Split layout: a long body can run into the bottom-right accent block; text flow ignores shapes.
 - [ ] Missing for students: italic, text highlight or shadow over photos, tab stops, a right-click menu.
@@ -359,6 +418,7 @@ Student-test loop (D-045), session-sized:
 - Neutral ground: the 7-step scale makes the neutral light ground #EBEBEB instead of the prototype's white (D-038). Keep, or special-case white?
 - **Autofit after a manual size.** 5q (D-034) turns autofit off when a size is set by hand, so a poster headline made Larger and then retyped long keeps its size and breaks words. Keep 5q, or keep autofit on with the set size as its ceiling?
 - **Carousels.** Students build three-slide carousels as linked Post sizes; content is shared across sizes (5w), so retyping slide 2 changes slide 1, and every new picture needs "Hide in this size" in the others (14 clicks for 3 slides, loop 7 U-03). Keep linked sizes as the only multi-canvas tool (multi-page is out of Phase 1), or add an unlinked duplicate size?
+- **Social formats (D-092).** Should the editor's size tabs, Change ratio panel and export file names also use the platform names ("Instagram story") instead of the ratio labels (Story)? Should Social gain Pinterest, X, TikTok or Facebook formats, with Pin and Banner moving into it?
 - **Shape frames.** Students dropped photos on hearts, stars, rounded squares and triangles expecting them to fill like the circle does (D-081); only circles take a picture. Add picture masks for library shapes (a contract change to `ImageNode.mask`)?
 
 ## Deferred
@@ -404,7 +464,7 @@ Run `npm run build`, start `npm run preview -- --port 4173`, then `python3 scrip
 
 ## Student-test loop
 
-`scripts/usertest/kura.py` drives the built app as a student would (dial, toolbar by accessible names, canvas in unit space, file picker, drops, pasted text, export downloads) and records screenshots, the saved document, toasts, console errors and off-origin requests under ignored `private/usertest/runs/`. `scripts/usertest/PRIMER.md` is the brief each simulated cohort reads. Serve a frozen copy of `dist/` on its own port so rebuilding does not disturb a run. Loop 1 (2026-10-10) ran four cohorts, 55 personas, across 1024–2560 px windows, Mac and Windows shortcuts and dpr 1–2; every session had no app console errors and no off-origin requests. Findings and fixes are D-046–D-068.
+`scripts/usertest/kura.py` drives the built app as a student would (dial, toolbar by accessible names, canvas in unit space, file picker, drops, pasted text, export downloads) and records screenshots, the saved document, toasts, console errors and off-origin requests under ignored `private/usertest/runs/`. `scripts/usertest/PRIMER.md` is the brief each simulated cohort reads. Serve a frozen copy of `dist/` on its own port so rebuilding does not disturb a run. Loop 1 (2026-10-10) ran four cohorts, 55 personas, across 1024–2560 px windows, Mac and Windows shortcuts and dpr 1–2; every session had no app console errors and no off-origin requests. Findings and fixes are D-046–D-068. Loops 2–8 fixed D-070–D-091. Safwat ended the loop after loop 9, whose findings are open under Next steps (D-093).
 
 The sections below record Phase 0 work; their audits run from a checkout of `study-v1`.
 
