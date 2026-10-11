@@ -67,9 +67,12 @@ export class Store {
    * Takes back a step nobody wanted (a label the Text tool added and left empty): when `base` is the latest step, the
    * document goes to `doc` and the step is forgotten, so Undo does not bring the label back; otherwise a plain commit (D-088).
    */
-  retract(base: KuraDoc, doc: KuraDoc): void {
-    if (this.history.past[this.history.past.length - 1] !== base) { this.commit(doc, {}); return; }
-    this.history = { ...this.history, past: this.history.past.slice(0, -1), future: [] }; this.doc = doc;
+  retract(base: KuraDoc, doc: KuraDoc, o: { id?: string; future?: KuraDoc[] } = {}): void {
+    // Steps after `base` that only changed the label (a Bold or Larger on it before typing) go with it (D-090).
+    const past = this.history.past, at = past.lastIndexOf(base), same = (d: KuraDoc) => JSON.stringify({ ...d, nodes: d.nodes.filter(n => n.id !== o.id) }) === JSON.stringify(base);
+    if (at < 0 || !past.slice(at + 1).every(same)) { this.commit(doc, {}); return; }
+    // The Redo steps the label's adding cleared come back, so T then Escape is as if T was never pressed (D-090).
+    this.history = { ...this.history, past: past.slice(0, at), future: o.future ?? [] }; this.doc = doc;
     const ids = new Set(doc.nodes.map(n => n.id));
     this.ui = { ...this.ui, sel: this.ui.sel.filter(id => ids.has(id)) };
     this.scheduleSave(); this.emit({ doc: true, ui: true });

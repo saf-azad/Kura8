@@ -88,29 +88,40 @@ export function unfit(doc: KuraDoc, id: string, measure: Measure, except?: strin
   return { ...doc, nodes: doc.nodes.map(x => x.id === id ? t : x) };
 }
 /**
- * Layout text whose copy changed in one size keeps fitting the others (D-088): in every other size where the new copy,
- * at the size it had when the edit began, would run past the picture or shape below it or the canvas bottom, less the
- * layout margin, it takes the largest size that fits with whole words, never below that size's body type. The size being
- * edited is the person's to judge; autofit text fits itself.
+ * Layout text whose copy changed keeps fitting its room in every size (D-088, D-090): where the new copy, at the size it
+ * had when the edit began, would run past the picture or shape below it or the canvas bottom, less the layout margin and
+ * the room the text stacked under it on the same backing needs, it takes the largest size that fits with whole words,
+ * never below that size's body type for a headline or three fifths of it for other text. The edited size counts too: a hand-set size holds while the copy
+ * fits (5q). Autofit text fits itself.
  */
-export function keepInRoom(before: KuraDoc, after: KuraDoc, id: string, measure: Measure, except: string): KuraDoc {
+export function keepInRoom(before: KuraDoc, after: KuraDoc, id: string, measure: Measure): KuraDoc {
   const was = before.nodes.find(n => n.id === id), now = after.nodes.find(n => n.id === id);
   if (was?.kind !== 'text' || now?.kind !== 'text' || !now.slot || now.fit) return after;
   let frames = now.frames;
   for (const spec of after.sizes) {
     const f0 = was.frames[spec.id], f1 = now.frames[spec.id];
-    if (spec.id === except || !f0 || !f1 || f1.hidden || f1.rot) continue;
-    const canvas = canvasSize(spec.ratio), scale = typeScale(spec.guide, canvas), start = textBox(was, f0, measure, scale), b0 = start.rect;
-    let limit = canvas.h - layoutPad(canvas);
+    if (!f0 || !f1 || f1.hidden || f1.rot) continue;
+    const canvas = canvasSize(spec.ratio), scale = typeScale(spec.guide, canvas), start = textBox(was, f0, measure, scale), b0 = start.rect, pad = layoutPad(canvas);
+    const across = (r: Rect) => r.x < b0.x + b0.w && b0.x < r.x + r.w && r.y >= b0.y + b0.h - EPS;
+    let limit = canvas.h - pad;
     for (const o of before.nodes) {
       const f = o.frames[spec.id];
       if (o.id === id || o.kind === 'text' || o.kind === 'ink' || !f || f.hidden || f.rot) continue;
-      if (f.rect.x < b0.x + b0.w && b0.x < f.rect.x + f.rect.w && f.rect.y >= b0.y + b0.h - EPS) limit = Math.min(limit, f.rect.y - layoutPad(canvas));
+      if (across(f.rect)) limit = Math.min(limit, f.rect.y - pad);
     }
-    limit = Math.max(limit, b0.y + b0.h);
+    // Text stacked under it, above that limit and on the same backing, keeps its room (a split layout's body above the accent).
+    const on = sitsOn(before, id, spec.id, f0.rect);
+    let below = b0.y + b0.h;
+    for (const o of before.nodes) {
+      const f = o.frames[spec.id];
+      if (o.id === id || o.kind !== 'text' || !f || f.hidden || f.rot || sitsOn(before, o.id, spec.id, f.rect) !== on) continue;
+      const r = textBox(o, f, measure, scale).rect;
+      if (across(r) && r.y + r.h <= limit + pad + EPS) below = Math.max(below, r.y + r.h);
+    }
+    limit = Math.max(limit - (below - b0.y - b0.h), b0.y + b0.h);
     const weight = drawnWeight(now.font, now.weight), at = { ...f1, fontSize: start.size };
     const size = textBox(now, at, measure, scale).rect.h <= limit - f1.rect.y + EPS ? start.size
-      : Math.max(Math.min(scale.body, start.size), roomSize({ text: now.text, size: start.size, width: f1.rect.w, height: limit - f1.rect.y, weight, measure, font: now.font }));
+      : Math.max(Math.min(now.slot === 'headline' ? scale.body : scale.body * .6, start.size), roomSize({ text: now.text, size: start.size, width: f1.rect.w, height: limit - f1.rect.y, weight, measure, font: now.font }));
     if (Math.abs(size - (f1.fontSize ?? scale.body)) > EPS) frames = { ...frames, [spec.id]: { ...f1, fontSize: size } };
   }
   return frames === now.frames ? after : { ...after, nodes: after.nodes.map(n => n.id === id ? { ...now, frames } : n) };

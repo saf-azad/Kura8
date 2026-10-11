@@ -282,19 +282,25 @@ it('widens a wrapped free label when its new copy would split a word (D-087)', (
   const slot = updateNodes(start, ['t'], n => ({ ...n, slot: 'body' }) as DocNode);
   expect(hugText(slot, updateNodes(slot, ['t'], n => ({ ...n, text: 'Level 2 gallery, east wing' })), 't', charMeasure).nodes[1].frames.main.rect.w).toBe(283);
 });
-it('keeps retyped layout text fitting above the band in the other sizes, and leaves the edited size to the person (D-088)', () => {
+it('keeps retyped layout text fitting above the band in every size, the text under it keeping its room (D-088, D-090)', () => {
   // Two sizes; the headline (no autofit, after a hand-set size) sits above a band at 600 in both.
   const two = (d: KuraDoc): KuraDoc => ({ ...d, sizes: [...d.sizes, { id: 'wide', ratio: 'square', guide: 'thirds', comp: null }], nodes: d.nodes.map(n => ({ ...n, frames: { ...n.frames, wide: n.frames.main } })) });
   const start = two(doc([rectNode('band', frame(0, 600, 1000, 400)), textNode('h', frame(45, 45, 910, 116, { fontSize: 100 }), 'Night Market', { slot: 'headline' } as Partial<DocNode>)]));
   const typed = updateNodes(start, ['h'], n => ({ ...n, text: 'Night Market Returns to the Quad with food trucks live music and stalls 2026' }));
-  const out = keepInRoom(start, typed, 'h', charMeasure, 'main'), h = out.nodes[1] as TextNode;
-  expect(h.frames.main.fontSize).toBe(100);
-  const b = textBox(h, h.frames.wide, charMeasure, typeScale('thirds', { w: 1000, h: 1000 }));
-  expect(b.rect.y + b.rect.h).toBeLessThanOrEqual(600 - 45 + 1e-6); expect(b.size).toBeLessThan(100);
+  const out = keepInRoom(start, typed, 'h', charMeasure), h = out.nodes[1] as TextNode;
+  for (const sid of ['main', 'wide']) {
+    const b = textBox(h, h.frames[sid], charMeasure, typeScale('thirds', { w: 1000, h: 1000 }));
+    expect(b.rect.y + b.rect.h).toBeLessThanOrEqual(600 - 45 + 1e-6); expect(b.size).toBeLessThan(100);
+  }
   // Back to the old copy, the old size returns; free labels and autofit text are left alone.
-  expect((keepInRoom(start, start, 'h', charMeasure, 'main').nodes[1] as TextNode).frames.wide.fontSize).toBe(100);
+  expect((keepInRoom(start, start, 'h', charMeasure).nodes[1] as TextNode).frames.wide.fontSize).toBe(100);
   const free = updateNodes(typed, ['h'], n => { const t = { ...n } as TextNode; delete t.slot; return t; });
-  expect(keepInRoom(start, free, 'h', charMeasure, 'main')).toBe(free);
+  expect(keepInRoom(start, free, 'h', charMeasure)).toBe(free);
+  // A body under the headline keeps its room above the band.
+  const stacked = updateNodes(start, ['h'], n => n).nodes.concat(textNode('b', frame(45, 190, 910, 32, { fontSize: 28 }), 'Body', { slot: 'body', frames: { main: frame(45, 190, 910, 32, { fontSize: 28 }), wide: frame(45, 190, 910, 32, { fontSize: 28 }) } } as Partial<DocNode>));
+  const withBody = { ...start, nodes: stacked }, grown = keepInRoom(withBody, updateNodes(withBody, ['h'], n => ({ ...n, text: (typed.nodes[1] as TextNode).text })), 'h', charMeasure);
+  const hb = textBox(grown.nodes[1] as TextNode, grown.nodes[1].frames.main, charMeasure, typeScale('thirds', { w: 1000, h: 1000 })).rect;
+  expect(hb.y + hb.h).toBeLessThanOrEqual(600 - 45 - (190 + 32 - 161) + 1e-6);
 });
 it('grows a free label at the canvas bottom upwards, keeping its margin there, and back down when shortened (D-088)', () => {
   const start = doc([textNode('t', frame(100, 930, 74, 35, { fontSize: 30 }), 'RSVP')]);

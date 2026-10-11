@@ -172,3 +172,23 @@ task is seriously blocked by one of them (we log those for the product owner).
   - Batches avoid cells with copy and arrive in file order.
   - A dropped logo goes on top.
 - **Grabbing.** Thin lines take a press within 10 px.
+
+## New in loop 9 (from loop-8 findings)
+- **Labels.**
+  - A label on a photo, pill or band shrinks to stay on it when retyped long.
+  - Labels at the canvas bottom grow upwards, never over what is right above them.
+  - Links break after slashes, dots and underscores.
+- **Typing.**
+  - Toolbar buttons used while typing keep you typing.
+  - An unused T label disappears cleanly, with no ghost after Undo, Redo or a reload.
+- **Linked sizes.**
+  - Retyped layout text keeps fitting in every size, including the one you are in.
+  - Fit in one size leaves the others alone.
+  - Header labels in a row don't collide in a Post.
+- **Arrange and pictures.**
+  - Same width/height keep logos whole.
+  - Space evenly won't overlap blocks.
+  - A picture inside a headline's empty room can be clicked.
+  - New shapes avoid the copy.
+- **Pasting.** Pasted lists keep one item per line when made larger.
+- **Colour.** The contrast fix passes on every background behind the text.

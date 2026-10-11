@@ -74,8 +74,10 @@ export function keepReadable(doc: KuraDoc): KuraDoc {
   const inside = (outer: Rect, inner: Rect) => contains(outer, { x: inner.x, y: inner.y }) && contains(outer, { x: inner.x + inner.w, y: inner.y + inner.h });
   const meets = (a: Rect, b: Rect) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
   const nodes = doc.nodes.map((n, i) => {
-    // Black or white counts as automatic only on layout text (the band's fallback); on a free label it was chosen (D-082).
-    if (n.kind !== 'text' || !autoFill(n.fill) || 'hex' in n.fill && !n.slot) return n;
+    // Black or white counts as automatic only on layout text (the band's fallback); on a free label it was chosen (D-082),
+    // unless it has become nearly invisible where it now sits (under 3 : 1, a label dragged off a band, D-090).
+    if (n.kind !== 'text' || !autoFill(n.fill)) return n;
+    const chosen = 'hex' in n.fill && !n.slot;
     const below = doc.nodes.slice(0, i), sizes = doc.sizes.filter(({ id }) => n.frames[id] && !n.frames[id].hidden);
     let onBand: string | null = null;
     for (const { id } of sizes) {
@@ -86,7 +88,7 @@ export function keepReadable(doc: KuraDoc): KuraDoc {
     // An empty picture frame is a placeholder the export leaves out: text over it sits on the ground (D-089).
     const bare = !onBand && sizes.length > 0 && sizes.every(({ id }) => below.every(b => { const f = b.frames[id]; return !f || f.hidden || b.kind === 'ink' || b.kind === 'text' || b.kind === 'image' && !b.asset || !meets(f.rect, n.frames[id].rect); }));
     const bg = onBand ?? (bare ? ground : null);
-    return bg && contrast(resolve(n.fill, doc.palette), bg) < 4.5 ? { ...n, fill: readableOn(bg, doc.palette) } : n;
+    return bg && contrast(resolve(n.fill, doc.palette), bg) < (chosen ? 3 : 4.5) ? { ...n, fill: readableOn(bg, doc.palette) } : n;
   });
   return nodes.some((n, i) => n !== doc.nodes[i]) ? { ...doc, nodes } : doc;
 }

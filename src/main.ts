@@ -60,7 +60,8 @@ addEventListener('storage', e => {
   store.commit(next, {}); toast('Updated from another tab', 2000);
 });
 void navigator.storage?.persist?.().catch(() => false);
-addEventListener('pagehide', () => store.save());
+// An untouched new label (T, then reload) is not kept (D-090).
+addEventListener('pagehide', () => { editor?.dropFresh(); store.save(); });
 let saveWarned = false;
 store.on(() => { if (store.saveFailed && !saveWarned) { saveWarned = true; toast('Couldn’t save in this browser; export to keep your work', 3000); } if (!store.saveFailed) saveWarned = false; });
 /** Writes a migrated version 1 document's inline images to IndexedDB; the v2 document is saved only when all of them landed. */

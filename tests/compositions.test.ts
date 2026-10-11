@@ -158,3 +158,10 @@ it('keeps two lines of body clear of the accent block in split layouts (D-090)',
     expect(slots.headline.rect.y).toBeGreaterThanOrEqual(layoutPad(c) - 1e-6);
   }
 });
+it('re-picks a free label’s black or white only when it has become nearly invisible where it sits (D-090)', () => {
+  const p: Palette = { hue: 120, dark: true, custom: [] }, at = (fill: object) => ({ id: 'l', kind: 'text', text: 'Dragged off', weight: 400, align: 'start', fill, frames: { main: { rect: { x: 50, y: 600, w: 200, h: 30 }, rot: 0 } } }) as DocNode;
+  const d = (fill: object): KuraDoc => ({ version: 2, id: 'd', createdAt: '', palette: p, ground: null, sizes: [{ id: 'main', ratio: 'square', guide: null, comp: null }], nodes: [at(fill)] });
+  const ground = resolve({ role: 'ground' }, p), out = keepReadable(d({ hex: '#000000' })).nodes[0] as TextNode;
+  expect(contrast(resolve(out.fill, p), ground)).toBeGreaterThanOrEqual(4.5);
+  expect(keepReadable(d({ hex: '#ffffff' })).nodes[0]).toMatchObject({ fill: { hex: '#ffffff' } });
+});
