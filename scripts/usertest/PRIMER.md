@@ -93,3 +93,17 @@ task is seriously blocked by one of them (we log those for the product owner).
 - Two tabs: text typed while the other tab deleted the block or pressed New is kept. Start ignores a second click or Enter.
 - Shortcuts work on Arabic/Russian/Korean keyboard layouts; size/angle fields accept "12,5". Browser zoom (150–200 %) now wraps the
   toolbar onto more rows with bigger buttons. Same-ratio size pills are numbered. Undo says when it swaps whole designs.
+
+## New in loop 5 (from loop-4 findings)
+- **Circle pictures.** Select a picture, then press Circle on the picture bar; or drop a photo on a circle shape. Picking several pictures for one empty frame tiles them across it, which suits a team page.
+- **Layout text keeps its slot and margin** when retyped. Only free labels (pasted or added) grow as you type.
+- **Text flows only with text on the same backing** (ground, band or photo).
+- **Pictures and sizing.** Loose pictures keep their shape in linked sizes. Same width/height match pictures exactly.
+- **Typed sizes and Larger** stop before a word would break, and keep the layout margin.
+- **Panels scroll** at browser zoom. The toolbar moves under the corner controls on small windows (1024 px) and at zoom.
+- **Colour.**
+  - The hex field selects its text when clicked and offers Set as accent as you type.
+  - A dark filled ground re-picks readable text colours.
+  - The contrast line shows "passes".
+- **Placement and Arrange.** Pastes avoid covering text. A locked background is ignored by Space evenly.
+- **Fill canvas** applies in every size. Hide says "in this size". The active size survives a reload.
