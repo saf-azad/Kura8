@@ -124,3 +124,25 @@ describe('linked sizes seed from the closest proportions (D-069)', () => {
     expect(addSize(two, 'cover', 'c', fakeMeasure).doc.nodes[0].frames.c).toEqual(addSize(two, 'cover', 'c', fakeMeasure, 'main').doc.nodes[0].frames.c);
   });
 });
+describe('ratio origins survive a nudge (D-076)', () => {
+  it('maps a moved node from its origin size, moved by the same share of the canvas', () => {
+    const d = doc([rectNode('b', frame(100, 100, 200, 200))]);
+    let r = reRatioKept(d, 'main', { ratio: 'story' }, fakeMeasure);
+    const story = r.doc.nodes[0].frames.main.rect, h = canvasSize('story').h;
+    const nudged = { ...r.doc, nodes: r.doc.nodes.map(n => ({ ...n, frames: { main: { ...n.frames.main, rect: { ...story, y: story.y + h / 10 } } } })) };
+    r = reRatioKept(nudged, 'main', { ratio: 'square' }, fakeMeasure, r.origin);
+    expect(r.doc.nodes[0].frames.main.rect).toEqual({ x: 100, y: 200, w: 200, h: 200 });
+  });
+});
+describe('band text colour on relayout (D-076)', () => {
+  it('turns band black or white back into ink off the band, and keeps a chosen colour', () => {
+    const spec = size({ ratio: 'portrait', guide: 'golden', comp: 'poster' }), palette = { hue: 120, dark: false, custom: [] };
+    const nodes = starterNodes(layout({ canvas: canvasSize('portrait'), guide: 'golden', comp: 'poster', measure: fakeMeasure, headline: 'H', body: 'B' }), { sizeId: 'main', newId: ids(), palette });
+    const d: KuraDoc = { ...doc(nodes, spec), palette };
+    expect(d.nodes.find(n => n.slot === 'body')).toMatchObject({ fill: { hex: '#000000' } });
+    const out = relayout(d, 'main', { ratio: 'portrait', guide: 'golden', comp: 'cover' }, fakeMeasure).doc;
+    expect(out.nodes.find(n => n.slot === 'body')).toMatchObject({ fill: { role: 'ink' } });
+    const mine = { ...d, nodes: d.nodes.map(n => n.slot === 'body' ? { ...n, fill: { hex: '#123456' } } : n) };
+    expect(relayout(mine, 'main', { ratio: 'portrait', guide: 'golden', comp: 'cover' }, fakeMeasure).doc.nodes.find(n => n.slot === 'body')).toMatchObject({ fill: { hex: '#123456' } });
+  });
+});

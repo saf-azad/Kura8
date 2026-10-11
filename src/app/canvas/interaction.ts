@@ -40,7 +40,8 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
     return null;
   };
   el.addEventListener('pointerdown', e => {
-    if (e.button !== 0 || drag || performance.now() < ed.ignorePointerUntil) return;
+    if (performance.now() < ed.ignorePointerUntil) { e.preventDefault(); return; }
+    if (e.button !== 0 || drag) return;
     const p = ed.toUnits(e), ui = ed.store.ui;
     el.focus({ preventScroll: true });
     if (ed.textarea) ed.finishText();
@@ -179,6 +180,8 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
   el.addEventListener('pointerup', finish);
   el.addEventListener('pointercancel', finish);
   el.addEventListener('pointerleave', () => { if (ed.store.ui.tool) sketch.leave(); });
+  // The canvas takes focus on mousedown; right after Start that would close the headline editor (D-062).
+  el.addEventListener('mousedown', e => { if (performance.now() < ed.ignorePointerUntil) e.preventDefault(); });
   el.addEventListener('dblclick', e => {
     if (performance.now() < ed.ignorePointerUntil) return;
     if (ed.store.ui.tool || ed.store.ui.armed) return;

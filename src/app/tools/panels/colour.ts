@@ -77,7 +77,7 @@ export function colourPanel(ed: Editor): HTMLElement {
   };
   ground(light, false); ground(dark, true);
   const backdrop = (t: DocNode, p: Palette): string | null => {
-    const nodes = ed.doc.nodes, c = center(ed.box(t));
+    const nodes = ed.doc.nodes, c = center(t.kind === 'text' ? ed.extent(t) : ed.box(t));
     for (let i = nodes.indexOf(t) - 1; i >= 0; i--) {
       const n = nodes[i], f = ed.frame(n);
       if (f.hidden || !containsRotated(ed.box(n), f.rot, c)) continue;

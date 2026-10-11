@@ -4,6 +4,7 @@ import { compIds, guideIds, ratioIds, validateDocument } from '../src/core/docum
 import { canvasSize } from '../src/core/ratios';
 import { fractionsOf } from '../src/core/guides';
 import { fitText, splitsWord, typeScale } from '../src/core/fit';
+import { contrast, resolve } from '../src/core/palette';
 import { fakeMeasure, doc, ids } from './helpers';
 const inside = (r: { x: number; y: number; w: number; h: number }, c: { w: number; h: number }) => r.x >= -1e-6 && r.y >= -1e-6 && r.x + r.w <= c.w + 1e-6 && r.y + r.h <= c.h + 1e-6 && r.w > 0 && r.h > 0;
 describe('layouts', () => {
@@ -79,5 +80,18 @@ describe('readable text on the accent band (D-056)', () => {
     const nodes = starterNodes(poster(), { sizeId: 'main', newId: ids(), palette: { hue: null, dark: false, custom: [] } });
     expect(nodes.find(n => n.slot === 'body')).toMatchObject({ fill: { role: 'ground' } });
     expect(starterNodes(poster(), { sizeId: 'main', newId: ids() }).find(n => n.slot === 'body')).toMatchObject({ fill: { role: 'ink' } });
+  });
+});
+describe('readable band text for every hue (D-076)', () => {
+  it('reaches 4.5 : 1 on the accent band, using an accent shade when neither ink nor ground does', () => {
+    const slots = layout({ canvas: canvasSize('portrait'), guide: 'golden', comp: 'poster', measure: fakeMeasure, headline: 'H', body: 'B' });
+    const fails: string[] = [];
+    for (const hue of [...Array.from({ length: 12 }, (_, i) => i * 30), null]) for (const dark of [false, true]) {
+      const p = { hue, dark, custom: [] }, ref = textRoleOn(slots, slots.body.rect, p);
+      if (contrast(resolve(ref, p), resolve({ role: 'accent' }, p)) < 4.5) fails.push(`${hue}/${dark}`);
+    }
+    expect(fails).toEqual([]);
+    expect(textRoleOn(slots, slots.body.rect, { hue: 120, dark: false, custom: [] })).toEqual({ hex: '#000000' });
+    expect(textRoleOn(slots, slots.body.rect, { hue: 150, dark: false, custom: [] })).toEqual({ hex: '#ffffff' });
   });
 });

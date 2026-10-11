@@ -13,7 +13,7 @@ import { align, distribute, type AlignMode } from '../core/arrange';
 import { drawnWeight, fontById } from '../core/fonts';
 import { addSize, removeSize } from '../core/sizes';
 import { containIn, CENTRE, fullImageRect, panFocus, spreadCells } from '../core/images';
-import { fontStack } from '../core/script';
+import { direction, fontStack, physicalAlign } from '../core/script';
 import { exportSize } from '../core/ratios';
 import type { SnapHit, SnapLine } from '../core/snap';
 import { Store, newId, type PanelId, type Tool } from './store';
@@ -131,7 +131,7 @@ export class Editor {
   boxes(): Box[] {
     const sel = this.selected().filter(n => !this.frame(n).hidden && n.id !== this.store.ui.editing), single = sel.length === 1 && !this.store.ui.armed && !this.store.ui.tool;
     return sel.map(n => {
-      const handles: HandleSet = !single || n.id === this.store.ui.reposition ? 'none' : n.kind === 'image' ? 'all' : n.kind === 'text' ? (n.fit ? 'fit' : 'text') : 'all';
+      const handles: HandleSet = !single || n.id === this.store.ui.reposition ? 'none' : n.kind === 'image' ? 'all' : n.kind === 'shape' && n.icon ? 'corners' : n.kind === 'text' ? (n.fit ? 'fit' : 'text') : 'all';
       return { id: n.id, rect: this.box(n), rot: this.frame(n).rot, handles, locked: !!n.locked };
     });
   }
@@ -299,8 +299,10 @@ export class Editor {
   }
   /** Image tool (D-061): picks pictures from the computer, for a selected empty frame or as new images. */
   imageTool(): void {
-    const one = this.one();
-    this.pickImage(one?.kind === 'image' && !one.asset && !one.locked ? one.id : null);
+    // A selected empty frame, else (nothing selected) the layout's empty frame takes the first picture (D-076).
+    const one = this.one(), empty = (n: DocNode | undefined) => n?.kind === 'image' && !n.asset && !n.locked;
+    const frame = empty(one) ? one!.id : !this.store.ui.sel.length ? this.visible().find(n => empty(n))?.id ?? null : null;
+    this.pickImage(frame);
   }
   /** An empty image frame to drop a picture on later (Shapes panel). */
   addImageFrame(): void {
@@ -357,13 +359,12 @@ export class Editor {
     this.commit(r.doc, 'Duplicated'); this.select(r.ids);
   }
   /** What occupies the canvas for placing new things: blocks' rotated bounds, text by the extent of its lines rather than its box (an autofit room is mostly empty). */
-  taken(): Rect[] {
-    return this.visible().map(n => {
-      const f = this.frame(n);
-      if (n.kind !== 'text') return rotatedBounds(this.box(n), f.rot);
-      const b = textBox(n, f, measure, this.typeScale()), w = Math.min(b.rect.w, Math.max(0, ...b.lines.map(l => textWidth(l, b.size, drawnWeight(n.font, n.weight), n.font))));
-      return rotatedBounds({ ...b.rect, w, h: Math.min(b.rect.h, b.lines.length * b.size * LINE_HEIGHT) }, f.rot);
-    });
+  taken(): Rect[] { return this.visible().map(n => rotatedBounds(n.kind === 'text' ? this.extent(n) : this.box(n), this.frame(n).rot)); }
+  /** Where a text block's letters are: its lines' height and widest line, on the side its alignment puts them. */
+  extent(n: TextNode): Rect {
+    const b = textBox(n, this.frame(n), measure, this.typeScale()), w = Math.min(b.rect.w, Math.max(0, ...b.lines.map(l => textWidth(l, b.size, drawnWeight(n.font, n.weight), n.font))));
+    const side = physicalAlign(n.align, direction(n.text)), x = side === 'left' ? b.rect.x : side === 'center' ? b.rect.x + (b.rect.w - w) / 2 : b.rect.x + b.rect.w - w;
+    return { x, y: b.rect.y, w, h: Math.min(b.rect.h, b.lines.length * b.size * LINE_HEIGHT) };
   }
   /** Plain text the last copy wrote to the system clipboard; null when the browser gave no copy event to write it. */
   clipText: string | null = null;
@@ -510,12 +511,16 @@ export class Editor {
   // sizes and ratio (5v, 5w)
   changeRatio(ratio: RatioId): void {
     if (ratio === this.spec().ratio) return;
+    if (!this.ratioOrigins.size) this.loadOrigins();
     const { doc, flags, origin } = reRatioKept(this.doc, this.sizeId, { ratio }, measure, this.ratioOrigins.get(this.sizeId));
-    this.ratioOrigins.set(this.sizeId, origin);
+    this.ratioOrigins.set(this.sizeId, origin); this.saveOrigins();
     this.store.commit(doc, {}); this.store.setUI({ flags });
     const r = ratioById(ratio);
     toast(flags.length ? `${r.label} ${ratioNumbers(ratio)} · ${new Set(flags.map(f => f.id)).size} flagged` : `${r.label} ${ratioNumbers(ratio)}`, 1800);
   }
+  /** Ratio origins outlive a reload (D-076): kept per document in the browser, never in the document. */
+  private loadOrigins(): void { try { const v = JSON.parse(localStorage.getItem('kura8:origins') ?? 'null'); if (v?.doc === this.doc.id) this.ratioOrigins = new Map(Object.entries(v.sizes as Record<string, RatioOrigin>)); } catch { /* none */ } }
+  private saveOrigins(): void { try { localStorage.setItem('kura8:origins', JSON.stringify({ doc: this.doc.id, sizes: Object.fromEntries(this.ratioOrigins) })); } catch { /* full: round trips start fresh */ } }
   addSize(ratio: RatioId): void {
     const id = newId(), { doc, flags } = addSize(this.doc, ratio, id, measure);
     this.store.commit(doc, {}); this.store.setUI({ size: id, flags, sel: [] });

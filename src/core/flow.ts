@@ -1,7 +1,7 @@
 import type { Measure, Rect } from './geometry';
 import type { KuraDoc, TextNode } from './document';
 import { canvasSize } from './ratios';
-import { LINE_HEIGHT, splitsWord, textBox, typeScale } from './fit';
+import { LINE_HEIGHT, splitsWord, textBox, textHeight, typeScale, type TextBox } from './fit';
 import { drawnWeight } from './fonts';
 import { direction, physicalAlign } from './script';
 import { nudge } from './ops';
@@ -10,6 +10,8 @@ import { nudge } from './ops';
 // some width, with a top no further below the old bottom than one line of the block above (or than the growth). Applied in every size,
 // since text is linked across sizes and wraps differently in each.
 const EPS = 1e-6;
+/** A text box cut to its lines. */
+const extent = (b: TextBox): TextBox => ({ ...b, rect: { ...b.rect, h: textHeight(b.lines.length, b.size) } });
 export function flowText(before: KuraDoc, after: KuraDoc, id: string, measure: Measure): KuraDoc {
   const was = before.nodes.find(n => n.id === id), now = after.nodes.find(n => n.id === id);
   if (was?.kind !== 'text' || now?.kind !== 'text') return after;
@@ -17,14 +19,16 @@ export function flowText(before: KuraDoc, after: KuraDoc, id: string, measure: M
   for (const spec of after.sizes) {
     const f0 = was.frames[spec.id], f1 = now.frames[spec.id];
     if (!f0 || !f1 || f0.hidden || f1.hidden || f0.rot || f1.rot) continue;
-    const scale = typeScale(spec.guide, canvasSize(spec.ratio)), b0 = textBox(was, f0, measure, scale), b1 = textBox(now, f1, measure, scale);
+    // Flow follows the lines, not the box: an autofit room is mostly empty, and turning autofit off or shrinking its
+    // text must not pull the text under the room (the poster's band) up to the letters (D-076).
+    const scale = typeScale(spec.guide, canvasSize(spec.ratio)), b0 = extent(textBox(was, f0, measure, scale)), b1 = extent(textBox(now, f1, measure, scale));
     const dy = b1.rect.y + b1.rect.h - (b0.rect.y + b0.rect.h);
     if (Math.abs(dy) < EPS) continue;
     const stack = new Map<string, { rect: Rect; line: number }>();
     for (const n of doc.nodes) {
       const f = n.frames[spec.id];
       if (n.id === id || n.kind !== 'text' || n.locked || !f || f.hidden || f.rot) continue;
-      const b = textBox(n as TextNode, f, measure, scale);
+      const b = extent(textBox(n as TextNode, f, measure, scale));
       stack.set(n.id, { rect: b.rect, line: b.size * LINE_HEIGHT });
     }
     const queue = [{ rect: b0.rect, line: b0.size * LINE_HEIGHT }], moving: string[] = [];

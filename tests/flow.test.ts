@@ -1,7 +1,7 @@
 import { it, expect } from 'vitest';
 import { flowText, hugText, oneLineWidth } from '../src/core/flow';
 import { updateNodes } from '../src/core/ops';
-import type { KuraDoc } from '../src/core/document';
+import type { KuraDoc, TextNode } from '../src/core/document';
 import { doc, frame, rectNode, textNode, fakeMeasure, charMeasure } from './helpers';
 // Headline 50 units (line 57.5) in a 300-wide box: "Hello" is one line, "Hello there friend" three.
 const stack = (): KuraDoc => doc([
@@ -69,4 +69,10 @@ it('moves text further down than one line when the block above jumps past it in 
   const d = doc([textNode('h', frame(0, 0, 300, 57.5, { fontSize: 50 }), 'Hello'), textNode('b', frame(0, 207.5, 300, 23, { fontSize: 20 }), 'Body')]);
   const pasted = updateNodes(d, ['h'], n => ({ ...n, text: 'Hello there friend of mine' }));
   expect(flowText(d, pasted, 'h', fakeMeasure).nodes[1].frames.main.rect.y).toBe(207.5 + 172.5);
+});
+it('follows the lines of autofit text, not its room, so the band under a poster headline stays put (D-076)', () => {
+  // Autofit room 0–600 holding one line at 50 (57.5 tall); the body sits on a band at 700.
+  const d = doc([textNode('h', frame(0, 0, 300, 600, { fontSize: 50 }), 'Hello', { fit: true } as Partial<TextNode>), textNode('b', frame(0, 700, 300, 23, { fontSize: 20 }), 'Body')]);
+  const unfit = updateNodes(d, ['h'], n => { const t = { ...n, frames: { main: { ...n.frames.main, fontSize: 40 } } } as TextNode; delete t.fit; return t; });
+  expect(flowText(d, unfit, 'h', fakeMeasure).nodes[1].frames.main.rect.y).toBe(700);
 });

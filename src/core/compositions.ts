@@ -46,8 +46,11 @@ export function layout(o: LayoutInput): Layout {
 export function textRoleOn(slots: Layout, text: Rect, palette: Palette): ColourRef {
   const inside = contains(slots.accent, { x: text.x, y: text.y }) && contains(slots.accent, { x: text.x + text.w, y: text.y + text.h });
   if (!inside) return { role: 'ink' };
-  const accent = resolve({ role: 'accent' }, palette);
-  return contrast(resolve({ role: 'ground' }, palette), accent) > contrast(resolve({ role: 'ink' }, palette), accent) ? { role: 'ground' } : { role: 'ink' };
+  // Ink or ground first; a mid-tone accent (lightness 50) can defeat both, and every palette shade, so the last resort
+  // is black or white, one of which always reaches 4.5 : 1 (D-076).
+  const accent = resolve({ role: 'accent' }, palette), score = (c: ColourRef) => contrast(resolve(c, palette), accent);
+  const pick = (refs: ColourRef[]) => refs.reduce((a, b) => score(b) > score(a) ? b : a), best = pick([{ role: 'ink' }, { role: 'ground' }]);
+  return score(best) >= 4.5 ? best : pick([{ hex: '#000000' }, { hex: '#ffffff' }]);
 }
 /** Slot-tagged starter nodes for a layout: empty image frame, accent block, headline and body text. */
 export function starterNodes(slots: Layout, o: { sizeId: string; newId: () => string; headline?: string; body?: string; palette?: Palette }): DocNode[] {

@@ -70,7 +70,18 @@ export type RatioOrigin = Record<string, { ratio: RatioId; guide: GuideId | null
  */
 export function reRatioKept(doc: KuraDoc, sizeId: string, to: { ratio: RatioId; guide?: GuideId | null }, measure: Measure, origin: RatioOrigin = {}): { doc: KuraDoc; flags: Flag[]; origin: RatioOrigin } {
   const from = doc.sizes.find(s => s.id === sizeId)!, guide = to.guide === undefined ? from.guide : to.guide;
-  const start = (n: DocNode) => { const o = origin[n.id], f = n.frames[sizeId]; return o && JSON.stringify(o.last) === JSON.stringify(f) ? o : { ratio: from.ratio, guide: from.guide, frame: f, last: f }; };
+  // Untouched since the last change: map from the origin. Only moved (same size, angle and type size): map from the
+  // origin moved by the same share of the canvas, so a nudge does not cost the original size (D-076).
+  const c0 = canvasSize(from.ratio), still = (f: Frame) => JSON.stringify({ ...f, rect: { ...f.rect, x: 0, y: 0 } });
+  const start = (n: DocNode) => {
+    const o = origin[n.id], f = n.frames[sizeId];
+    if (o && JSON.stringify(o.last) === JSON.stringify(f)) return o;
+    if (o && still(o.last) === still(f)) {
+      const co = canvasSize(o.ratio), r = o.frame.rect, dx = (f.rect.x - o.last.rect.x) * co.w / c0.w, dy = (f.rect.y - o.last.rect.y) * co.h / c0.h;
+      return { ...o, frame: { ...o.frame, rect: { ...r, x: r.x + dx, y: r.y + dy } } };
+    }
+    return { ratio: from.ratio, guide: from.guide, frame: f, last: f };
+  };
   const starts = new Map(doc.nodes.map(n => [n.id, start(n)])), mapped = new Map<string, Record<string, Frame>>();
   const frameFor = (n: DocNode): Frame => {
     const o = starts.get(n.id)!;

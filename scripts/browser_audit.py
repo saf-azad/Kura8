@@ -298,7 +298,8 @@ def s_select_move(app):
     app.select(head, shift=True); check('2 selected' in p.locator('.info').inner_text(), 'shift-click did not add')
     app.click_unit(990, 990); p.wait_for_timeout(80)
     app.drag_unit((5, 995), (400, 690)); check('2 selected' in p.locator('.info').inner_text(), f'marquee: {p.locator(".info").inner_text()}')
-    p.keyboard.press('Control+a'); check(f'{len(d["nodes"])} selected' in p.locator('.info').inner_text(), 'select all')
+    p.keyboard.press('Control+a'); p.wait_for_timeout(100)  # the info label updates on the next animation frame
+    check(f'{len(d["nodes"])} selected' in p.locator('.info').inner_text(), 'select all')
     p.keyboard.press('Escape'); r = app.frame(acc)
     app.drag_unit((r['x'] + r['w'] / 2, r['y'] + r['h'] / 2), (r['x'] + r['w'] / 2 + 137, r['y'] + r['h'] / 2 + 91), alt=True)
     moved = app.frame(find(app.doc(), slot='accent')[0]); check(abs(moved['x'] - r['x'] - 137) < 1.5 and abs(moved['y'] - r['y'] - 91) < 1.5, f'move off: {moved}')

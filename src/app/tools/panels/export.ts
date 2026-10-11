@@ -56,7 +56,7 @@ export function exportSheet(ed: Editor): HTMLElement {
     sheet.hidden = !open; sheet.inert = !open;
     if (!open) { wasOpen = false; return; }
     const ratio = ed.spec().ratio, r = ratioById(ratio);
-    if (!wasOpen) { wasOpen = true; scale = r.mm ? { dpi: 300 } : { scale: 1 }; setTimeout(() => button.focus({ preventScroll: true }), 0); }
+    if (!wasOpen) { wasOpen = true; all = false; scale = r.mm ? { dpi: 300 } : { scale: 1 }; setTimeout(() => button.focus({ preventScroll: true }), 0); }
     // Print sizes skip 2×, which is all but the same as 300 dpi.
     const options: [ExportScale, string][] = [...(r.mm ? [[{ dpi: 300 }, '300 dpi'] as [ExportScale, string]] : []), [{ scale: 1 }, '1×'], ...(r.mm ? [] : [[{ scale: 2 }, '2×'] as [ExportScale, string]]), [{ scale: 3 }, '3×']];
     if (!scale || !withinPixelLimit(exportSize(ratio, scale))) scale = options.find(([o]) => withinPixelLimit(exportSize(ratio, o)))![0];
