@@ -33,3 +33,14 @@ it('gives every block the key’s width or height, scaling pictures in proportio
   const hgt = matchSize([photo, box], key, 'h');
   expect(hgt.p.h).toBe(188); expect(hgt.p.w).toBeCloseTo(291 * 188 / 182); expect(hgt.b).toEqual({ x: 0, y: 300, w: 100, h: 188 });
 });
+it('leaves a locked background out of the row when spacing evenly (D-082)', () => {
+  const c = (id: string, x: number) => ({ id, rect: { x, y: 200, w: 100, h: 100 } }), bg = { id: 'bg', rect: { x: 0, y: 0, w: 1000, h: 562 } };
+  const m = distribute([bg, c('a', 60), c('b', 240), c('c', 500), c('d', 820)], 'x', ['bg']);
+  expect(m.bg).toEqual({ dx: 0, dy: 0 }); expect(m.a.dx).toBeCloseTo(0); expect(m.d.dx).toBeCloseTo(0);
+  const gap = (920 - 60 - 400) / 3; expect(m.b.dx).toBeCloseTo(160 + gap - 240); expect(m.c.dx).toBeCloseTo(260 + 2 * gap - 500);
+  expect(distribute([bg, c('a', 60), c('b', 240)], 'x', ['bg'])).toEqual({ bg: { dx: 0, dy: 0 } });
+});
+it('keeps a turned block centred when it takes the key size (D-082)', () => {
+  const m = matchSize([{ id: 't', rect: { x: 400, y: 400, w: 200, h: 100 }, keepAspect: false, rot: 45 }], { x: 0, y: 0, w: 100, h: 300 }, 'h');
+  expect(m.t).toEqual({ x: 400, y: 300, w: 200, h: 300 });
+});

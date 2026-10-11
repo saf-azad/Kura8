@@ -45,7 +45,10 @@ export function reRatioFrames(doc: KuraDoc, from: SizeSpec, to: { ratio: RatioId
     let h = T !== null && B !== null && B - T > 1 ? B - T : f.rect.h * s;
     const next: Frame = { ...f, rect: { x: 0, y: 0, w, h }, ...(fontSize === undefined ? {} : { fontSize }) };
     if (node.kind === 'text' && !node.fit) h = boxOf(node, next, measure, c1, to.guide).h;
-    next.rect = { x: L !== null ? L : Rr !== null ? Rr - w : cx - w / 2, y: T !== null ? T : B !== null ? B - h : cy - h / 2, w, h };
+    // Free text keeps its aligned edge's share of the width, so a left-aligned stack stays aligned (D-082); others centre.
+    const side = node.kind === 'text' ? physicalAlign(node.align, direction(node.text)) : 'center';
+    const free = side === 'left' ? box.x / c0.w * c1.w : side === 'right' ? (box.x + box.w) / c0.w * c1.w - w : cx - w / 2;
+    next.rect = { x: L !== null ? L : Rr !== null ? Rr - w : free, y: T !== null ? T : B !== null ? B - h : cy - h / 2, w, h };
     // An icon or a loose picture (a logo, a photo placed by hand) keeps its proportions (D-077, D-081): it fits the mapped
     // box, against the edges that stayed on a line, else centred. A layout's picture slot takes the new slot's shape.
     if ((node.kind === 'shape' && node.icon || node.kind === 'image' && !node.slot) && f.rect.h > 0) {

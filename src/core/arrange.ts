@@ -23,6 +23,11 @@ export function distribute(boxes: { id: string; rect: Rect }[], mode: Distribute
   const out: Record<string, Move> = {};
   if (boxes.length < 3) return out;
   const pos = (r: Rect) => mode === 'x' ? r.x : r.y, len = (r: Rect) => mode === 'x' ? r.w : r.h;
+  // A pinned block that overlaps another along the axis (a locked full-bleed background) is not a stop in the row: it
+  // stays where it is and the others space as if it were not selected (D-082).
+  const meets = (a: Rect, b: Rect) => pos(a) < pos(b) + len(b) - 1e-6 && pos(b) < pos(a) + len(a) - 1e-6;
+  const lying = new Set(boxes.filter(b => pinned.includes(b.id) && boxes.some(o => o !== b && meets(o.rect, b.rect))).map(b => b.id));
+  if (lying.size) { const rest = distribute(boxes.filter(b => !lying.has(b.id)), mode, pinned); for (const id of lying) rest[id] = { dx: 0, dy: 0 }; return rest; }
   const sorted = [...boxes].sort((a, b) => pos(a.rect) + len(a.rect) / 2 - (pos(b.rect) + len(b.rect) / 2));
   // The ends and pinned (locked) blocks stay; the blocks between each pair of them share that stretch evenly (D-077).
   const pins = sorted.map((b, i) => i === 0 || i === sorted.length - 1 || pinned.includes(b.id) ? i : -1).filter(i => i >= 0);
@@ -35,14 +40,16 @@ export function distribute(boxes: { id: string; rect: Rect }[], mode: Distribute
   return out;
 }
 /**
- * Same width or height (D-077): every box takes the key's width (or height) with its top-left corner kept; a box that
+ * Same width or height (D-077): every box takes the key's width (or height) with its top-left corner kept (a turned box
+ * its centre); a box that
  * keeps its proportions (a filled picture, an icon) scales both sides. Works on unrotated frames.
  */
-export function matchSize(boxes: { id: string; rect: Rect; keepAspect: boolean }[], key: Rect, mode: 'w' | 'h'): Record<string, Rect> {
+export function matchSize(boxes: { id: string; rect: Rect; keepAspect: boolean; rot?: number }[], key: Rect, mode: 'w' | 'h'): Record<string, Rect> {
   const out: Record<string, Rect> = {};
-  for (const { id, rect: r, keepAspect } of boxes) {
-    const k = mode === 'w' ? key.w / r.w : key.h / r.h;
-    out[id] = mode === 'w' ? { ...r, w: key.w, h: keepAspect ? r.h * k : r.h } : { ...r, h: key.h, w: keepAspect ? r.w * k : r.w };
+  for (const { id, rect: r, keepAspect, rot } of boxes) {
+    const k = mode === 'w' ? key.w / r.w : key.h / r.h, next = mode === 'w' ? { ...r, w: key.w, h: keepAspect ? r.h * k : r.h } : { ...r, h: key.h, w: keepAspect ? r.w * k : r.w };
+    // A turned block keeps its centre, so it does not jump (D-082).
+    out[id] = rot ? { ...next, x: r.x + (r.w - next.w) / 2, y: r.y + (r.h - next.h) / 2 } : next;
   }
   return out;
 }

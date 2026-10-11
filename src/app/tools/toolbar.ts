@@ -33,7 +33,9 @@ export function toolbar(ed: Editor, panels: Panels): HTMLElement {
       if (el.value === shown) return;
       // Arabic-Indic, Persian and full-width digits read as digits (D-081).
       const digits = el.value.replace(/[\u0660-\u0669]/g, d => String(d.charCodeAt(0) - 0x660)).replace(/[\u06F0-\u06F9]/g, d => String(d.charCodeAt(0) - 0x6F0)).replace(/[\uFF10-\uFF19]/g, d => String(d.charCodeAt(0) - 0xFF10)).replace(/[\u066B\uFF0E]/g, '.').replace(/\uFF0C/g, ',');
-      const v = parseFloat(digits.replace(/[\u2212\u2013\u2014]/g, '-').replace(/^([^,.]*),(\d*)$/, '$1.$2').replace(/[^0-9.\-]/g, ''));
+      // A plain number reads as itself (1e3); "1.234,5" is European thousands; a lone comma is a decimal point (D-081, D-082).
+      const plain = digits.replace(/[\u2212\u2013\u2014]/g, '-').trim(), european = plain.replace(/^(-?\d{1,3}(?:\.\d{3})+),(\d+)$/, (_, a: string, b: string) => `${a.replace(/\./g, '')}.${b}`);
+      const v = Number.isFinite(Number(european)) && european !== '' ? Number(european) : parseFloat(european.replace(/^([^,.]*),(\d*)$/, '$1.$2').replace(/[^0-9.\-]/g, ''));
       const applied = Number.isFinite(v) ? apply(v) : null;
       el.value = applied ?? shown; shown = el.value;
     };
@@ -47,7 +49,7 @@ export function toolbar(ed: Editor, panels: Panels): HTMLElement {
     el.addEventListener('blur', commit);
     return el;
   };
-  const angle = readout('Angle', v => { const r = ed.setAngle(v); return r === null ? null : `${Math.round(r)}°`; });
+  const angle = readout('Angle', v => { const r = ed.setAngle(v); return r === null ? null : `${Math.round(r * 10) / 10}°`; });
   const size = readout('Font size', v => { const r = ed.setFontSize(v); return r === null ? null : String(Math.round(r * 10) / 10); });
   const smaller = iconButton('Smaller', ICON.minus, () => ed.fontStep(-1), 'btn small'), larger = iconButton('Larger', ICON.plus, () => ed.fontStep(1), 'btn small');
   const bold = h('button', { type: 'button', className: 'btn', title: `Bold (${MOD} B)`, style: 'font-weight:700;font-size:16px' }, 'B');
@@ -79,7 +81,7 @@ export function toolbar(ed: Editor, panels: Panels): HTMLElement {
     sketchGroup.classList.toggle('hidden', !u.tool);
     const swatch = one && one.kind !== 'image' ? one.fill : u.armed ?? u.swatch, value = ed.colour(swatch);
     chip.style.background = value; hex.textContent = value.toUpperCase();
-    if (document.activeElement !== angle) angle.value = sel[0] ? `${Math.round(ed.frame(sel[0]).rot)}°` : '—';
+    if (document.activeElement !== angle) angle.value = sel[0] ? `${Math.round(ed.frame(sel[0]).rot * 10) / 10}°` : '—';
     const turnable = sel.some(n => !n.locked); angle.classList.toggle('faded', !turnable); angle.disabled = !turnable;
     textGroup.classList.toggle('faded', !isText || !!one?.locked);
     for (const b of [face, smaller, larger, bold, align, fit]) b.disabled = !isText || !!one?.locked;
@@ -126,6 +128,8 @@ export function toolbar(ed: Editor, panels: Panels): HTMLElement {
     bar.style.left = `${Math.max(span.left + half, Math.min(window.innerWidth / 2, span.right - half))}px`;
     bar.style.transform = `translateX(-50%) scale(${k})`;
     const top = `${Math.max(100, Math.ceil(y + bar.offsetHeight * k + 16))}px`;
+    // Panels under the toolbar scroll rather than run off the window (zoom, short windows, D-082); in the bar's own scale.
+    bar.style.setProperty('--panel-max', `${Math.max(160, (window.innerHeight - (y + bar.offsetHeight * k) - 24) / k - 12)}px`);
     if (document.documentElement.style.getPropertyValue('--stage-top') !== top) { document.documentElement.style.setProperty('--stage-top', top); ed.fit(); }
   } });
   return bar;

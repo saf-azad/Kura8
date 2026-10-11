@@ -55,7 +55,10 @@ export function colourPanel(ed: Editor): HTMLElement {
     el.addEventListener('pointermove', move); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
   });
   drag(sv, 'sv'); drag(hueBar, 'h');
-  const typed = () => { const v = hex.value.trim().replace(/^#/, ''); return /^[0-9a-f]{6}$/i.test(v) ? `#${v.toLowerCase()}` : null; };
+  // Six hex digits, or three (#fff), with or without '#' (D-082).
+  const typed = () => { const v = hex.value.trim().replace(/^#/, ''); return /^[0-9a-f]{6}$/i.test(v) ? `#${v.toLowerCase()}` : /^[0-9a-f]{3}$/i.test(v) ? `#${[...v.toLowerCase()].map(c => c + c).join('')}` : null; };
+  /** Text in the field that is not a colour ("white", "#12345"): said, rather than silently using the last colour. */
+  const garbled = () => editingHex && !typed() && hex.value.trim().replace(/^#/, '').toLowerCase() !== focusValue;
   // The field selects its value on focus, so typing replaces it; the hue and accent buttons follow what is typed (D-081).
   hex.addEventListener('focus', () => { editingHex = true; focusValue = hex.value.trim().toLowerCase().replace(/^#/, ''); requestAnimationFrame(() => hex.select()); });
   hex.addEventListener('input', () => {
@@ -75,10 +78,11 @@ export function colourPanel(ed: Editor): HTMLElement {
   asAccent.addEventListener('pointerdown', e => e.preventDefault());
   asAccent.addEventListener('click', () => {
     const v = typed() ?? (('hex' in current()) ? (current() as { hex: string }).hex : null);
-    if (!v) return;
-    editingHex = false; hex.blur(); ed.setPalette({ accent: v }, 'Accent set');
+    if (!v || garbled()) { toast('Type a colour like #1B1F3B'); return; }
+    // Setting the accent ends any paint armed by the typed colour, so the next tap selects rather than paints.
+    editingHex = false; hex.blur(); ed.store.setUI({ armed: null }); ed.setPalette({ accent: v }, 'Accent set');
   });
-  fillGround.addEventListener('click', () => { const ref = typed() ? { hex: typed()! } : current(); editingHex = false; hex.blur(); ed.fillGround(ref); });
+  fillGround.addEventListener('click', () => { if (garbled()) { toast('Type a colour like #1B1F3B'); return; } const ref = typed() ? { hex: typed()! } : current(); editingHex = false; hex.blur(); ed.fillGround(ref); });
   // 5i: tap a ground to switch; hold it to preview the other ground and let go to return.
   const ground = (b: HTMLElement, isDark: boolean) => {
     let t0 = 0;
@@ -143,11 +147,13 @@ export function colourPanel(ed: Editor): HTMLElement {
     // Every selected text block is checked at nine points over its lines, so a second line running onto a dark block
     // counts, and the worst one is shown (D-077).
     let worst: { text: DocNode & { kind: 'text' }; bg: string; ratio: number } | null = null;
+    const failing: string[] = [];
     for (const t of sel) {
       if (t.kind !== 'text') continue;
       const e = ed.extent(t);
       for (const fx of [.15, .5, .85]) for (const fy of [.2, .5, .8]) {
         const bg = backdrop(t, p, { x: e.x + e.w * fx, y: e.y + e.h * fy }), ratio = bg ? contrast(resolve(t.fill, p), bg) : Infinity;
+        if (bg && ratio < 4.5 && !failing.includes(t.id)) failing.push(t.id);
         if (bg && (!worst || ratio < worst.ratio)) worst = { text: t, bg, ratio };
       }
     }
@@ -158,7 +164,8 @@ export function colourPanel(ed: Editor): HTMLElement {
       if (ratio >= 4.5) contrastBox.replaceChildren(h('span', { className: 'muted' }, 'Contrast'), h('span', {}, `${ratio.toFixed(1)} : 1  passes`), h('span'));
       else {
         const use = h('button', { type: 'button', title: 'Use the nearest passing shade' }, 'use');
-        use.addEventListener('click', () => { if (fix) { ed.applySwatch(fix.ref); toast(`Contrast ${fix.ratio.toFixed(1)} : 1`); } });
+        // Only the failing text takes the passing shade; the rest of the selection keeps its colours (D-082).
+        use.addEventListener('click', () => { if (fix) { ed.fillOnly(failing, fix.ref); toast(`Contrast ${fix.ratio.toFixed(1)} : 1`); } });
         contrastBox.replaceChildren(h('span', { className: 'muted' }, 'Contrast'), h('span', {}, `${ratio.toFixed(1)} : 1  fails`), h('span'),
           ...(fix ? [h('span', { className: 'muted' }, 'Nearest pass'), h('span', {}, `${fix.ratio.toFixed(1)} : 1`), use] : [h('span', { className: 'muted' }, 'No shade on this row passes')]));
       }

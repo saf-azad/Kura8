@@ -31,3 +31,6 @@ it('steps an All sizes export down to the largest scale that fits, not to 1× (D
   expect(zipScale('square', { dpi: 300 })).toEqual({ scale: 2 }); expect(zipScale('a4', { dpi: 300 })).toEqual({ dpi: 300 });
   expect(zipScale('square', { scale: 1 })).toEqual({ scale: 1 });
 });
+it('scales the rounded 1× height, so 3× is exactly three times 1× (D-082)', () => {
+  expect(exportSize('link', { scale: 1 })).toEqual({ w: 1200, h: 628 }); expect(exportSize('link', { scale: 3 })).toEqual({ w: 3600, h: 1884 });
+});

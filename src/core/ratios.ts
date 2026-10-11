@@ -31,8 +31,8 @@ export function exportSize(id: RatioId, option: ExportScale): Size {
     if (!r.mm) throw new Error(`${id} has no print size`);
     return { w: Math.round(r.mm.w / 25.4 * option.dpi), h: Math.round(r.mm.h / 25.4 * option.dpi) };
   }
-  const w = r.exportWidth * option.scale;
-  return { w, h: Math.round(w * r.h / r.w) };
+  // The 1× height rounded once, then scaled, so 3× is exactly three times 1× (Link 3× is 3600 × 1884, D-082).
+  return { w: r.exportWidth * option.scale, h: Math.round(r.exportWidth * r.h / r.w) * option.scale };
 }
 export const withinPixelLimit = (s: Size): boolean => s.w * s.h <= MAX_PIXELS;
 /**

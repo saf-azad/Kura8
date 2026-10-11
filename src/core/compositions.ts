@@ -67,7 +67,8 @@ export function keepReadable(doc: KuraDoc): KuraDoc {
   const inside = (outer: Rect, inner: Rect) => contains(outer, { x: inner.x, y: inner.y }) && contains(outer, { x: inner.x + inner.w, y: inner.y + inner.h });
   const meets = (a: Rect, b: Rect) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
   const nodes = doc.nodes.map((n, i) => {
-    if (n.kind !== 'text' || !autoFill(n.fill)) return n;
+    // Black or white counts as automatic only on layout text (the band's fallback); on a free label it was chosen (D-082).
+    if (n.kind !== 'text' || !autoFill(n.fill) || 'hex' in n.fill && !n.slot) return n;
     const below = doc.nodes.slice(0, i), sizes = doc.sizes.filter(({ id }) => n.frames[id] && !n.frames[id].hidden);
     const onBand = sizes.some(({ id }) => {
       const t = n.frames[id];

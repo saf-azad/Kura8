@@ -124,3 +124,9 @@ describe('text on a filled ground stays readable (D-081)', () => {
     expect(keepReadable({ ...d, ground: null })).toEqual({ ...d, ground: null });
   });
 });
+it('keeps black or white chosen for a free label on the band (D-082)', () => {
+  const p: Palette = { hue: 60, dark: false, custom: [] }, band = { id: 'band', kind: 'shape', shape: 'rect', fill: { role: 'accent' }, frames: { main: { rect: { x: 0, y: 500, w: 1000, h: 300 }, rot: 0 } } } as DocNode;
+  const label = { id: 'l', kind: 'text', text: 'Hi', weight: 400, align: 'start', fill: { hex: '#ffffff' }, frames: { main: { rect: { x: 50, y: 600, w: 100, h: 30 }, rot: 0 } } } as DocNode;
+  const d: KuraDoc = { version: 2, id: 'd', createdAt: '', palette: { ...p, dark: true }, ground: null, sizes: [{ id: 'main', ratio: 'square', guide: null, comp: null }], nodes: [band, label] };
+  expect(keepReadable(d)).toBe(d);
+});

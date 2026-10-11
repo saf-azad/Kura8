@@ -75,6 +75,12 @@ describe('re-ratio (5v)', () => {
     const back = reRatio(doc([t]), 'main', { ratio: 'cover' }, fakeMeasure).doc.nodes[0].frames.main;
     expect(back.fontSize).toBeCloseTo(16.7 / 4, 6);
   });
+  it('keeps a stack of left- or right-aligned labels aligned in a new ratio (D-082)', () => {
+    const d = doc([textNode('a', frame(120, 400, 300, 23, { fontSize: 20 }), 'Teams of 4'), textNode('b', frame(120, 440, 160, 23, { fontSize: 20 }), 'RSVP'),
+      textNode('c', frame(520, 400, 300, 23, { fontSize: 20 }), 'Right', { align: 'end' } as Partial<DocNode>), textNode('e', frame(660, 440, 160, 23, { fontSize: 20 }), 'Too', { align: 'end' } as Partial<DocNode>)]);
+    const out = reRatio(d, 'main', { ratio: 'cover' }, fakeMeasure).doc.nodes.map(n => n.frames.main.rect);
+    expect(out[0].x).toBeCloseTo(out[1].x, 6); expect(out[2].x + out[2].w).toBeCloseTo(out[3].x + out[3].w, 6);
+  });
   it('treats rotated nodes as free and changes the guide when asked', () => {
     const d = doc([rectNode('r', frame(0, 0, 100, 100, { rot: 30 }))]);
     const out = reRatioFrames(d, d.sizes[0], { ratio: 'landscape', guide: null }, fakeMeasure);

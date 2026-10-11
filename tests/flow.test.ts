@@ -61,7 +61,7 @@ it('keeps one-line text on one line when its size or face changes (D-070)', () =
   expect(w(hugText(hug, updateNodes(grow(hug, 150), ['n'], n => ({ ...n, align: 'center' })), 'n', charMeasure)).x).toBe(0);
   // A free label slides back to stay on the canvas, up to the canvas width (D-070, D-081).
   const huge = grow(hug, 400); expect(w(hugText(hug, huge, 'n', charMeasure))).toMatchObject({ x: 0, w: 1000 });
-  const two = updateNodes(hug, ['n'], n => ({ ...n, text: 'a\nb' }));
+  const two = updateNodes(wide, ['n'], n => ({ ...n, text: 'a\nb' }));
   expect(hugText(two, grow(two, 150), 'n', charMeasure)).toEqual(grow(two, 150));
   expect(hugText(hug, hug, 'missing', charMeasure)).toBe(hug);
 });
@@ -142,4 +142,19 @@ it('keeps layout text in its slot when retyped, and slides a free label at the l
   const big = updateNodes(label, ['a'], n => ({ ...n, frames: { main: { ...n.frames.main, fontSize: 100 } } }));
   expect(hugText(label, big, 'a', charMeasure).nodes[0].frames.main.rect).toMatchObject({ x: 0 });
   expect(hugText(label, big, 'a', charMeasure).nodes[0].frames.main.rect.w).toBeCloseTo(240 * 1.02, 0);
+});
+it('widens a hugging label to its widest paragraph when a paragraph is pasted in (D-082)', () => {
+  const tag = doc([textNode('t', frame(100, 0, 129, 32, { fontSize: 30 }), 'Tagline')]);
+  const pasted = updateNodes(tag, ['t'], n => ({ ...n, text: 'Short line\nA much longer second paragraph here' }));
+  expect(hugText(tag, pasted, 't', charMeasure).nodes[0].frames.main.rect.w).toBeCloseTo(35 * 18 * 1.02, 0);
+});
+it('moves text only among blocks on the same thing: band text stays when the headline above changes (D-082)', () => {
+  // A wide poster: headline on the ground ending at 46, the band from 60 holding the body at 70.
+  const band = rectNode('band', frame(0, 60, 1000, 100)), d = doc([band, textNode('h', frame(0, 0, 300, 46, { fontSize: 20 }), 'Spring Graduate Show'), textNode('b', frame(0, 70, 300, 23, { fontSize: 20 }), 'Body')]);
+  const shorter = updateNodes(d, ['h'], n => ({ ...n, text: 'Spring' })), longer = updateNodes(d, ['h'], n => ({ ...n, text: 'Spring Graduate Showcase twenty twenty six' }));
+  expect(flowText(d, shorter, 'h', fakeMeasure).nodes[2].frames.main.rect.y).toBe(70);
+  expect(flowText(d, longer, 'h', fakeMeasure).nodes[2].frames.main.rect.y).toBe(70);
+  // Two blocks on the same band still flow together.
+  const both = doc([band, textNode('h', frame(0, 62, 300, 23, { fontSize: 20 }), 'Hi'), textNode('b', frame(0, 90, 300, 23, { fontSize: 20 }), 'Body')]);
+  expect(flowText(both, updateNodes(both, ['h'], n => ({ ...n, text: 'Hello there friend of mine' })), 'h', fakeMeasure).nodes[2].frames.main.rect.y).toBeGreaterThan(90);
 });

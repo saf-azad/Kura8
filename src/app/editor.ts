@@ -496,6 +496,8 @@ export class Editor {
     if (ids.length) { this.store.commit(setFill(this.doc, ids, ref), { key: 'fill' }); this.store.setUI({ armed: null }); }
     else if (!sel.length) this.store.setUI({ armed: ref });
   }
+  /** A colour for some blocks only (the failing text of a selection, D-082), whatever else is selected. */
+  fillOnly(ids: string[], ref: ColourRef): void { const open = ids.filter(id => !nodeById(this.doc, id)?.locked); if (open.length) this.commit(setFill(this.doc, open, ref)); }
   /** The ground takes a colour directly (Colour panel, D-077), and paint stops. */
   fillGround(ref: ColourRef): void { this.store.setUI({ armed: null }); this.commit(keepReadable(setGround(this.doc, ref)), 'Ground filled'); }
   paintAt(node: DocNode | undefined): void {
@@ -607,8 +609,8 @@ export class Editor {
     if (shown.length < 2) { toast('Select two or more to match sizes'); return; }
     const order = this.store.ui.sel, key = shown.find(n => n.locked) ?? [...shown].sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id))[0];
     const others = shown.filter(n => n !== key && !n.locked && !(mode === 'h' && n.kind === 'text' && !n.fit));
-    if (!others.length) return;
-    const rects = matchSize(others.map(n => ({ id: n.id, rect: this.frame(n).rect, keepAspect: n.kind === 'shape' && !!n.icon })), this.frame(key).rect, mode);
+    if (!others.length) { toast(mode === 'h' ? 'Text takes its height from its lines' : 'Nothing to match'); return; }
+    const rects = matchSize(others.map(n => ({ id: n.id, rect: this.frame(n).rect, keepAspect: n.kind === 'shape' && !!n.icon, rot: this.frame(n).rot })), this.frame(key).rect, mode);
     this.commit(setFrames(this.doc, this.sizeId, Object.fromEntries(others.map(n => [n.id, { ...this.frame(n), rect: rects[n.id] }]))), mode === 'w' ? 'Same width' : 'Same height');
     this.flagAllText();
   }
@@ -675,7 +677,9 @@ export class Editor {
     area.value = node.text; this.textarea = area; this.stack.append(area);
     this.store.setUI({ editing: id, sel: [id], armed: null });
     this.positionTextarea(); area.focus({ preventScroll: true }); area.select();
-    area.addEventListener('input', () => { const cur = nodeById(this.doc, id), prev = this.doc; if (cur?.kind === 'text') { this.store.set(flowText(prev, hugText(prev, updateNodes(prev, [id], n => ({ ...n, text: area.value })), id, measure), id, measure)); this.positionTextarea(); } });
+    // Whether the block hugs its words is judged as the edit began, not at each keystroke: a column whose line happens to
+    // fill its box while typing must not start growing (D-082).
+    area.addEventListener('input', () => { const cur = nodeById(this.doc, id), prev = this.doc; if (cur?.kind === 'text') { this.store.set(flowText(prev, hugText(before, updateNodes(prev, [id], n => ({ ...n, text: area.value })), id, measure), id, measure)); this.positionTextarea(); } });
     area.addEventListener('keydown', e => {
       const mod = (e.metaKey || e.ctrlKey) && !e.altKey;
       // Undo before typing anything leaves the text and undoes the last change (e.g. New); Mod+B bolds the block being typed.
@@ -706,7 +710,9 @@ export class Editor {
       if (foreign.id !== this.doc.id) { this.store.commit(foreign, { before: this.doc }); toast('Another tab started a new design · Undo brings this one back', 3200); return; }
       const there = nodeById(foreign, node.id), empty = !node.text.trim();
       let merged = foreign;
-      if (empty) merged = there ? removeNodes(foreign, [node.id]) : foreign;
+      // Emptying the block removes it, unless the other tab rewrote it meanwhile: the newer words stay (D-082).
+      const started = before ? nodeById(before, node.id) : undefined, rewritten = there?.kind === 'text' && started?.kind === 'text' && there.text !== started.text;
+      if (empty) merged = there && !rewritten ? removeNodes(foreign, [node.id]) : foreign;
       else if (there?.kind === 'text') merged = flowText(foreign, updateNodes(foreign, [node.id], n => ({ ...n, text: node.text })), node.id, measure);
       else if (!there) {
         const first = node.frames[this.sizeId] ?? Object.values(node.frames)[0], frames = Object.fromEntries(foreign.sizes.map(s => [s.id, node.frames[s.id] ?? first]));

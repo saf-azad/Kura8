@@ -51,6 +51,8 @@ input.readout{width:58px;text-align:center;font:inherit;font-size:13px;backgroun
 /* panels */
 .panel{position:absolute;padding:15px;border:var(--stroke) solid var(--ink);border-radius:var(--r-md);background:var(--paper);display:flex;flex-direction:column;gap:12px;z-index:8;transform-origin:50% 0;transition:opacity var(--fast),transform var(--base) var(--ease)}
 .panel[hidden]{display:flex!important;opacity:0;pointer-events:none;transform:scale(.98)}
+.toolbar .panel{max-height:var(--panel-max,none);overflow-y:auto}
+.corner .panel,.corner-stack .panel{max-height:calc(100vh - 150px);overflow-y:auto}
 .panel h3{font-size:11px;font-weight:400;opacity:.6;margin:0;padding-left:2px}
 .toolbar{position:absolute;left:50%;top:20px;transform:translateX(-50%);transform-origin:50% 0;z-index:7;display:flex;align-items:center;gap:5px;padding:5px 10px;border:var(--stroke) solid var(--ink);border-radius:39px;background:var(--paper);white-space:nowrap}
 .toolbar .swatch-button{display:flex;align-items:center;gap:5px;height:40px;padding:0 5px;border-radius:var(--r-sm);transition:background var(--fast)}

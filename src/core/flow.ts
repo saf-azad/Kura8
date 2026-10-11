@@ -18,6 +18,19 @@ const extent = (b: TextBox): TextBox => ({ ...b, rect: { ...b.rect, h: textHeigh
  */
 const held = (n: TextNode, b: TextBox): TextBox => n.fit ? b : extent(b);
 const overlaps = (a: Rect, b: Rect) => a.x < b.x + b.w - EPS && b.x < a.x + a.w - EPS;
+const inside = (outer: Rect, r: Rect) => r.x >= outer.x - EPS && r.y >= outer.y - EPS && r.x + r.w <= outer.x + outer.w + EPS && r.y + r.h <= outer.y + outer.h + EPS;
+/**
+ * What a text block sits on in a size: the topmost unturned picture or shape under it that holds it whole, else the
+ * ground (null). Text flows only among blocks on the same thing, so the poster's band text never follows the headline
+ * above the band, in any ratio (D-082).
+ */
+function sitsOn(doc: KuraDoc, id: string, sizeId: string, r: Rect): string | null {
+  for (let j = doc.nodes.findIndex(n => n.id === id) - 1; j >= 0; j--) {
+    const b = doc.nodes[j], f = b.frames[sizeId];
+    if (b.kind !== 'text' && b.kind !== 'ink' && f && !f.hidden && !f.rot && inside(f.rect, r)) return b.id;
+  }
+  return null;
+}
 export function flowText(before: KuraDoc, after: KuraDoc, id: string, measure: Measure): KuraDoc {
   const was = before.nodes.find(n => n.id === id), now = after.nodes.find(n => n.id === id);
   if (was?.kind !== 'text' || now?.kind !== 'text') return after;
@@ -29,13 +42,13 @@ export function flowText(before: KuraDoc, after: KuraDoc, id: string, measure: M
     const dy = b1.rect.y + b1.rect.h - (b0.rect.y + b0.rect.h);
     // A room gives nothing back: leaving autofit (Smaller on a poster headline) never pulls the text under it up (D-077).
     if (Math.abs(dy) < EPS || (was.fit && dy < 0)) continue;
-    const stack = new Map<string, { rect: Rect; line: number }>(), others: { id: string; rect: Rect }[] = [];
+    const stack = new Map<string, { rect: Rect; line: number }>(), others: { id: string; rect: Rect }[] = [], on = sitsOn(doc, id, spec.id, b0.rect);
     for (const n of doc.nodes) {
       const f = n.frames[spec.id];
       if (n.id === id || n.kind !== 'text' || !f || f.hidden || f.rot) continue;
       const b = held(n as TextNode, textBox(n as TextNode, f, measure, scale));
       others.push({ id: n.id, rect: b.rect });
-      if (!n.locked) stack.set(n.id, { rect: b.rect, line: b.size * LINE_HEIGHT });
+      if (!n.locked && sitsOn(doc, n.id, spec.id, b.rect) === on) stack.set(n.id, { rect: b.rect, line: b.size * LINE_HEIGHT });
     }
     const queue = [{ rect: b0.rect, line: b0.size * LINE_HEIGHT }], moving: string[] = [];
     while (queue.length) {
@@ -82,12 +95,14 @@ export function wholeWordSize(text: string, size: number, width: number, weight:
  * single line, a free label (no layout slot) whose box hugged its words (within 15 %) follows them like an auto-width
  * label, growing away from its aligned edge and sliding back to stay on the canvas; beyond the canvas width it wraps.
  * Layout text keeps its slot: it widens only when a word would otherwise break, and only towards the canvas edge on its
- * growing side, so it never crosses back over a picture column. Rotated labels keep their aligned edge's point. Autofit
- * and multi-paragraph text keep their width. Applied in every size.
+ * growing side, so it never crosses back over a picture column. Rotated labels keep their aligned edge's point. A
+ * hugging label given several paragraphs (a pasted paragraph) widens to its widest one (D-082). Autofit text, and
+ * multi-paragraph text that did not hug, keep their width. Applied in every size.
  */
 export function hugText(before: KuraDoc, after: KuraDoc, id: string, measure: Measure): KuraDoc {
   const was = before.nodes.find(n => n.id === id), now = after.nodes.find(n => n.id === id);
-  if (was?.kind !== 'text' || now?.kind !== 'text' || now.fit || now.text.includes('\n') || !now.text.trim()) return after;
+  if (was?.kind !== 'text' || now?.kind !== 'text' || now.fit || !now.text.trim()) return after;
+  const paragraphs = now.text.includes('\n');
   let doc = after;
   for (const spec of after.sizes) {
     const f0 = was.frames[spec.id], f1 = now.frames[spec.id];
@@ -95,9 +110,9 @@ export function hugText(before: KuraDoc, after: KuraDoc, id: string, measure: Me
     const scale = typeScale(spec.guide, canvasSize(spec.ratio)), b0 = textBox(was, f0, measure, scale);
     if (b0.lines.length !== 1) continue;
     const w0 = drawnWeight(was.font, was.weight), w1 = drawnWeight(now.font, now.weight), s1 = f1.fontSize ?? scale.body;
-    const natural0 = oneLineWidth(was.text, b0.size, w0, measure, was.font), natural1 = oneLineWidth(now.text, s1, w1, measure, now.font) * 1.02;
+    const natural0 = oneLineWidth(was.text, b0.size, w0, measure, was.font), natural1 = Math.max(...now.text.split('\n').map(p => p.trim() ? oneLineWidth(p, s1, w1, measure, now.font) : 0)) * 1.02;
     const free = !now.slot, hugging = free && f0.rect.w <= natural0 * 1.15 + 1, r = f1.rect, lines = measure(now.text, s1, w1, r.w, now.font);
-    if (!hugging && (lines.length < 2 || !splitsWord(now.text, lines))) continue;
+    if (!hugging && (paragraphs || lines.length < 2 || !splitsWord(now.text, lines))) continue;
     const canvas = canvasSize(spec.ratio), side = physicalAlign(now.align, direction(now.text)), cx = r.x + r.w / 2, room = free ? canvas.w : roomFor(now, f1, canvas);
     const cap = Math.max(room, hugging ? 0 : r.w), w = Math.max(hugging ? 0 : r.w, Math.min(natural1, cap));
     if (Math.abs(w - r.w) < 1e-6) continue;
