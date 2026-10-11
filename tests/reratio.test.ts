@@ -234,3 +234,24 @@ describe('linked sizes keep labels whole and text clear (D-087)', () => {
     expect(kept.nodes[2].frames.k.rect.y).toBeLessThan(kh.rect.y + kh.rect.h);
   });
 });
+describe('linked sizes keep side-by-side labels apart and text on the canvas (D-089)', () => {
+  const scale = (r: 'square' | 'cover' | 'banner' | 'landscape' | 'link') => typeScale('thirds', canvasSize(r));
+  it('grows a row of labels from a Header only as far as keeps them apart, at one shared size', () => {
+    const words = ['Analytics', 'Content', 'Social'], d = doc(words.map((w, i) => textNode(`l${i}`, frame(600 + i * 120, 140, w.length * 18 * .6 * 1.02, 21, { fontSize: 18 }), w)), size({ ratio: 'cover' }));
+    for (const ratio of ['square', 'landscape', 'banner'] as const) {
+      const out = addSize(d, ratio, 'b', fakeMeasure).doc, boxes = out.nodes.map(n => textBox(n as TextNode, n.frames.b, fakeMeasure, scale(ratio)));
+      for (const b of boxes) expect(b.lines).toHaveLength(1);
+      for (let i = 1; i < boxes.length; i++) expect(boxes[i - 1].rect.x + boxes[i - 1].rect.w).toBeLessThanOrEqual(boxes[i].rect.x + 1e-6);
+      expect(new Set(out.nodes.map(n => n.frames.b.fontSize)).size).toBe(1);
+    }
+  });
+  it('lifts the headline rather than pushing the line under it off the canvas', () => {
+    // One line in the Banner, two in the Link, near the bottom: pushing the body would put it past the canvas.
+    const d = doc([textNode('h', frame(45, 230, 670, 58, { fontSize: 50.5 }), 'Đêm hội Trăng Rằm 2026', { slot: 'headline' } as Partial<DocNode>),
+      textNode('b', frame(45, 300, 670, 23, { fontSize: 20 }), 'Mid-Autumn Festival Night', { slot: 'body' } as Partial<DocNode>)], size({ ratio: 'banner' }));
+    const out = addSize(d, 'link', 'k', fakeMeasure).doc, h = textBox(out.nodes[0] as TextNode, out.nodes[0].frames.k, fakeMeasure, scale('link')).rect;
+    expect(textBox(out.nodes[0] as TextNode, out.nodes[0].frames.k, fakeMeasure, scale('link')).lines).toHaveLength(2);
+    const b = textBox(out.nodes[1] as TextNode, out.nodes[1].frames.k, fakeMeasure, scale('link')).rect;
+    expect(b.y).toBeGreaterThanOrEqual(h.y + h.h - 1e-6); expect(b.y + b.h).toBeLessThanOrEqual(canvasSize('link').h + 1e-6);
+  });
+});

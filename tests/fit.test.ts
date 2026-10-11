@@ -56,9 +56,12 @@ it('does not count a break after a hyphen as a broken word (D-086)', async () =>
   expect(splitsWord('a - b', ['a -', 'b'])).toBe(false);
 });
 it('finds the pieces a text never breaks inside: hyphens after a letter, slashes, characters of Chinese (D-088)', () => {
-  expect(pieces('state-of-the-art linktr.ee/unswms')).toEqual(['state-', 'of-', 'the-', 'art', 'linktr.ee/', 'unswms']);
+  expect(pieces('state-of-the-art linktr.ee/unswms')).toEqual(['state-', 'of-', 'the-', 'art', 'linktr.', 'ee/', 'unswms']);
   expect(pieces('down to -12 degrees, -20% off')).toEqual(['down', 'to', '-12', 'degrees,', '-20%', 'off']);
   expect(pieces('夜市 Night')).toEqual(['夜', '市', 'Night']);
   expect(splitsWord('linktr.ee/unswms', ['linktr.ee/', 'unswms'])).toBe(false);
   expect(splitsWord('of -12 degrees', ['of -', '12 degrees'])).toBe(true);
+  // A link also breaks after an underscore and a dot between letters, never inside a number (D-089).
+  expect(pieces('instagram.com/usyd.marketing_society v2.5')).toEqual(['instagram.', 'com/', 'usyd.', 'marketing_', 'society', 'v2.5']);
+  expect(splitsWord('usyd.marketing_society', ['usyd.', 'marketing_', 'society'])).toBe(false);
 });

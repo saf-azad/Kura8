@@ -192,6 +192,25 @@ Append-only. New entries supersede named old entries; do not edit history. Forma
   - **Selecting.** A thin line or rule takes a press within 10 screen pixels of its middle.
   - **Layer names** are cut between characters, never inside an emoji.
   - Why: loop 7 cohort V (34 sessions).
+- **D-089** 2026-10-11 fable — Loop 8 cohort W (verification).
+  - **Labels on blocks.** A label on a block retyped with a word the block cannot hold takes the size that fits it there (down to three fifths of body). Past that it leaves for the canvas as before. This supersedes D-088's widening there, which ran it over the headline.
+  - **Growing upwards.** Every free label at the canvas bottom grows upwards, wrapped or not and on any later edit. It never rises above its block's top or the nearest block or text right above it.
+  - **Wrapping.** A label wraps on its side when the copy fits on the canvas once lifted, rather than sliding over the headline (supersedes part of D-087). A block or neighbour beside it gives way only when the wider bounds fit and these do not; this supersedes D-086's two tests, which now keep the label in its block and grow it upwards.
+  - **Links** also break after an underscore and after a dot between letters (`BREAK_AFTER`).
+  - **Linked sizes and Change ratio.**
+    - Side-by-side labels that grow by the body-type ratio (Header to Post) stop before what stood beside them on their row, keeping their aligned edge.
+    - Labels that shared a size and a row keep sharing it. This supersedes the overlap D-087's one-line rule caused.
+    - Where restacking would push text off the canvas (a Banner cover made into a Link), the text above rises instead, as far as the layout margin.
+  - **Text tool.**
+    - After a toolbar control (Align right, Bold) the new label is judged from where the control left it, and typing carries on at its end, typed or not.
+    - A press beside the canvas leaves it being typed.
+    - A click near an edge places it inside the layout margin.
+  - **Readable colour.** Nudging with the arrow keys re-picks the readable colour as a drag does.
+  - **Larger and typed sizes** also stop before pushed text reaches the canvas bottom margin.
+  - **Placement.** Pasted copy and new labels count straddling a band or pill at three times the area they cover. Pasted copy now knows the bands, so it sits on one or beside it.
+  - **Arrange.** Centring that falls back to the selection says so.
+  - **Names.** Layer names from file names are cut between characters (`cleanName`).
+  - Why: loop 8 cohort W (31 sessions; 14 of 23 loop-7 items fixed, 9 partly).
 
 ## Next steps
 

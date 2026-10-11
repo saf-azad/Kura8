@@ -90,8 +90,41 @@ export function reRatioFrames(doc: KuraDoc, from: SizeSpec, to: { ratio: RatioId
     }
     frames[node.id] = next;
   }
+  // Text that grew more than its canvas (Header to Post) stops before it reaches what stood beside it on its row, keeping
+  // its aligned edge; labels that shared a size and a row keep sharing it (D-089).
+  const ts = (n: DocNode) => n.kind === 'text' && !n.frames[from.id].rot && !n.frames[from.id].hidden && !frames[n.id].rot;
+  const grown = doc.nodes.filter(n => ts(n) && n.kind === 'text' && !n.fit && n.frames[from.id].fontSize !== undefined && (frames[n.id].fontSize ?? 0) > n.frames[from.id].fontSize! * s + 1e-6);
+  const box0 = (n: DocNode) => boxOf(n, n.frames[from.id], measure, c0, from.guide), box1 = (n: DocNode) => boxOf(n, frames[n.id], measure, c1, to.guide);
+  const rowmates = (a: DocNode) => doc.nodes.filter(b => b.id !== a.id && b.kind !== 'ink' && !b.frames[from.id].hidden && !b.frames[from.id].rot && (() => {
+    const p = box0(a), q = box0(b), line = textHeight(1, textBox(a as TextNode, a.frames[from.id], measure, typeScale(from.guide, c0)).size);
+    return q.y < p.y + line && p.y < q.y + q.h && (q.x >= p.x + p.w - 1e-6 || q.x + q.w <= p.x + 1e-6);
+  })());
+  const fit = new Map<string, number>();
+  for (const a of grown) {
+    const p0 = box0(a), p1 = box1(a), side = physicalAlign((a as TextNode).align, direction((a as TextNode).text));
+    let lo = -Infinity, hi = Infinity;
+    for (const b of rowmates(a)) {
+      const q0 = box0(b), q1 = boxOf(b, frames[b.id], measure, c1, to.guide);
+      if (q0.x >= p0.x + p0.w - 1e-6) hi = Math.min(hi, q1.x - (q0.x - p0.x - p0.w) / c0.w * c1.w);
+      else lo = Math.max(lo, q1.x + q1.w + (p0.x - q0.x - q0.w) / c0.w * c1.w);
+    }
+    const room = side === 'left' ? hi - p1.x : side === 'right' ? p1.x + p1.w - lo : 2 * Math.min(p1.x + p1.w / 2 - lo, hi - p1.x - p1.w / 2);
+    const f0 = a.frames[from.id].fontSize!, f1 = frames[a.id].fontSize!, least = f0 * s / f1;
+    if (room < p1.w) fit.set(a.id, Math.max(least, room / p1.w));
+  }
+  // Rowmates that shared a size take the smallest of their sizes.
+  for (let pass = 0; pass < 2; pass++) for (const a of grown) for (const b of rowmates(a)) {
+    if (!grown.includes(b) || Math.abs(a.frames[from.id].fontSize! - b.frames[from.id].fontSize!) > .5) continue;
+    const k = Math.min(fit.get(a.id) ?? 1, fit.get(b.id) ?? 1); if (k < 1) { fit.set(a.id, k); fit.set(b.id, k); }
+  }
+  for (const [id, k] of fit) {
+    const n = doc.nodes.find(x => x.id === id) as TextNode, f = frames[id], side = physicalAlign(n.align, direction(n.text)), w = f.rect.w * k;
+    const x = side === 'left' ? f.rect.x : side === 'right' ? f.rect.x + f.rect.w - w : f.rect.x + (f.rect.w - w) / 2, next = { ...f, fontSize: f.fontSize! * k, rect: { ...f.rect, x, w } };
+    frames[id] = { ...next, rect: { ...next.rect, h: boxOf(n, next, measure, c1, to.guide).h } };
+  }
   // Text whose type grew more than its canvas (Banner to Link) can reach the text it stood above: what stood under it,
-  // on the same backing, moves down to keep clear, top to bottom (D-087).
+  // on the same backing, moves down to keep clear, top to bottom (D-087); where that would push it off the canvas, the
+  // text above rises instead, as far as the layout margin (D-089).
   const texts = doc.nodes.filter(n => n.kind === 'text' && !n.frames[from.id].rot && !n.frames[from.id].hidden && !frames[n.id].rot)
     .map(n => ({ n, b0: boxOf(n, n.frames[from.id], measure, c0, from.guide), on: sitsOn(doc, n.id, from.id, n.frames[from.id].rect) }))
     .sort((a, b) => a.b0.y - b.b0.y);
@@ -101,7 +134,10 @@ export function reRatioFrames(doc: KuraDoc, from: SizeSpec, to: { ratio: RatioId
       if (upper === lower || upper.on !== lower.on || a0.y + a0.h > b0.y + TOLERANCE || a0.x >= b0.x + b0.w || b0.x >= a0.x + a0.w) continue;
       const a1 = boxOf(upper.n, frames[upper.n.id], measure, c1, to.guide), f1 = frames[lower.n.id], gap = Math.max(0, b0.y - a0.y - a0.h) * s;
       if (a1.x >= f1.rect.x + f1.rect.w || f1.rect.x >= a1.x + a1.w || a1.y + a1.h <= f1.rect.y + TOLERANCE) continue;
-      frames[lower.n.id] = { ...f1, rect: { ...f1.rect, y: a1.y + a1.h + gap } };
+      const need = a1.y + a1.h + gap - f1.rect.y, lowH = boxOf(lower.n, f1, measure, c1, to.guide).h, pad1 = layoutPad(c1);
+      const over = Math.max(0, f1.rect.y + need + lowH - (c1.h - pad1)), rise = Math.min(over, Math.max(0, a1.y - pad1));
+      if (rise > 0) frames[upper.n.id] = { ...frames[upper.n.id], rect: { ...frames[upper.n.id].rect, y: frames[upper.n.id].rect.y - rise } };
+      frames[lower.n.id] = { ...f1, rect: { ...f1.rect, y: f1.rect.y + need - rise } };
     }
   }
   for (const node of doc.nodes) flags.push(...flagsFor(node, frames[node.id], measure, c1, to.guide));

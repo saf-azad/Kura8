@@ -79,3 +79,9 @@ it('keeps a batch of pictures off the cells that hold copy, tiling the rest, and
   // Too many for the clear cells at four to a cell: every cell takes tiles again.
   expect(spreadCells({ x: 450, y: 450 }, cells, [title], 40, canvas, false, [title]).some(b => b.x < 600 && b.y < 300)).toBe(true);
 });
+it('puts a label on a band or beside it rather than across its edge (D-089)', () => {
+  const canvas = { w: 900, h: 900 }, band = { x: 0, y: 600, w: 900, h: 300 }, head = { x: 0, y: 0, w: 900, h: 560 };
+  const p = freeSpot({ size: { w: 400, h: 200 }, canvas, cells: [], taken: [band], text: [head], backs: [band], pad: 40 });
+  const box = { ...p, w: 400, h: 200 };
+  expect(box.y >= 600 && box.y + box.h <= 900 || box.y + box.h <= 600).toBe(true);
+});

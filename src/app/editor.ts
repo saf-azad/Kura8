@@ -6,7 +6,7 @@ import { canvasSize, ratioById, ratioNumbers } from '../core/ratios';
 import { contrast, resolve } from '../core/palette';
 import { defaultShapeSize, shapeLibrary, ICON_SHAPE } from '../core/shapes';
 import { LINE_HEIGHT, roomSize, splitsWord, textBox, textHeight, typeScale, crossing, type TypeScale } from '../core/fit';
-import { addNodes, addUnderText, setName, duplicateNodes, nodeById, nudge, pasteNodes, removeNodes, reorder, setFill, setFrames, setGround, setHidden, setLocked, updateNodes, type Order } from '../core/ops';
+import { addNodes, addUnderText, cleanName, setName, duplicateNodes, nodeById, nudge, pasteNodes, removeNodes, reorder, setFill, setFrames, setGround, setHidden, setLocked, updateNodes, type Order } from '../core/ops';
 import { reRatioKept, flagsFor, type RatioOrigin } from '../core/reratio';
 import { flowText, hugText, keepInRoom, sitsOn, unfit } from '../core/flow';
 import { keepReadable, layoutPad } from '../core/compositions';
@@ -105,7 +105,8 @@ export class Editor {
     this.file = h('input', { type: 'file', accept: 'image/png,image/jpeg,image/webp,image/gif,image/svg+xml,.svg,image/heic,image/heif,.heic,.heif', multiple: true, className: 'hidden' });
     const stage = h('div', { className: 'stage' }, this.stack);
     root.append(stage, this.info, this.file);
-    stage.addEventListener('pointerdown', e => { if (e.target !== stage) return; this.finishText(); this.store.setUI({ sel: [], panel: null }); });
+    // A press beside the canvas while the Text tool's new label is being typed leaves it be (D-089).
+    stage.addEventListener('pointerdown', e => { if (e.target !== stage || this.fresh && this.store.ui.editing === this.fresh) return; this.finishText(); this.store.setUI({ sel: [], panel: null }); });
     // The second click of a double-click on Start lands wherever the Start button was, on the canvas or the stage around a
     // wide one: it must not close the headline editor (D-062, D-077). Controls answer at once (D-083).
     for (const type of ['pointerdown', 'mousedown', 'click', 'dblclick'] as const) {
@@ -430,7 +431,7 @@ export class Editor {
     let hit = target ? nodeById(this.doc, target) : at ? this.hitTest(at) : undefined;
     const added: { key: string; natural: Size; name: string }[] = [], skipped: string[] = [];
     // A picture is named after its file in Layers, so a mood board's rows tell apart (D-086).
-    const stem = (f: File) => f.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim().slice(0, 80);
+    const stem = (f: File) => cleanName(f.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' '));
     // A drop on a background picture (Fill canvas) adds a picture instead of swapping the background; Replace swaps it (D-083).
     if (!target && hit?.kind === 'image' && hit.asset && this.doc.nodes[0]?.id === hit.id && this.isBackground(hit)) hit = undefined;
     if (!target && hit?.locked && (hit.kind === 'image' || hit.kind === 'shape' && hit.shape === 'circle')) skipped.push('the frame under it is locked');
@@ -564,7 +565,7 @@ export class Editor {
     for (const s of this.doc.sizes) {
       const c = canvasSize(s.ratio), size = typeScale(s.guide, c).body, widest = Math.max(...text.split('\n').map(p => textWidth(p.trim(), size, 400)));
       const w = Math.min(long ? c.w * .6 : c.w * .8, Math.max(widest * 1.02, size));
-      const h = textHeight(measure(text, size, 400, w).length, size), at = freeSpot({ size: { w, h }, canvas: c, cells: this.cells(s.id), ...this.occupied(s.id), pad: Math.min(c.w, c.h) * .045 });
+      const h = textHeight(measure(text, size, 400, w).length, size), at = freeSpot({ size: { w, h }, canvas: c, cells: this.cells(s.id), ...this.blocks(s.id), pad: Math.min(c.w, c.h) * .045 });
       node.frames[s.id] = { rect: { ...at, w, h }, rot: 0, fontSize: size };
     }
     this.add([node], 'Pasted text'); this.flagText([node.id]);
@@ -592,7 +593,8 @@ export class Editor {
   /** Keyboard moves never snap; quick repeats fold into one undo step. */
   nudge(dx: number, dy: number): void {
     const ids = this.selected().filter(n => !n.locked).map(n => n.id);
-    if (ids.length) this.store.commit(nudge(this.doc, this.sizeId, ids, dx, dy), { key: 'nudge' });
+    // Nudged onto or off a band or pill, automatic text takes the colour that reads there, as after a drag (D-089).
+    if (ids.length) this.store.commit(keepReadable(nudge(this.doc, this.sizeId, ids, dx, dy)), { key: 'nudge' });
   }
   /** A swatch fills the selection; with nothing selected it arms paint (5e). */
   applySwatch(ref: ColourRef): void {
@@ -683,7 +685,10 @@ export class Editor {
     const shown = (d: KuraDoc) => d.nodes.filter(x => x.frames[this.sizeId] && !x.frames[this.sizeId].hidden && !x.frames[this.sizeId].rot && x.kind !== 'ink');
     const crowds = (d: KuraDoc) => {
       const was = new Map(shown(doc).map(x => [x.id, boxOf(x)])), now = shown(d), moved = now.filter(x => x.kind === 'text' && (x.id === id || was.get(x.id)?.y !== boxOf(x).y));
-      return moved.some(a => { const ra = boxOf(a), ra0 = was.get(a.id)!; return now.some(o => o.id !== a.id && meets(ra, boxOf(o)) && !meets(ra0, was.get(o.id)!)); });
+      // Text pushed into the canvas's bottom margin counts as crowded too (D-089).
+      const c = this.canvas(), bottom = c.h - layoutPad(c) + 1;
+      return moved.some(a => { const ra = boxOf(a), ra0 = was.get(a.id)!;
+        return a.id !== id && ra.y + ra.h > bottom && ra0.y + ra0.h <= bottom || now.some(o => o.id !== a.id && meets(ra, boxOf(o)) && !meets(ra0, was.get(o.id)!)); });
     };
     const test = (size: number) => {
       const d = flowText(doc, hugText(doc, this.withSize(doc, id, size), id, measure), id, measure), m = nodeById(d, id) as TextNode, g = m.frames[this.sizeId], b = textBox(m, g, measure, scale);
@@ -784,7 +789,8 @@ export class Editor {
     const c0 = { x: 0, y: 0, ...this.canvas() }, inside = (m: Record<string, { dx: number; dy: number }>) => boxes.every(b => { const d = m[b.id] ?? { dx: 0, dy: 0 }, r = b.rect;
       return r.x + d.dx >= Math.min(0, r.x) - .5 && r.y + d.dy >= Math.min(0, r.y) - .5 && r.x + r.w + d.dx <= Math.max(c0.w, r.x + r.w) + .5 && r.y + r.h + d.dy <= Math.max(c0.h, r.y + r.h) + .5; });
     let largest = (mode === 'hcenter' || mode === 'vcenter') && !locked.length && sel.length > 1 ? [...sel].sort((a, b) => area(b) - area(a))[0] : null;
-    if (largest && !inside(align(boxes, mode as AlignMode, c0, [bounds(largest)]))) largest = null;
+    const fellBack = !!largest && !inside(align(boxes, mode as AlignMode, c0, [bounds(largest)]));
+    if (fellBack) largest = null;
     const key = largest ? [bounds(largest)] : locked;
     const moves = mode === 'spread-x' || mode === 'spread-y' ? distribute(shown.map(n => ({ id: n.id, rect: bounds(n) })), mode === 'spread-x' ? 'x' : 'y', shown.filter(n => n.locked).map(n => n.id)) : align(boxes, mode, c0, key);
     // Nothing to move is said, not recorded as a step (D-083).
@@ -795,7 +801,7 @@ export class Editor {
       const n = nodeById(d, id)!, b = rotatedBounds(n.kind === 'text' ? this.extent(n, this.sizeId) : n.frames[this.sizeId].rect, n.frames[this.sizeId].rot);
       return b.x < -.5 || b.y < -.5 || b.x + b.w > c.w + .5 || b.y + b.h > c.h + .5;
     }, off = Object.keys(frames).filter(id => past(next, id) && !past(this.doc, id)).length;
-    this.commit(next, (mode.startsWith('spread') ? 'Spaced evenly' : largest ? 'Centred on the largest block' : key.length ? 'Aligned to the locked block' : sel.length === 1 ? 'Aligned to the canvas' : 'Aligned')
+    this.commit(next, (mode.startsWith('spread') ? 'Spaced evenly' : largest ? 'Centred on the largest block' : fellBack ? 'Centred on the selection, so nothing leaves the canvas' : key.length ? 'Aligned to the locked block' : sel.length === 1 ? 'Aligned to the canvas' : 'Aligned')
       + (off ? ` · ${off === 1 ? 'one block runs' : `${off} blocks run`} past the canvas edge` : ''));
     this.flagText(Object.keys(frames));
   }
@@ -918,14 +924,17 @@ export class Editor {
       // on the new label and the typing goes on in it, rather than the label going and the letters running as shortcuts
       // (D-088). A field that takes typing (the size, the hex) keeps the label and ends the edit.
       const press = this.chromePress, chrome = performance.now() - press.at < 1000;
-      if (chrome && id === this.fresh && !this.touched) {
+      if (chrome && id === this.fresh) {
         if (press.typing) { this.touched = true; this.finishText(); return; }
         setTimeout(() => {
           if (this.textarea !== area || document.activeElement === area) return;
           const n = nodeById(this.doc, id);
           const ui = this.store.ui;
           if (n?.kind !== 'text' || n.locked || ui.sel.length !== 1 || ui.sel[0] !== id || ui.panel === 'export' || ui.screen !== 'editor' || ui.tool) { this.touched = true; this.finishText(); return; }
-          this.store.setUI({ editing: id }); this.positionTextarea(); area.focus({ preventScroll: true }); area.select();
+          // Its growth is judged from where the control left it (Align right), and typed text carries on at the end (D-089).
+          this.hugBase = this.doc;
+          this.store.setUI({ editing: id }); this.positionTextarea(); area.focus({ preventScroll: true });
+          if (this.touched) area.setSelectionRange(area.value.length, area.value.length); else area.select();
         }, 0);
         return;
       }
@@ -988,7 +997,7 @@ export class Editor {
     const overlap = (a: Rect, t: Rect) => Math.max(0, Math.min(a.x + a.w, t.x + t.w) - Math.max(a.x, t.x)) * Math.max(0, Math.min(a.y + a.h, t.y + t.h) - Math.max(a.y, t.y));
     const within = (t: Rect, r: Rect) => r.x >= t.x - 1e-6 && r.y >= t.y - 1e-6 && r.x + r.w <= t.x + t.w + 1e-6 && r.y + r.h <= t.y + t.h + 1e-6;
     // A band or pill that holds the whole label costs nothing; one it straddles counts (D-087).
-    const cover = (r: Rect, o: { taken: Rect[]; text: Rect[]; backs: Rect[] }, c: Size) => o.taken.reduce((a, t) => a + (o.backs.includes(t) && within(t, r) ? 0 : overlap(r, t)), 0)
+    const cover = (r: Rect, o: { taken: Rect[]; text: Rect[]; backs: Rect[] }, c: Size) => o.taken.reduce((a, t) => a + (o.backs.includes(t) ? within(t, r) ? 0 : 3 * overlap(r, t) : overlap(r, t)), 0)
       + 10 * o.text.reduce((a, t) => a + overlap(r, t), 0) + (r.y + r.h > c.h ? r.w * (r.y + r.h - c.h) * 10 : 0);
     for (const s of doc.sizes) {
       const f = n.frames[s.id]; if (!f || f.hidden || f.rot) continue;
@@ -1009,8 +1018,9 @@ export class Editor {
     const id = this.store.ui.editing, area = this.textarea;
     if (!area || !id || id !== this.fresh || area.value !== 'Text') return false;
     const n = nodeById(this.doc, id); if (n?.kind !== 'text') return false;
-    const f = this.frame(n), c = this.canvas();
-    this.store.set(setFrames(this.doc, this.sizeId, { [id]: { ...f, rect: { ...f.rect, x: Math.max(0, Math.min(p.x, c.w - f.rect.w)), y: Math.max(0, Math.min(p.y, c.h - f.rect.h)) } } }));
+    // It keeps the layout margin from the canvas edges, so a click at the edge does not put it flush there (D-089).
+    const f = this.frame(n), c = this.canvas(), pad = layoutPad(c), mx = Math.min(pad, (c.w - f.rect.w) / 2), my = Math.min(pad, (c.h - f.rect.h) / 2);
+    this.store.set(setFrames(this.doc, this.sizeId, { [id]: { ...f, rect: { ...f.rect, x: Math.max(mx, Math.min(p.x, c.w - f.rect.w - mx)), y: Math.max(my, Math.min(p.y, c.h - f.rect.h - my)) } } }));
     // Its growth is judged from where it was put, so the first key does not send it back (D-087).
     this.hugBase = this.doc;
     this.placing = true; this.placed = true; this.positionTextarea();

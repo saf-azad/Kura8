@@ -67,7 +67,8 @@ const shared = (a: Rect, b: Rect): number => Math.max(0, Math.min(a.x + a.w, b.x
  * pastes and icons never land exactly on one another. Covering text (`text`, kept `pad` / 2 clear) counts ten times as
  * much as covering pictures or blocks, so copy goes over a photo before it goes over other copy (D-081). The box stays
  * inside the canvas, `pad` from its edges where it fits (D-087). A block in `backs` (a band or pill for a label) costs
- * nothing when it holds the whole box, so a label sits on a block or beside it, never across its edge (D-087).
+ * nothing when it holds the whole box and three times its share when the box straddles its edge, so a label sits on a
+ * block or beside it rather than across its edge (D-087, D-089).
  */
 export function freeSpot(o: { size: Size; canvas: Size; cells: Rect[]; taken: Rect[]; pad: number; text?: Rect[]; backs?: Rect[] }): Point {
   const { size, canvas, pad } = o, w = Math.min(size.w, canvas.w), h = Math.min(size.h, canvas.h);
@@ -81,7 +82,7 @@ export function freeSpot(o: { size: Size; canvas: Size; cells: Rect[]; taken: Re
   const gap = pad / 2, text = (o.text ?? []).map(t => ({ x: t.x - gap, y: t.y - gap, w: t.w + 2 * gap, h: t.h + 2 * gap }));
   let best = spots[0], least = Infinity;
   for (const p of spots) {
-    const box = { ...p, w, h }, cover = o.taken.reduce((s, t) => s + (backs.has(t) && holds(t, box) ? 0 : shared(box, t)), 0) + text.reduce((s, t) => s + 10 * shared(box, t), 0);
+    const box = { ...p, w, h }, cover = o.taken.reduce((s, t) => s + (backs.has(t) ? holds(t, box) ? 0 : 3 * shared(box, t) : shared(box, t)), 0) + text.reduce((s, t) => s + 10 * shared(box, t), 0);
     if (cover < least - 1e-6) { least = cover; best = p; }
   }
   return best;

@@ -30,11 +30,14 @@ export function setFill(doc: KuraDoc, ids: string[], fill: ColourRef): KuraDoc {
   return updateNodes(doc, ids, n => n.kind === 'image' ? n : { ...n, fill });
 }
 /** Names a node in Layers (D-066); blank clears it. Works on locked nodes too, like lock itself. */
-export function setName(doc: KuraDoc, id: string, name: string): KuraDoc {
-  // At most 80 UTF-16 units, cut between characters so an emoji is never split in half (D-088).
+/** A layer name: spaces folded, trimmed, at most 80 UTF-16 units, cut between characters so an emoji is never split (D-066, D-088). */
+export function cleanName(name: string): string {
   let clean = '';
   for (const ch of name.replace(/\s+/g, ' ').trim()) { if (clean.length + ch.length > 80) break; clean += ch; }
-  clean = clean.trim();
+  return clean.trim();
+}
+export function setName(doc: KuraDoc, id: string, name: string): KuraDoc {
+  const clean = cleanName(name);
   return { ...doc, nodes: doc.nodes.map(n => { if (n.id !== id) return n; const next = { ...n }; if (clean) next.name = clean; else delete next.name; return next; }) };
 }
 /** Opacity for any unlocked node (D-052); 1 or more clears it. */
