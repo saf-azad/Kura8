@@ -8,7 +8,7 @@ import { defaultShapeSize, shapeLibrary, ICON_SHAPE } from '../core/shapes';
 import { LINE_HEIGHT, roomSize, splitsWord, textBox, textHeight, typeScale, crossing, type TypeScale } from '../core/fit';
 import { addNodes, addUnderText, setName, duplicateNodes, nodeById, nudge, pasteNodes, removeNodes, reorder, setFill, setFrames, setGround, setHidden, setLocked, updateNodes, type Order } from '../core/ops';
 import { reRatioKept, flagsFor, type RatioOrigin } from '../core/reratio';
-import { flowText, hugText, sitsOn, unfit } from '../core/flow';
+import { flowText, hugText, keepInRoom, sitsOn, unfit } from '../core/flow';
 import { keepReadable, layoutPad } from '../core/compositions';
 import { align, distribute, matchSize, type AlignMode } from '../core/arrange';
 import { drawnWeight, fontById } from '../core/fonts';
@@ -73,6 +73,11 @@ export class Editor {
   private placing = false;
   /** The just-added label was put where the person clicked: it stays there (D-086). */
   private placed = false;
+  /** The document before the Text tool added the label, and whether anything was typed in it since (D-088). */
+  private freshBase: KuraDoc | null = null;
+  private touched = false;
+  /** When a press last landed off the canvas (the toolbar, a panel, the stage around the canvas), and whether on a field that takes typing (D-088). */
+  private chromePress = { at: 0, typing: false };
   /** A repeated Enter or Space from Start or Go is ignored until then, or until another key is typed. */
   ignoreKeysUntil = 0;
   private textBefore: KuraDoc | null = null;
@@ -84,6 +89,10 @@ export class Editor {
   readonly info: HTMLDivElement;
   constructor(root: HTMLElement, store: Store) {
     this.root = root; this.store = store;
+    document.addEventListener('pointerdown', e => {
+      const t = e.target instanceof Element ? e.target : null;
+      this.chromePress = t && t !== this.textarea && !t.closest('canvas.overlay') ? { at: performance.now(), typing: !!t.closest('input, textarea, select, [contenteditable]') } : { at: 0, typing: false };
+    }, true);
     this.docCanvas = h('canvas', { className: 'doc', 'aria-label': 'Document' });
     this.overlay = h('canvas', { className: 'overlay', tabindex: 0, 'aria-label': 'Canvas: click to select, drag to move, double-click text to edit' });
     this.imageBar = h('div', { className: 'seg image-bar hidden' }, h('button', { type: 'button', 'data-act': 'pick', title: 'Replace the picture' }, 'Replace'), h('button', { type: 'button', 'data-act': 'move', title: 'Drag the picture inside its frame' }, 'Reposition'),
@@ -162,10 +171,15 @@ export class Editor {
   colour(ref: ColourRef): string { return resolve(ref, this.palette()); }
   /** Unit-space point under a pointer event. */
   toUnits(e: { clientX: number; clientY: number }): Point { const r = this.overlay.getBoundingClientRect(); return { x: (e.clientX - r.left - MARGIN) / this.scale, y: (e.clientY - r.top - MARGIN) / this.scale }; }
-  hitTest(p: Point): DocNode | undefined { return [...this.visible()].reverse().find(n => containsRotated(this.box(n), this.frame(n).rot, p)); }
+  hitTest(p: Point): DocNode | undefined { return [...this.visible()].reverse().find(n => containsRotated(this.reach(n), this.frame(n).rot, p)); }
+  /** Where a press takes a block: its box, at least 20 screen pixels thick, so a thin line or rule can be caught (D-088). */
+  reach(n: DocNode): Rect {
+    const b = this.box(n), min = 20 / this.scale, w = Math.max(b.w, min), h = Math.max(b.h, min);
+    return { x: b.x - (w - b.w) / 2, y: b.y - (h - b.h) / 2, w, h };
+  }
   /** Alt+click (D-065): the block under the selected one at this point, cycling back to the top. */
   hitBelow(p: Point): DocNode | undefined {
-    const all = [...this.visible()].reverse().filter(n => containsRotated(this.box(n), this.frame(n).rot, p)), at = all.findIndex(n => this.store.ui.sel.includes(n.id));
+    const all = [...this.visible()].reverse().filter(n => containsRotated(this.reach(n), this.frame(n).rot, p)), at = all.findIndex(n => this.store.ui.sel.includes(n.id));
     return at < 0 ? all[0] : all[(at + 1) % all.length];
   }
   boxes(): Box[] {
@@ -370,7 +384,7 @@ export class Editor {
       const at = freeSpot({ size: { w: Math.min(c.w * .4, w * 4), h }, canvas: c, cells: this.cells(s.id), ...this.occupied(s.id), pad: Math.min(c.w, c.h) * .045 });
       node.frames[s.id] = { rect: { x: at.x, y: at.y, w, h }, rot: 0, fontSize: size };
     }
-    this.add([node]); this.editText(node.id); this.fresh = node.id; this.placed = false;
+    this.freshBase = this.doc; this.add([node]); this.editText(node.id); this.fresh = node.id; this.placed = false; this.touched = false;
   }
   addShape(key: string): void {
     const def = shapeLibrary[key], s = defaultShapeSize(def.ar, this.canvas()), swatch = this.store.ui.swatch, rect = this.centred(s.w, s.h);
@@ -457,7 +471,9 @@ export class Editor {
         if (!into.asset && !shared && images.length > 1) shared = into;
         const f = this.frame(into), rect = clear ? containIn(f.rect, stored.natural) : f.rect;
         filled++;
-        put(setFrames(updateNodes(this.doc, [into.id], n => ({ ...n, asset: stored.key, cutout: false, focus: CENTRE, ...(!n.name && stem(original) ? { name: stem(original) } : {}) }) as ImageNode), this.sizeId, { [into.id]: { ...f, rect } }), 'Filled');
+        // A small file stretched over the frame is said to look soft, as a new picture is (D-086, D-088).
+        const soft = rect.w * exportSize(this.spec().ratio, { scale: 1 }).w / this.canvas().w > stored.natural.w * 1.5;
+        put(setFrames(updateNodes(this.doc, [into.id], n => ({ ...n, asset: stored.key, cutout: false, focus: CENTRE, ...(!n.name && stem(original) ? { name: stem(original) } : {}) }) as ImageNode), this.sizeId, { [into.id]: { ...f, rect } }), soft ? 'Filled · the picture is small and may look soft' : 'Filled');
         this.select([into.id]); continue;
       }
       if (!target) fills.length = 0;
@@ -490,7 +506,7 @@ export class Editor {
     // inside them, and go under the text (D-047, D-058); one picture dropped at a point goes where it was put, on top, so
     // a logo dropped over the headline is the block a press there takes (D-087). One undo step for the batch.
     const c = this.canvas(), p = at ?? { x: c.w / 2, y: c.h / 2 }, taken = this.taken();
-    const boxes = spreadCells(p, this.cells(), taken, added.length, c, !!at, added.length > 1 ? this.occupied().text : []);
+    const boxes = spreadCells(p, this.cells(), taken, added.length, c, !!at, this.occupied().text);
     const nodes: DocNode[] = added.map((a, i) => ({ id: newId(), kind: 'image', asset: a.key, frames: this.framesFor(containIn(boxes[i], a.natural)), ...(a.name ? { name: a.name } : {}) }));
     // A small file drawn much larger than its pixels (a 240 px logo across a slide) is said to look soft (D-086).
     const px = exportSize(this.spec().ratio, { scale: 1 }).w / c.w, soft = added.filter((a, i) => containIn(boxes[i], a.natural).w * px > a.natural.w * 1.5).length;
@@ -615,7 +631,7 @@ export class Editor {
   editTexts(fn: (n: TextNode) => TextNode, key?: string): void {
     const ids = this.texts().map(n => n.id); if (!ids.length) return;
     let doc = this.doc;
-    for (const id of ids) doc = flowText(doc, hugText(doc, updateNodes(doc, [id], n => fn(n as TextNode)), id, measure), id, measure);
+    for (const id of ids) doc = flowText(doc, keepInRoom(doc, hugText(doc, updateNodes(doc, [id], n => fn(n as TextNode)), id, measure), id, measure, this.sizeId), id, measure);
     this.store.commit(doc, { key }); this.flagAllText();
   }
   fontStep(dir: 1 | -1): void {
@@ -660,9 +676,18 @@ export class Editor {
     // A free label on a block (a photo caption, a pill) grows only as far as the block holds it (D-083, D-087).
     const on = !n.slot && !f.rot ? sitsOn(doc, id, this.sizeId, f.rect, true) : null, block = on ? nodeById(doc, on)!.frames[this.sizeId].rect : null;
     const held = (r: Rect) => !block || r.x >= block.x - .5 && r.y >= block.y - .5 && r.x + r.w <= block.x + block.w + .5 && r.y + r.h <= block.y + block.h + .5;
+    // Nor past the point where the text it pushes down would land on other text or a block, or stop at the canvas
+    // bottom under it (D-088).
+    const boxOf = (n: DocNode) => n.kind === 'text' ? textBox(n, n.frames[this.sizeId], measure, scale).rect : n.frames[this.sizeId].rect;
+    const meets = (a: Rect, r: Rect) => a.x < r.x + r.w - 1 && r.x < a.x + a.w - 1 && a.y < r.y + r.h - 1 && r.y < a.y + a.h - 1;
+    const shown = (d: KuraDoc) => d.nodes.filter(x => x.frames[this.sizeId] && !x.frames[this.sizeId].hidden && !x.frames[this.sizeId].rot && x.kind !== 'ink');
+    const crowds = (d: KuraDoc) => {
+      const was = new Map(shown(doc).map(x => [x.id, boxOf(x)])), now = shown(d), moved = now.filter(x => x.kind === 'text' && (x.id === id || was.get(x.id)?.y !== boxOf(x).y));
+      return moved.some(a => { const ra = boxOf(a), ra0 = was.get(a.id)!; return now.some(o => o.id !== a.id && meets(ra, boxOf(o)) && !meets(ra0, was.get(o.id)!)); });
+    };
     const test = (size: number) => {
-      const d = hugText(doc, this.withSize(doc, id, size), id, measure), m = nodeById(d, id) as TextNode, g = m.frames[this.sizeId], b = textBox(m, g, measure, scale);
-      return { whole: !splitsWord(m.text, b.lines), fits: !!g.rot || b.rect.y + b.rect.h <= limit + 1e-6 && held(b.rect) };
+      const d = flowText(doc, hugText(doc, this.withSize(doc, id, size), id, measure), id, measure), m = nodeById(d, id) as TextNode, g = m.frames[this.sizeId], b = textBox(m, g, measure, scale);
+      return { whole: !splitsWord(m.text, b.lines), fits: !!g.rot || b.rect.y + b.rect.h <= limit + 1e-6 && held(b.rect) && !crowds(d) };
     };
     const top = test(want);
     if (top.whole && top.fits) return { size: want, note: '' };
@@ -700,7 +725,7 @@ export class Editor {
     // Measure in the real face, so the text under it moves by the right amount.
     await Promise.all([loadFont(font, 400), loadFont(font, 700)]);
     let doc = this.doc;
-    for (const id of ids) doc = flowText(doc, hugText(doc, updateNodes(doc, [id], n => { const t = { ...n, font } as TextNode; if (font === 'grotesk') delete t.font; return t; }), id, measure), id, measure);
+    for (const id of ids) doc = flowText(doc, keepInRoom(doc, hugText(doc, updateNodes(doc, [id], n => { const t = { ...n, font } as TextNode; if (font === 'grotesk') delete t.font; return t; }), id, measure), id, measure, this.sizeId), id, measure);
     this.store.commit(doc, {}); this.flagAllText();
   }
   /** Marks text that runs off the canvas after an edit (the 5v flag), and clears the mark once it fits again. */
@@ -755,17 +780,21 @@ export class Editor {
     // Locked blocks in the selection stay put: the others line up with them (D-072) and space evenly around them (D-077).
     // With none, centring several blocks keeps the largest still and brings the others onto it (an icon onto a circle, D-086).
     const locked = shown.filter(n => n.locked).map(bounds), area = (n: DocNode) => { const r = bounds(n); return r.w * r.h; };
-    const largest = (mode === 'hcenter' || mode === 'vcenter') && !locked.length && sel.length > 1 ? [...sel].sort((a, b) => area(b) - area(a))[0] : null;
+    // It falls back to their joint bounds when that would send a block past the canvas edge (Select all, D-088).
+    const c0 = { x: 0, y: 0, ...this.canvas() }, inside = (m: Record<string, { dx: number; dy: number }>) => boxes.every(b => { const d = m[b.id] ?? { dx: 0, dy: 0 }, r = b.rect;
+      return r.x + d.dx >= Math.min(0, r.x) - .5 && r.y + d.dy >= Math.min(0, r.y) - .5 && r.x + r.w + d.dx <= Math.max(c0.w, r.x + r.w) + .5 && r.y + r.h + d.dy <= Math.max(c0.h, r.y + r.h) + .5; });
+    let largest = (mode === 'hcenter' || mode === 'vcenter') && !locked.length && sel.length > 1 ? [...sel].sort((a, b) => area(b) - area(a))[0] : null;
+    if (largest && !inside(align(boxes, mode as AlignMode, c0, [bounds(largest)]))) largest = null;
     const key = largest ? [bounds(largest)] : locked;
-    const moves = mode === 'spread-x' || mode === 'spread-y' ? distribute(shown.map(n => ({ id: n.id, rect: bounds(n) })), mode === 'spread-x' ? 'x' : 'y', shown.filter(n => n.locked).map(n => n.id)) : align(boxes, mode, { x: 0, y: 0, ...this.canvas() }, key);
+    const moves = mode === 'spread-x' || mode === 'spread-y' ? distribute(shown.map(n => ({ id: n.id, rect: bounds(n) })), mode === 'spread-x' ? 'x' : 'y', shown.filter(n => n.locked).map(n => n.id)) : align(boxes, mode, c0, key);
     // Nothing to move is said, not recorded as a step (D-083).
     if (sel.every(n => { const m = moves[n.id]; return !m || Math.abs(m.dx) < 1e-6 && Math.abs(m.dy) < 1e-6; })) { toast(mode.startsWith('spread') ? 'Already evenly spaced' : 'Already aligned'); return; }
     const frames = Object.fromEntries(sel.map(n => { const f = this.frame(n), m = moves[n.id] ?? { dx: 0, dy: 0 }; return [n.id, { ...f, rect: { ...f.rect, x: f.rect.x + m.dx, y: f.rect.y + m.dy } }]; }));
     // A block sent past the canvas edge is said so, since it would be cut from the export (D-087).
-    const next = setFrames(this.doc, this.sizeId, frames), c = this.canvas(), off = Object.keys(frames).filter(id => {
-      const n = nodeById(next, id)!, b = rotatedBounds(n.kind === 'text' ? this.extent(n, this.sizeId) : n.frames[this.sizeId].rect, n.frames[this.sizeId].rot);
+    const next = setFrames(this.doc, this.sizeId, frames), c = this.canvas(), past = (d: KuraDoc, id: string) => {
+      const n = nodeById(d, id)!, b = rotatedBounds(n.kind === 'text' ? this.extent(n, this.sizeId) : n.frames[this.sizeId].rect, n.frames[this.sizeId].rot);
       return b.x < -.5 || b.y < -.5 || b.x + b.w > c.w + .5 || b.y + b.h > c.h + .5;
-    }).length;
+    }, off = Object.keys(frames).filter(id => past(next, id) && !past(this.doc, id)).length;
     this.commit(next, (mode.startsWith('spread') ? 'Spaced evenly' : largest ? 'Centred on the largest block' : key.length ? 'Aligned to the locked block' : sel.length === 1 ? 'Aligned to the canvas' : 'Aligned')
       + (off ? ` · ${off === 1 ? 'one block runs' : `${off} blocks run`} past the canvas edge` : ''));
     this.flagText(Object.keys(frames));
@@ -856,7 +885,7 @@ export class Editor {
     // fill its box while typing must not start growing (D-082).
     area.addEventListener('input', e => {
       const cur = nodeById(this.doc, id); if (cur?.kind !== 'text') return;
-      let prev = this.doc;
+      let prev = this.doc; if (id === this.fresh) this.touched = true;
       // A paragraph pasted into the label the Text tool just added arrives at body size in every size, as pasted copy does (D-074, D-087).
       if (id === this.fresh && (e as InputEvent).inputType === 'insertFromPaste' && (area.value.length > 40 || area.value.includes('\n'))) {
         prev = updateNodes(prev, [id], n => ({ ...n, frames: Object.fromEntries(Object.entries(n.frames).map(([sid, f]) => {
@@ -864,8 +893,16 @@ export class Editor {
           return [sid, { ...f, fontSize: Math.min(f.fontSize ?? Infinity, body ?? Infinity) }];
         })) }));
       }
-      const next = hugText(this.hugBase ?? before, updateNodes(prev, [id], n => ({ ...n, text: area.value })), id, measure);
-      this.store.set(id === this.fresh ? next : flowText(prev, next, id, measure)); this.positionTextarea();
+      // Layout text keeps fitting the other sizes as it is retyped (D-088).
+      if (id === this.fresh) {
+        this.store.set(keepInRoom(before, hugText(this.hugBase ?? before, updateNodes(prev, [id], n => ({ ...n, text: area.value })), id, measure), id, measure, this.sizeId));
+      } else {
+        // Every keystroke is judged from the document as the edit began, so text typed key by key and the same text pasted
+        // at once leave the blocks under it in the same place (D-088).
+        const start = this.hugBase ?? before, edited = updateNodes(start, [id], n => ({ ...cur, text: area.value, frames: n.frames }) as TextNode);
+        this.store.set(flowText(start, keepInRoom(start, hugText(start, edited, id, measure), id, measure, this.sizeId), id, measure));
+      }
+      this.positionTextarea();
     });
     area.addEventListener('keydown', e => {
       const mod = (e.metaKey || e.ctrlKey) && !e.altKey;
@@ -875,7 +912,25 @@ export class Editor {
       if (e.key === 'Escape' || e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); e.stopPropagation(); this.finishText(); this.overlay.focus({ preventScroll: true }); } });
     // A click on the untouched placeholder keeps it selected, so typing replaces "Text" rather than splitting it (D-087).
     area.addEventListener('mousedown', e => { if (id === this.fresh && area.value === 'Text') { e.preventDefault(); area.focus({ preventScroll: true }); area.select(); } });
-    area.addEventListener('blur', () => { if (!this.placing) this.finishText(); });
+    area.addEventListener('blur', () => {
+      if (this.placing) return;
+      // T, then a toolbar control (Bold, Larger, a typeface) or a click beside the canvas before typing: the control acts
+      // on the new label and the typing goes on in it, rather than the label going and the letters running as shortcuts
+      // (D-088). A field that takes typing (the size, the hex) keeps the label and ends the edit.
+      const press = this.chromePress, chrome = performance.now() - press.at < 1000;
+      if (chrome && id === this.fresh && !this.touched) {
+        if (press.typing) { this.touched = true; this.finishText(); return; }
+        setTimeout(() => {
+          if (this.textarea !== area || document.activeElement === area) return;
+          const n = nodeById(this.doc, id);
+          const ui = this.store.ui;
+          if (n?.kind !== 'text' || n.locked || ui.sel.length !== 1 || ui.sel[0] !== id || ui.panel === 'export' || ui.screen !== 'editor' || ui.tool) { this.touched = true; this.finishText(); return; }
+          this.store.setUI({ editing: id }); this.positionTextarea(); area.focus({ preventScroll: true }); area.select();
+        }, 0);
+        return;
+      }
+      this.finishText();
+    });
     this.textBefore = before; this.hugBase = before;
   }
   positionTextarea(): void {
@@ -889,7 +944,8 @@ export class Editor {
     const area = this.textarea;
     if (!area) return;
     // A label the Text tool just added is one undo step with its first typing (D-085).
-    this.textarea = null; const id = this.store.ui.editing, fresh = id !== null && id === this.fresh, before = this.textBefore; this.textBefore = null; this.hugBase = null; this.fresh = null;
+    this.textarea = null; const id = this.store.ui.editing, fresh = id !== null && id === this.fresh, before = this.textBefore, base = this.freshBase, touched = this.touched;
+    this.textBefore = null; this.hugBase = null; this.fresh = null; this.freshBase = null; this.touched = false;
     area.remove(); this.store.setUI({ editing: null });
     const node = id ? nodeById(this.doc, id) : undefined;
     if (!node || node.kind !== 'text') return;
@@ -911,8 +967,9 @@ export class Editor {
       }
       this.store.commit(merged, { before: before ?? undefined }); toast(empty ? 'Updated from another tab' : 'Updated from another tab · your text is kept', 2400); return;
     }
-    // A label added and left untouched (T, then Escape) goes again, as if never added (D-086).
-    if (fresh && before && node.text === 'Text') { this.store.undo(); this.select([]); return; }
+    // A label added and left untouched (T, then Escape) or emptied goes again, as if never added: Undo does not bring it
+    // back (D-086, D-088).
+    if (fresh && base && (!touched || !node.text.trim())) { this.store.retract(base, removeNodes(this.doc, [node.id])); this.select([]); return; }
     if (!node.text.trim()) { this.store.commit(removeNodes(this.doc, [node.id]), { before: before ?? undefined }); this.select([]); return; }
     const f = this.frame(node), b = this.box(node);
     let synced = node.fit ? this.doc : updateNodes(this.doc, [node.id], n => ({ ...n, frames: { ...n.frames, [this.sizeId]: { ...f, rect: { ...f.rect, h: b.h } } } }));

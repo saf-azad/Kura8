@@ -70,7 +70,7 @@ export function showDial(root: HTMLElement, host: DialHost): { paint(): void; de
   picker(sv, 'sv'); picker(hueBar, 'h');
   const light = h('button', { type: 'button', title: 'Light ground', 'aria-label': 'Light ground' }, h('i', { style: 'background:#ECF0F3' })), dark = h('button', { type: 'button', title: 'Dark ground', 'aria-label': 'Dark ground' }, h('i', { style: 'background:#000' }));
   light.addEventListener('click', () => host.set({ dark: false })); dark.addEventListener('click', () => host.set({ dark: true }));
-  const startLabel = h('span'), start = h('button', { type: 'button', className: 'solid' }, startLabel, h('span', { html: ICON.go, style: 'display:grid' }));
+  const startLabel = h('span'), start = h('button', { type: 'button', className: 'solid', 'data-start': '' }, startLabel, h('span', { html: ICON.go, style: 'display:grid' }));
   start.addEventListener('click', () => host.start());
   const fresh = h('button', { type: 'button', className: 'outline', title: 'Start a new design from the dial; Undo brings the old one back' }, 'New');
   fresh.addEventListener('click', () => host.fresh());

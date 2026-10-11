@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { typeScale, fitText, textBox, crossing, textHeight, roomSize, LINE_HEIGHT } from '../src/core/fit';
+import { typeScale, fitText, textBox, crossing, textHeight, roomSize, LINE_HEIGHT, pieces, splitsWord } from '../src/core/fit';
 import { PHI } from '../src/core/guides/golden';
 import { fakeMeasure, charMeasure, frame } from './helpers';
 import type { TextNode } from '../src/core/document';
@@ -54,4 +54,11 @@ it('does not count a break after a hyphen as a broken word (D-086)', async () =>
   expect(splitsWord('late-afternoon light', ['late-', 'afternoon light'])).toBe(false);
   expect(splitsWord('late-afternoon light', ['late-aftern', 'oon light'])).toBe(true);
   expect(splitsWord('a - b', ['a -', 'b'])).toBe(false);
+});
+it('finds the pieces a text never breaks inside: hyphens after a letter, slashes, characters of Chinese (D-088)', () => {
+  expect(pieces('state-of-the-art linktr.ee/unswms')).toEqual(['state-', 'of-', 'the-', 'art', 'linktr.ee/', 'unswms']);
+  expect(pieces('down to -12 degrees, -20% off')).toEqual(['down', 'to', '-12', 'degrees,', '-20%', 'off']);
+  expect(pieces('夜市 Night')).toEqual(['夜', '市', 'Night']);
+  expect(splitsWord('linktr.ee/unswms', ['linktr.ee/', 'unswms'])).toBe(false);
+  expect(splitsWord('of -12 degrees', ['of -', '12 degrees'])).toBe(true);
 });

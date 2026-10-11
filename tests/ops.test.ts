@@ -58,5 +58,8 @@ it('names layers, trimming and clearing blanks (D-066)', () => {
   expect(d.nodes[1].name).toBe('Hero photo'); expect(validateDocument(d)).toBe(true);
   expect(setName(d, 'b', '   ').nodes[1]).not.toHaveProperty('name');
   expect(setName(d, 'a', 'x'.repeat(100)).nodes[0].name).toHaveLength(80);
+  // An emoji at the cut is left out whole, not split into half a character (D-088).
+  const odd = setName(d, 'a', `${'x'.repeat(79)}🎉 party`).nodes[0].name!;
+  expect(odd).toBe('x'.repeat(79)); expect(validateDocument(setName(d, 'a', `${'x'.repeat(79)}🎉`))).toBe(true);
   expect(validateDocument({ ...d, nodes: [{ ...d.nodes[0], name: '' }] })).toBe(false);
 });

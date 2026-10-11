@@ -142,3 +142,33 @@ task is seriously blocked by one of them (we log those for the product owner).
   - Small files get a "may look soft" note.
   - Layers names pictures after their files.
 - **Text.** Hyphenated words break after the hyphen. Text never flows past the canvas bottom.
+
+## New in loop 8 (from loop-7 findings)
+- **Text tool (T).**
+  - T then a click places the label at the click, sideways too.
+  - T then Bold, Larger, a typeface or a colour before typing styles the new label, and typing goes on in it.
+  - A pasted paragraph arrives at body size.
+  - An empty label goes without leaving an Undo step.
+- **Labels.**
+  - Long copy wraps on the label's own side instead of sliding over the headline.
+  - A label at the canvas bottom grows upwards.
+  - Chinese text and links stay within a photo or block.
+  - A minus sign stays with its number.
+  - Labels moved onto a pill or band take a readable colour.
+- **Sizes.**
+  - Larger on several labels keeps them the same size.
+  - Larger stops before pushed text would land on other text or a block.
+  - Retyping layout text in one size keeps it fitting the other linked sizes.
+- **Linked sizes and Change ratio.**
+  - One-line labels stay on one line.
+  - Small type stays legible in a Header.
+  - Text under a grown headline moves clear.
+- **Pasting, arranging and exporting.**
+  - Pasted text is only as wide as its widest line.
+  - Text aligns by its letters.
+  - Align warns about blocks pushed off the canvas, and Select all with Align centres stays on the canvas.
+  - Export counts blocks lying outside the canvas.
+- **Pictures.**
+  - Batches avoid cells with copy and arrive in file order.
+  - A dropped logo goes on top.
+- **Grabbing.** Thin lines take a press within 10 px.

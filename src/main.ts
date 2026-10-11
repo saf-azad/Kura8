@@ -152,26 +152,33 @@ function go(): void {
   if (!store.doc) { fresh(); return; }
   const before = store.doc, sizeId = store.ui.size, spec = before.sizes.find(x => x.id === sizeId) ?? before.sizes[0];
   const same = spec.ratio === s.ratio && spec.guide === s.guide && spec.comp === s.comp;
-  const palette = { ...before.palette, hue: s.hue, dark: s.dark, ...(s.accent ? { accent: s.accent } : {}) };
+  const palette = { ...before.palette, hue: s.hue, dark: s.dark, ...(s.accent ? { accent: s.accent } : {}) }, at = lastPress();
   if (!s.accent) delete palette.accent;
   const out = same ? { doc: before, flags: [] } : relayout({ ...before, palette }, spec.id, { ratio: s.ratio, guide: s.guide, comp: s.comp }, measure);
   const next = keepReadable({ ...out.doc, palette });
   store.setUI({ screen: 'editor', size: spec.id });
   route();
   // A double press on Go lands on the dial's empty editor, not on a block (D-083).
-  const guarded = ensureEditor(), at = lastPress(); guarded.ignoreKeysUntil = performance.now() + 650; guarded.ignorePointerUntil = at ? performance.now() + 650 : 0; guarded.ignorePointerAt = at;
+  const guarded = ensureEditor(); guarded.ignoreKeysUntil = performance.now() + 650; guarded.ignorePointerUntil = at ? performance.now() + 650 : 0; guarded.ignorePointerAt = at;
   if (next !== before && JSON.stringify(next) !== JSON.stringify(before)) {
     store.commit(next, {}); store.setUI({ flags: out.flags });
     const ed = ensureEditor();
     if (spec.ratio === s.ratio && !same) { store.paused = true; ed.tween.start(before, next, spec.id, d => { ed.display = d; ed.invalidate(); }, () => { ed.display = null; store.paused = false; ed.invalidate(); }); }
   }
 }
-/** The last press on the page, when it was within the last half second: the click on Start or Go (D-086). */
+/**
+ * The last press on the page, when it was within the last half second: the click on Start or Go (D-086). Started from
+ * the keyboard, the Start button's own place stands in, so a click there straight after Enter is caught too (D-088).
+ */
 let pressed: { x: number; y: number; t: number } | null = null;
 document.addEventListener('pointerdown', e => { pressed = { x: e.clientX, y: e.clientY, t: performance.now() }; }, true);
-const lastPress = (): { x: number; y: number } | null => pressed && performance.now() - pressed.t < 500 ? { x: pressed.x, y: pressed.y } : null;
+const lastPress = (): { x: number; y: number } | null => {
+  if (pressed && performance.now() - pressed.t < 500) return { x: pressed.x, y: pressed.y };
+  const r = document.querySelector('[data-start]')?.getBoundingClientRect();
+  return r && r.width ? { x: r.x + r.width / 2, y: r.y + r.height / 2 } : null;
+};
 function fresh(): void {
-  const had = !!store.doc, { doc, headline } = starter(store.dial);
+  const had = !!store.doc, { doc, headline } = starter(store.dial), at = lastPress();
   store.commit(doc, { before: store.doc });
   store.setUI({ screen: 'editor', size: 'main', sel: [], flags: [] });
   route();
@@ -179,8 +186,7 @@ function fresh(): void {
   if (had) toast('New design · Undo brings the last one back', 2200);
   ed.lift();
   // A slow second click on Start (up to a second and a half) still leaves the headline editor open (D-083, D-086).
-  // Only a second click where the first one was counts; Enter or Space starts leave clicks alone (D-086).
-  const at = lastPress();
+  // Only a second click where the first one was (or where Start was, after Enter) counts (D-086, D-088).
   ed.editText(headline); ed.ignorePointerUntil = at ? performance.now() + 1500 : 0; ed.ignorePointerAt = at; ed.ignoreKeysUntil = performance.now() + 1500;
 }
 let screen = '';

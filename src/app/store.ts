@@ -63,6 +63,17 @@ export class Store {
     this.ui = { ...this.ui, sel, flags: o.keepFlags ? this.ui.flags : this.ui.flags.filter(f => ids.has(f.id)), size: doc.sizes.some(s => s.id === this.ui.size) ? this.ui.size : doc.sizes[0].id };
     this.scheduleSave(); this.emit({ doc: true, ui: true });
   }
+  /**
+   * Takes back a step nobody wanted (a label the Text tool added and left empty): when `base` is the latest step, the
+   * document goes to `doc` and the step is forgotten, so Undo does not bring the label back; otherwise a plain commit (D-088).
+   */
+  retract(base: KuraDoc, doc: KuraDoc): void {
+    if (this.history.past[this.history.past.length - 1] !== base) { this.commit(doc, {}); return; }
+    this.history = { ...this.history, past: this.history.past.slice(0, -1), future: [] }; this.doc = doc;
+    const ids = new Set(doc.nodes.map(n => n.id));
+    this.ui = { ...this.ui, sel: this.ui.sel.filter(id => ids.has(id)) };
+    this.scheduleSave(); this.emit({ doc: true, ui: true });
+  }
   undo(): boolean { return this.step(undo); }
   redo(): boolean { return this.step(redo); }
   private step(fn: typeof undo): boolean {

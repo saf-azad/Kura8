@@ -15,10 +15,19 @@ const EPS = 1e-6;
 /** Whether wrapping broke a word across lines (a word wider than the line). Text in scripts written without spaces wraps anywhere and never counts. */
 export function splitsWord(text: string, lines: string[]): boolean {
   if (/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Thai}]/u.test(text)) return false;
-  // A break after a hyphen ("late-" / "afternoon") is not a broken word (D-086).
-  const flat = (s: string) => s.replace(/\s+/g, ' ').trim().replace(/- /g, '-');
+  // A break after a hyphen ("late-" / "afternoon") or a slash ("linktr.ee/" / "unswms") is not a broken word (D-086, D-088).
+  const flat = (s: string) => s.replace(/\s+/g, ' ').trim().replace(/(?<=[\p{L}\p{N}]-|\/) /gu, '');
   return flat(lines.join(' ')) !== flat(text);
 }
+/**
+ * The pieces a text never breaks inside (D-088): words, split after a hyphen that follows a letter or digit and after a
+ * slash, and single characters in scripts written without spaces. A minus sign ("-12") stays with its number.
+ */
+export function pieces(text: string): string[] {
+  return text.split(/\s+/).filter(Boolean).flatMap(word => /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Thai}]/u.test(word) ? [...word] : word.split(BREAK_AFTER));
+}
+/** Where a word may break between lines: after a hyphen that follows a letter or digit, and after a slash (D-086, D-088). */
+export const BREAK_AFTER = /(?<=[\p{L}\p{N}]-|\/)(?=.)/u;
 /** Autofit (5q): from `size`, step down the type scale until the text fits `height` without breaking a word (D-055), stopping at body size; past that it overflows and the block grows. */
 export function fitText(o: { text: string; weight: 400 | 700; width: number; height: number; size: number; scale: TypeScale; measure: Measure; font?: FontId }): { size: number; lines: string[]; overflow: boolean } {
   const floor = Math.min(o.size, o.scale.body), sizes = [o.size, ...o.scale.steps.filter(s => s < o.size - EPS && s >= floor - EPS).reverse()];
