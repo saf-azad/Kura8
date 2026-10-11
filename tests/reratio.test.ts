@@ -68,6 +68,13 @@ describe('re-ratio (5v)', () => {
     const l = out.nodes[0].frames.main.rect, sl = out.nodes[1].frames.main.rect;
     expect(l.w / l.h).toBeCloseTo(318 / 95, 6); expect(sl.w / sl.h).not.toBeCloseTo(1000 / 3 / 250, 1);
   });
+  it('grows text by the body-type ratio going from a wide size to a taller one, and shrinks with the geometry (D-081)', () => {
+    const t = textNode('t', frame(100, 100, 300, 20, { fontSize: 16.7 }), 'Hi'), header = doc([t], size({ ratio: 'cover' }));
+    const post = reRatio(header, 'main', { ratio: 'square' }, fakeMeasure).doc.nodes[0].frames.main;
+    expect(post.fontSize).toBeCloseTo(16.7 * 28 / 15, 6); expect(post.rect.w).toBeCloseTo(300 * 28 / 15, 6);
+    const back = reRatio(doc([t]), 'main', { ratio: 'cover' }, fakeMeasure).doc.nodes[0].frames.main;
+    expect(back.fontSize).toBeCloseTo(16.7 / 4, 6);
+  });
   it('treats rotated nodes as free and changes the guide when asked', () => {
     const d = doc([rectNode('r', frame(0, 0, 100, 100, { rot: 30 }))]);
     const out = reRatioFrames(d, d.sizes[0], { ratio: 'landscape', guide: null }, fakeMeasure);

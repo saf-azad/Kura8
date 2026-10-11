@@ -60,10 +60,14 @@ export function oneLineWidth(text: string, size: number, weight: 400 | 700, meas
   while (hi - lo > .25) { const mid = (lo + hi) / 2; if (measure(text, size, weight, mid, font).length === 1 && !splitsWord(text, measure(text, size, weight, mid, font))) hi = mid; else lo = mid; }
   return hi;
 }
-/** How wide a text block may grow from its aligned edge to the canvas edge it grows towards; a turned block may use the canvas width. */
+/**
+ * How wide a text block may grow: a free label (or a turned block) the canvas width, since it slides back on; layout text
+ * from its aligned edge to the canvas edge it grows towards, less the margin it keeps from the nearer edge (D-081).
+ */
 export function roomFor(n: TextNode, f: Frame, canvas: Size): number {
-  const r = f.rect, side = physicalAlign(n.align, direction(n.text)), cx = r.x + r.w / 2;
-  return f.rot ? canvas.w : side === 'left' ? canvas.w - r.x : side === 'right' ? r.x + r.w : 2 * Math.min(cx, canvas.w - cx);
+  const r = f.rect, side = physicalAlign(n.align, direction(n.text)), cx = r.x + r.w / 2, m = Math.max(0, Math.min(r.x, canvas.w - r.x - r.w));
+  if (f.rot || !n.slot) return canvas.w;
+  return side === 'left' ? canvas.w - r.x - m : side === 'right' ? r.x + r.w - m : 2 * (Math.min(cx, canvas.w - cx) - m);
 }
 /** The largest size up to `size` at which no word of the text breaks across lines `width` wide (to half a unit). */
 export function wholeWordSize(text: string, size: number, width: number, weight: 400 | 700, measure: Measure, font?: TextNode['font']): number {

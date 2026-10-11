@@ -37,8 +37,11 @@ export function reRatioFrames(doc: KuraDoc, from: SizeSpec, to: { ratio: RatioId
     const cx = (box.x + box.w / 2) / c0.w * c1.w, cy = (box.y + box.h / 2) / c0.h * c1.h;
     const pin = !f.rot, L = pin ? onLine(box.x, l0.x, l1.x) : null, Rr = pin ? onLine(box.x + box.w, l0.x, l1.x) : null;
     const T = pin ? onLine(box.y, l0.y, l1.y) : null, B = pin ? onLine(box.y + box.h, l0.y, l1.y) : null;
-    const w = L !== null && Rr !== null && Rr - L > 1 ? Rr - L : f.rect.w * s;
-    const fontSize = f.fontSize === undefined ? undefined : f.fontSize * s;
+    // Going to a size at least as big both ways (a Header to a Post), text grows by the two sizes' body type rather than
+    // keeping the small type of the wide size (D-081); shrinking still follows the geometry.
+    const k = node.kind === 'text' && s >= 1 - 1e-9 ? Math.max(1, typeScale(to.guide, c1).body / typeScale(from.guide, c0).body) : s;
+    const w = L !== null && Rr !== null && Rr - L > 1 ? Rr - L : Math.min(c1.w, f.rect.w * k);
+    const fontSize = f.fontSize === undefined ? undefined : f.fontSize * k;
     let h = T !== null && B !== null && B - T > 1 ? B - T : f.rect.h * s;
     const next: Frame = { ...f, rect: { x: 0, y: 0, w, h }, ...(fontSize === undefined ? {} : { fontSize }) };
     if (node.kind === 'text' && !node.fit) h = boxOf(node, next, measure, c1, to.guide).h;

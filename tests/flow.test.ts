@@ -104,7 +104,10 @@ it('lets a hugging label follow retyped text, and widens a wide box only to save
   const column = doc([textNode('n', frame(378, 0, 570, 69, { fontSize: 60 }), 'Marcus', { slot: 'headline' } as Partial<TextNode>)]);
   expect(w(hugText(column, retype(column, 'Marcus Lee Digital Marketing'), 'n', charMeasure)).w).toBe(570);
   expect(w(hugText(column, retype(column, 'Communications'), 'n', charMeasure)).w).toBe(570);
-  expect(w(hugText(column, retype(column, 'Communicationsandmarketing'), 'n', charMeasure))).toMatchObject({ x: 378, w: 622 });
+  // Layout text keeps its margin too (D-081): a word longer than the slot breaks inside it rather than crossing the margin.
+  expect(w(hugText(column, retype(column, 'Communicationsandmarketing'), 'n', charMeasure))).toMatchObject({ x: 378, w: 570 });
+  const roomy = doc([textNode('n', frame(45, 0, 570, 69, { fontSize: 60 }), 'Marcus', { slot: 'headline' } as Partial<TextNode>)]);
+  expect(w(hugText(roomy, retype(roomy, 'Communicationsandmarketing'), 'n', charMeasure))).toMatchObject({ x: 45, w: 910 });
 });
 it('grows a right-aligned label to the left and a turned label from its aligned edge (D-077)', () => {
   const right = doc([textNode('n', frame(700, 0, 92, 57.5, { fontSize: 50 }), '+142', { align: 'end' } as Partial<TextNode>)]);
@@ -122,11 +125,13 @@ it('finds the largest size that keeps every word whole, and the room a block may
   expect(wholeWordSize('Summer', 200, 1000, 700, charMeasure)).toBe(200);
   expect(wholeWordSize('Summer', 400, 1000, 700, charMeasure)).toBe(277.5);
   expect(wholeWordSize('Summer sale', 400, 1000, 700, charMeasure)).toBe(277.5);
-  const t = textNode('n', frame(300, 0, 200, 50), 'Hi'), canvas = { w: 1000, h: 1000 };
-  expect(roomFor(t, t.frames.main, canvas)).toBe(700);
-  expect(roomFor({ ...t, align: 'end' }, t.frames.main, canvas)).toBe(500);
-  expect(roomFor({ ...t, align: 'center' }, t.frames.main, canvas)).toBe(800);
+  // Layout text keeps the margin it has from the nearer edge (here 100 on the right); a free label may use the canvas.
+  const t = textNode('n', frame(300, 0, 600, 50), 'Hi', { slot: 'headline' } as Partial<TextNode>) as TextNode, canvas = { w: 1000, h: 1000 };
+  expect(roomFor(t, t.frames.main, canvas)).toBe(600);
+  expect(roomFor({ ...t, align: 'end' }, t.frames.main, canvas)).toBe(800);
+  expect(roomFor({ ...t, align: 'center' }, t.frames.main, canvas)).toBe(600);
   expect(roomFor(t, { ...t.frames.main, rot: 10 }, canvas)).toBe(1000);
+  expect(roomFor({ ...t, slot: undefined }, t.frames.main, canvas)).toBe(1000);
 });
 it('keeps layout text in its slot when retyped, and slides a free label at the left edge back on (D-081)', () => {
   // The starter headline nearly fills its slot, so it looked like a hugging label and grew across the picture column.

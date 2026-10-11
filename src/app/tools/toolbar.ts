@@ -31,7 +31,9 @@ export function toolbar(ed: Editor, panels: Panels): HTMLElement {
     // Enter applies and keeps the field focused with its value selected, so a corrective Backspace edits the number.
     const commit = () => {
       if (el.value === shown) return;
-      const v = parseFloat(el.value.replace(/[\u2212\u2013\u2014]/g, '-').replace(/^([^,.]*),(\d*)$/, '$1.$2').replace(/[^0-9.\-]/g, ''));
+      // Arabic-Indic, Persian and full-width digits read as digits (D-081).
+      const digits = el.value.replace(/[\u0660-\u0669]/g, d => String(d.charCodeAt(0) - 0x660)).replace(/[\u06F0-\u06F9]/g, d => String(d.charCodeAt(0) - 0x6F0)).replace(/[\uFF10-\uFF19]/g, d => String(d.charCodeAt(0) - 0xFF10)).replace(/[\u066B\uFF0E]/g, '.').replace(/\uFF0C/g, ',');
+      const v = parseFloat(digits.replace(/[\u2212\u2013\u2014]/g, '-').replace(/^([^,.]*),(\d*)$/, '$1.$2').replace(/[^0-9.\-]/g, ''));
       const applied = Number.isFinite(v) ? apply(v) : null;
       el.value = applied ?? shown; shown = el.value;
     };
@@ -100,25 +102,30 @@ export function toolbar(ed: Editor, panels: Panels): HTMLElement {
     pressed(arrange, u.panel === 'arrange', 'aria-expanded'); panels.arrange.style.left = `${arrange.offsetLeft - 60}px`;
     pressed(lock, sel.length > 0 && sel.every(n => n.locked)); lock.title = sel.length && sel.every(n => n.locked) ? `Unlock (${MOD} ${SHIFT} L)` : `Lock (${MOD} ${SHIFT} L)`;
     fade(undo, ed.store.history.past.length > 0); fade(redo, ed.store.history.future.length > 0);
-    // Fit between the wordmark and the corner controls: centred in that span, scaled down only a little when it is too
-    // narrow (several linked-size pills widen the corner, D-069). Past that it wraps onto two rows rather than shrinking,
-    // so browser zoom makes the controls bigger, and the canvas moves down under it (D-077).
-    const left = 130, right = window.innerWidth - (document.querySelector<HTMLElement>('.corner')?.offsetWidth ?? 0) - 60, room = right - left;
+    // Fit between the wordmark and the corner controls: centred in that span, scaled down only a little (several
+    // linked-size pills widen the corner, D-069). When it cannot fit there it moves under them and takes the window's
+    // width, wrapping onto more rows rather than shrinking, so a small window or browser zoom keeps full-size controls;
+    // the canvas moves down under it (D-077, D-081).
+    const corner = document.querySelector<HTMLElement>('.corner'), column = document.querySelector<HTMLElement>('.corner-stack');
     if (!bar.classList.contains('wrap')) { natural = bar.offsetWidth; rowH = bar.offsetHeight; }
-    const wrap = room / Math.max(1, natural) < .8;
+    const beside = { left: 130, right: window.innerWidth - (corner?.offsetWidth ?? 0) - 60 }, under = (beside.right - beside.left) / Math.max(1, natural) < .8;
+    const span = under ? { left: 20, right: window.innerWidth - (column?.offsetWidth ?? 0) - 60 } : beside, room = span.right - span.left;
+    const wrap = room / Math.max(1, natural) < .75;
     let k = Math.min(1, room / Math.max(1, natural));
     if (wrap && fitted !== `${room}|${natural}`) {
-      // The narrowest width that keeps the bar to two rows (whole groups wrap, so measure), three when two would be under
-      // three-quarter size; then the scale that fits the room.
+      // Rows as wide as the room, at the largest scale (down to 0.6) that keeps the bar to two rows.
       fitted = `${room}|${natural}`; bar.classList.add('wrap');
-      const rows = (n: number) => { let mw = natural * (n === 2 ? .5 : .34); bar.style.maxWidth = `${mw}px`; while (bar.offsetHeight > n * rowH + (n - 1) * 4 + 2 && mw < natural) { mw += 16; bar.style.maxWidth = `${mw}px`; } return Math.min(1, room / bar.offsetWidth); };
-      wrapK = rows(2); if (wrapK < .75) wrapK = Math.max(.6, rows(3));
+      let kk = 1;
+      // An explicit width: a positioned bar's own width would stop at the window edge from its left.
+      for (; kk > .6; kk -= .05) { bar.style.width = `${room / kk}px`; if (bar.offsetHeight <= 2 * rowH + 6) break; }
+      wrapK = Math.max(.6, kk); bar.style.width = `${room / wrapK}px`;
     }
-    if (wrap) k = wrapK; else { fitted = ''; bar.classList.remove('wrap'); bar.style.maxWidth = ''; }
-    const half = bar.offsetWidth * k / 2;
-    bar.style.left = `${Math.max(left + half, Math.min(window.innerWidth / 2, right - half))}px`;
+    if (wrap) k = wrapK; else { fitted = ''; bar.classList.remove('wrap'); bar.style.width = ''; }
+    const half = bar.offsetWidth * k / 2, y = under ? Math.ceil((corner?.getBoundingClientRect().bottom ?? 70) + 10) : 20;
+    bar.style.top = `${y}px`;
+    bar.style.left = `${Math.max(span.left + half, Math.min(window.innerWidth / 2, span.right - half))}px`;
     bar.style.transform = `translateX(-50%) scale(${k})`;
-    const top = `${Math.max(100, Math.ceil(20 + bar.offsetHeight * k + 16))}px`;
+    const top = `${Math.max(100, Math.ceil(y + bar.offsetHeight * k + 16))}px`;
     if (document.documentElement.style.getPropertyValue('--stage-top') !== top) { document.documentElement.style.setProperty('--stage-top', top); ed.fit(); }
   } });
   return bar;

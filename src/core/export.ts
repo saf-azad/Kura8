@@ -2,6 +2,8 @@ import type { Size } from './geometry';
 import type { KuraDoc } from './document';
 import type { Scene, SceneOp } from './scene';
 import { coverCrop } from './images';
+import { STARTER } from './compositions';
+const PLACEHOLDERS = [STARTER.headline, STARTER.body];
 // Export writers with no dependencies: SVG from the scene (explicit tspans from our own line breaks, licences in
 // <metadata>, 5u) and a one-page raster PDF around a JPEG (DCTDecode, hand-written xref).
 export type Licence = { name: string; set: string; licence: string; source: string };
@@ -78,7 +80,8 @@ export const pageSize = (pixels: Size, mm?: Size): Size => mm ? { w: mm.w / 25.4
  * text hidden in some size still counts (All sizes).
  */
 export function nameStem(doc: KuraDoc, sizeId?: string): string {
-  const texts = doc.nodes.filter(n => n.kind === 'text' && !(sizeId && n.frames[sizeId]?.hidden) && n.text.trim());
+  // Placeholder copy a layout started with never names a file (D-081).
+  const texts = doc.nodes.filter(n => n.kind === 'text' && !(sizeId && n.frames[sizeId]?.hidden) && n.text.trim() && !(n.slot && PLACEHOLDERS.includes(n.text.trim())));
   const pick = texts.find(n => n.slot === 'headline') ?? texts[0], text = pick?.kind === 'text' ? pick.text : '';
   // Latin letters without a decomposition (Vietnamese đ, Polish ł, Danish ø, German ß) are spelt out too (D-077).
   const plain: Record<string, string> = { đ: 'd', ð: 'd', ł: 'l', ø: 'o', ß: 'ss', æ: 'ae', œ: 'oe', ı: 'i', þ: 'th' };

@@ -90,8 +90,8 @@ export class Editor {
     for (const type of ['pointerdown', 'mousedown', 'click', 'dblclick'] as const) {
       document.addEventListener(type, e => { if (performance.now() < this.ignorePointerUntil && e.target !== this.textarea) { e.preventDefault(); e.stopPropagation(); } }, true);
     }
-    // Likewise a second Enter on Start would put an empty first line in the headline.
-    document.addEventListener('keydown', e => { if (e.key === 'Enter' && performance.now() < this.ignorePointerUntil) { e.preventDefault(); e.stopPropagation(); } }, true);
+    // Likewise a second Enter or Space on Start would put an empty line or a space at the start of the headline.
+    document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && performance.now() < this.ignorePointerUntil) { e.preventDefault(); e.stopPropagation(); } }, true);
     this.renderer = new Canvas2DRenderer(this.docCanvas);
     this.imageBar.addEventListener('click', e => {
       const b = (e.target as Element).closest('button'), n = this.one();
@@ -258,12 +258,13 @@ export class Editor {
     this.finishReposition();
     this.commit(setFrames(updateNodes(this.doc, [id], x => ({ ...x, focus: CENTRE }) as ImageNode), this.sizeId, { [id]: { ...f, rect: containIn(f.rect, natural) } }), 'Fitted to the picture');
   }
-  /** Fill canvas (D-077): the frame becomes the whole canvas, unturned, and goes behind everything; the picture covers it. */
+  /** Fill canvas (D-077, D-081): the frame becomes the whole canvas in every size, unturned, and goes behind everything; the picture covers it. */
   fillCanvas(id: string): void {
     const n = nodeById(this.doc, id); if (n?.kind !== 'image' || n.locked) return;
     this.finishReposition();
-    const c = this.canvas(), f = this.frame(n);
-    this.commit(reorder(setFrames(this.doc, this.sizeId, { [id]: { ...f, rot: 0, rect: { x: 0, y: 0, ...c } } }), [id], 'back'), 'Fills the canvas · sent to the back');
+    // Every size: a background is a background in each linked size (D-081).
+    const frames = Object.fromEntries(this.doc.sizes.filter(s => n.frames[s.id]).map(s => [s.id, { ...n.frames[s.id], rot: 0, rect: { x: 0, y: 0, ...canvasSize(s.ratio) } }]));
+    this.commit(reorder({ ...this.doc, nodes: this.doc.nodes.map(x => x.id === id ? { ...x, frames: { ...x.frames, ...frames } } : x) }, [id], 'back'), 'Fills the canvas · sent to the back');
   }
   /** Circle (D-081): the picture shows in the ellipse its frame bounds; turning it on squares the frame about its centre in this size. */
   toggleCircle(id: string): void {
@@ -332,7 +333,7 @@ export class Editor {
     const frames: Record<string, Frame> = {};
     for (const s of this.doc.sizes) {
       const c = canvasSize(s.ratio), side = Math.min(c.w, c.h) * .16;
-      frames[s.id] = { rect: { ...freeSpot({ size: { w: side, h: side }, canvas: c, cells: this.cells(s.id), taken: this.taken(s.id), pad: Math.min(c.w, c.h) * .045 }), w: side, h: side }, rot: 0 };
+      frames[s.id] = { rect: { ...freeSpot({ size: { w: side, h: side }, canvas: c, cells: this.cells(s.id), ...this.occupied(s.id), pad: Math.min(c.w, c.h) * .045 }), w: side, h: side }, rot: 0 };
     }
     this.add([{ id: newId(), kind: 'shape', shape: ICON_SHAPE, fill: { role: 'ink' }, icon: { set: 'phosphor', name, d, licence: 'MIT' }, frames }],
       flattened ? `${title(name)} · flattened to one ink` : title(name));
@@ -361,7 +362,7 @@ export class Editor {
     // fills only the block under it.
     const fills = target ? [target, ...this.visible().filter(n => n.kind === 'image' && !n.asset && !n.locked && n.id !== target).map(n => n.id)] : hit ? [hit.id] : [];
     // Several pictures for one empty frame share it as tiles (a team page, a mood board) instead of piling up (D-081).
-    let shared: ImageNode | null = null;
+    let shared: ImageNode | null = null, filled = 0;
     // A picture dropped on a circle shape takes its place as a circle picture (D-081).
     let ring = !target && hit?.kind === 'shape' && hit.shape === 'circle' && !hit.locked ? hit : null;
     for (const original of images) {
@@ -385,6 +386,7 @@ export class Editor {
       if (into?.kind === 'image' && !into.locked && !(clear && into.asset && !target)) {
         if (!into.asset && !shared && images.length > 1) shared = into;
         const f = this.frame(into), rect = clear ? containIn(f.rect, stored.natural) : f.rect;
+        filled++;
         this.commit(setFrames(updateNodes(this.doc, [into.id], n => ({ ...n, asset: stored.key, cutout: false, focus: CENTRE }) as ImageNode), this.sizeId, { [into.id]: { ...f, rect } }), 'Filled');
         this.select([into.id]); continue;
       }
@@ -393,7 +395,7 @@ export class Editor {
     }
     // Skipped files are named in the closing toast, so a batch never hides them (D-074).
     const note = skipped.length ? ` · skipped ${skipped.join('; ')}` : '';
-    if (!added.length) { if (skipped.length) toast(`Nothing added${note}`, 3600); return; }
+    if (!added.length) { if (skipped.length) toast(`${filled ? `Filled ${filled === 1 ? 'the frame' : `${filled} frames`}` : 'Nothing added'}${note}`, 3600); return; }
     if (shared) {
       // The frame and the pictures left over split the frame's area in every size; each picture covers its tile.
       const n = 1 + added.length, ids = added.map(() => newId()), frames: Record<string, Record<string, Frame>> = Object.fromEntries([shared.id, ...ids].map(id => [id, {}]));
@@ -431,6 +433,11 @@ export class Editor {
   taken(sizeId = this.sizeId): Rect[] {
     return this.doc.nodes.filter(n => n.frames[sizeId] && !n.frames[sizeId].hidden).map(n => rotatedBounds(n.kind === 'text' ? this.extent(n, sizeId) : n.frames[sizeId].rect, n.frames[sizeId].rot));
   }
+  /** What occupies a size, text apart from pictures and blocks, for placing pasted copy and icons (D-081). */
+  occupied(sizeId = this.sizeId): { taken: Rect[]; text: Rect[] } {
+    const shown = this.doc.nodes.filter(n => n.frames[sizeId] && !n.frames[sizeId].hidden), bounds = (n: DocNode) => rotatedBounds(n.kind === 'text' ? this.extent(n, sizeId) : n.frames[sizeId].rect, n.frames[sizeId].rot);
+    return { taken: shown.filter(n => n.kind !== 'text').map(bounds), text: shown.filter(n => n.kind === 'text').map(bounds) };
+  }
   /** Where a text block's letters are: its lines' height and widest line, on the side its alignment puts them. */
   extent(n: TextNode, sizeId = this.sizeId): Rect {
     const s = this.doc.sizes.find(x => x.id === sizeId) ?? this.spec(), b = textBox(n, n.frames[sizeId] ?? this.frame(n), measure, typeScale(s.guide, canvasSize(s.ratio))), w = Math.min(b.rect.w, Math.max(0, ...b.lines.map(l => textWidth(l, b.size, drawnWeight(n.font, n.weight), n.font))));
@@ -452,7 +459,7 @@ export class Editor {
     const node: TextNode = { id: newId(), kind: 'text', text, weight: 400, align: 'start', fill: { role: 'ink' }, frames: {} }, long = text.length > 40 || text.includes('\n');
     for (const s of this.doc.sizes) {
       const c = canvasSize(s.ratio), size = typeScale(s.guide, c).body, w = long ? c.w * .6 : Math.min(c.w * .8, textWidth(text, size, 400) * 1.02);
-      const h = textHeight(measure(text, size, 400, w).length, size), at = freeSpot({ size: { w, h }, canvas: c, cells: this.cells(s.id), taken: this.taken(s.id), pad: Math.min(c.w, c.h) * .045 });
+      const h = textHeight(measure(text, size, 400, w).length, size), at = freeSpot({ size: { w, h }, canvas: c, cells: this.cells(s.id), ...this.occupied(s.id), pad: Math.min(c.w, c.h) * .045 });
       node.frames[s.id] = { rect: { ...at, w, h }, rot: 0, fontSize: size };
     }
     this.add([node], 'Pasted text'); this.flagText([node.id]);
@@ -544,8 +551,12 @@ export class Editor {
   }
   /** A typed font size for the selected text (D-060); a manual size turns autofit off, like Smaller and Larger. */
   setFontSize(value: number): number | null {
-    const size = Math.max(4, Math.min(2000, value)), ids = this.selected().filter(n => n.kind === 'text' && !n.locked).map(n => n.id);
+    let size = Math.max(4, Math.min(2000, value));
+    const ids = this.selected().filter(n => n.kind === 'text' && !n.locked).map(n => n.id);
     if (!ids.length) return null;
+    // A typed size stops where a word would break, as Larger does (D-081).
+    const whole = Math.min(...ids.map(id => { const n = nodeById(this.doc, id) as TextNode, f = this.frame(n); return wholeWordSize(n.text, size, Math.max(f.rect.w, roomFor(n, f, this.canvas())), drawnWeight(n.font, n.weight), measure, n.font); }));
+    if (whole < size) { size = Math.max(4, whole); toast(`Largest size that keeps every word whole: ${Math.round(size * 10) / 10}`, 2200); }
     let doc = this.doc;
     for (const id of ids) doc = flowText(doc, hugText(doc, updateNodes(doc, [id], n => { const t = { ...n, frames: { ...n.frames, [this.sizeId]: { ...n.frames[this.sizeId], fontSize: size } } } as TextNode; delete t.fit; return t; }), id, measure), id, measure);
     this.store.commit(doc, {}); this.flagAllText();

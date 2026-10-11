@@ -18,3 +18,9 @@ it('names exports after the headline, else the first visible text, else kura8', 
   expect(nameStem(doc([textNode('w', frame(0, 0, 10, 10), 'Supercalifragilisticexpialidocious-and-even-longer-words')]), 'main')).toBe('supercalifragilisticexpialidocious-and');
   expect(nameStem(doc([textNode('w', frame(0, 0, 10, 10), 'Abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz')]), 'main')).toBe('abcdefghijklmnopqrstuvwxyzabcdefghijklmn');
 });
+it('never names a file after layout placeholder copy (D-081)', () => {
+  const placeholder = (id: string, text: string, slot: 'headline' | 'body') => textNode(id, frame(0, 0, 10, 10), text, { slot } as Partial<DocNode>);
+  expect(nameStem(doc([placeholder('b', 'Body text', 'body')]), 'main')).toBe('kura8');
+  expect(nameStem(doc([placeholder('b', 'Body text', 'body'), placeholder('h', 'Night Market', 'headline')]), 'main')).toBe('night-market');
+  expect(nameStem(doc([textNode('x', frame(0, 0, 10, 10), 'Headline')]), 'main')).toBe('headline');
+});

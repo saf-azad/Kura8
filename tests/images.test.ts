@@ -60,3 +60,10 @@ it('tiles several pictures into one frame, closest to square, the last row filli
   expect(six.map(r => [r.x, r.y, r.w, r.h])).toEqual([[0, 0, 300, 300], [300, 0, 300, 300], [0, 300, 300, 300], [300, 300, 300, 300], [0, 600, 600, 300]]);
   expect(tiles({ x: 5, y: 5, w: 100, h: 100 }, 1, 4)).toEqual([{ x: 5, y: 5, w: 100, h: 100 }]);
 });
+it('puts copy over a photo before it puts it over other copy, keeping clear of text (D-081)', () => {
+  const canvas = { w: 1000, h: 1000 }, photo = { x: 0, y: 0, w: 1000, h: 600 }, words = { x: 0, y: 600, w: 1000, h: 400 };
+  const p = freeSpot({ size: { w: 300, h: 40 }, canvas, cells: [], taken: [photo], text: [words], pad: 40 });
+  expect(p.y + 40).toBeLessThanOrEqual(580);
+  const q = freeSpot({ size: { w: 300, h: 40 }, canvas, cells: [], taken: [], text: [{ x: 0, y: 0, w: 1000, h: 100 }], pad: 40 });
+  expect(q.y).toBeGreaterThanOrEqual(120);
+});

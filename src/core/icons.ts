@@ -80,7 +80,8 @@ export const SYNONYMS: Record<string, string[]> = {
   // Loop-3 student searches (D-077).
   tick: ['check', 'check circle', 'checks', 'check square'], study: ['book open', 'books', 'graduation cap', 'notebook', 'student'],
   search: ['magnifying glass', 'magnifying glass plus'], find: ['magnifying glass'], language: ['translate', 'globe'],
-  arrow: ['arrow right', 'arrow left', 'arrow up', 'arrow down'], write: ['pencil', 'pen nib', 'note pencil'], edit: ['pencil simple', 'pencil', 'note pencil'], trend: ['trend up', 'chart line up'],
+  arrow: ['arrow right', 'arrow left', 'arrow up', 'arrow down'], checkmark: ['check', 'check circle', 'checks'], magnifier: ['magnifying glass'],
+  studying: ['book open', 'books', 'graduation cap', 'notebook'], students: ['student', 'graduation cap', 'users three'], write: ['pencil', 'pen nib', 'note pencil'], edit: ['pencil simple', 'pencil', 'note pencil'], trend: ['trend up', 'chart line up'],
 };
 
 const fold = (s: string) => s.normalize('NFD').replace(/\p{M}+/gu, '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();

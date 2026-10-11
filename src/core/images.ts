@@ -61,18 +61,21 @@ const shared = (a: Rect, b: Rect): number => Math.max(0, Math.min(a.x + a.w, b.x
  * Where a new block of `size` goes (D-077): pasted copy and icons look for the spot that overlaps the blocks already
  * there the least, trying each guide cell's corner (inset by `pad`) and rows down it, then the canvas in rows; ties go
  * to the emptiest cell first, then reading order. On a full canvas the least covered spot still wins, so repeated
- * pastes and icons never land exactly on one another. The box stays inside the canvas.
+ * pastes and icons never land exactly on one another. Covering text (`text`, kept `pad` / 2 clear) counts ten times as
+ * much as covering pictures or blocks, so copy goes over a photo before it goes over other copy (D-081). The box stays
+ * inside the canvas.
  */
-export function freeSpot(o: { size: Size; canvas: Size; cells: Rect[]; taken: Rect[]; pad: number }): Point {
+export function freeSpot(o: { size: Size; canvas: Size; cells: Rect[]; taken: Rect[]; pad: number; text?: Rect[] }): Point {
   const { size, canvas, pad } = o, w = Math.min(size.w, canvas.w), h = Math.min(size.h, canvas.h);
   const fit = (x: number, y: number): Point => ({ x: Math.max(0, Math.min(x, canvas.w - w)), y: Math.max(0, Math.min(y, canvas.h - h)) });
   const cells = [...o.cells].map(c => ({ c, o: occupancy(c, o.taken) })).sort((a, b) => a.o - b.o).map(x => x.c);
   const step = Math.max(h, 10), spots: Point[] = [];
   for (const c of cells) for (let y = c.y + pad; y === c.y + pad || y + h <= c.y + c.h - pad + 1e-6; y += step) spots.push(fit(c.x + pad, y));
   for (let y = pad; y === pad || y + h <= canvas.h - pad + 1e-6; y += step) for (let x = pad; x === pad || x + w <= canvas.w - pad + 1e-6; x += Math.max(w / 2, 10)) spots.push(fit(x, y));
+  const gap = pad / 2, text = (o.text ?? []).map(t => ({ x: t.x - gap, y: t.y - gap, w: t.w + 2 * gap, h: t.h + 2 * gap }));
   let best = spots[0], least = Infinity;
   for (const p of spots) {
-    const cover = o.taken.reduce((s, t) => s + shared({ ...p, w, h }, t), 0);
+    const box = { ...p, w, h }, cover = o.taken.reduce((s, t) => s + shared(box, t), 0) + text.reduce((s, t) => s + 10 * shared(box, t), 0);
     if (cover < least - 1e-6) { least = cover; best = p; }
   }
   return best;

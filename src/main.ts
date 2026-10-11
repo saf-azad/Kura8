@@ -172,7 +172,7 @@ function fresh(): void {
   const ed = ensureEditor();
   if (had) toast('New design · Undo brings the last one back', 2200);
   ed.lift();
-  ed.editText(headline); ed.ignorePointerUntil = performance.now() + 450;
+  ed.editText(headline); ed.ignorePointerUntil = performance.now() + 650;
 }
 let screen = '';
 store.on(() => {
