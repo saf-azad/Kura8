@@ -41,6 +41,10 @@ describe('flattenSvg', () => {
     expect(flattenSvg(SVGS[1])).toEqual({ d: 'M0 0H10V10Z M5 5l10 0 0 10z Mz', flattened: true });
     expect(flattenSvg(svg('<path d="m1 2z"/>', '<path d=" m3 4 "/>', '<path d="mz"/>'))).toEqual({ d: 'M1 2z M3 4 Mz', flattened: true });
   });
+  it('keeps the implicit linetos after an absolute moveto absolute (pen-nib drew spikes)', () => {
+    expect(flattenSvg(svg('<path d="M95.04,31.78,163.25,36.73Z"/>')).d).toBe('M95.04 31.78L163.25 36.73Z');
+    expect(flattenSvg(svg('<path d="m1 2 3 4z"/>')).d).toBe('M1 2l3 4z');
+  });
   it('flags opacity and fill-opacity variations even on one path', () => {
     expect(flattenSvg(SVGS[2])).toEqual({ d: 'M0 0H1Z', flattened: true });
     expect(flattenSvg(svg('<path style="fill-opacity: .5" d="M0 0H1Z"/>')).flattened).toBe(true);
@@ -154,6 +158,8 @@ describe.runIf(real)('baked Phosphor catalog', () => {
     expect(searchIcons(catalog, 'mug').names).toContain('coffee');
     for (const key of Object.keys(SYNONYMS)) expect(searchIcons(catalog, key).category, key).toBeUndefined();
     expect(searchIcons(catalog, 'wether').category).toBe('weather & nature');
+    // Loop-3 searches (D-077): the expected icon leads.
+    for (const [q, first] of [['search', 'magnifying-glass'], ['tick', 'check'], ['study', 'book-open'], ['growth', 'chart-line-up']]) expect(searchIcons(catalog, q).names[0], q).toBe(first);
   });
   it('stores each path as core normalises it', () => {
     for (const name of ['heart', 'coffee', 'stack', 'lasso', 'music-notes-minus']) {
