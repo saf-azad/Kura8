@@ -1,8 +1,9 @@
 import { it, expect } from 'vitest';
-import { flowText, hugText, oneLineWidth, roomFor, wholeWordSize } from '../src/core/flow';
+import { flowText, hugText, oneLineWidth, roomFor, unfit, wholeWordSize } from '../src/core/flow';
+import { textBox, typeScale } from '../src/core/fit';
 import { updateNodes } from '../src/core/ops';
 import type { DocNode, KuraDoc, TextNode } from '../src/core/document';
-import { doc, frame, rectNode, textNode, fakeMeasure, charMeasure } from './helpers';
+import { doc, frame, rectNode, size, textNode, fakeMeasure, charMeasure } from './helpers';
 // Headline 50 units (line 57.5) in a 300-wide box: "Hello" is one line, "Hello there friend" three.
 const stack = (): KuraDoc => doc([
   textNode('h', frame(0, 0, 300, 57.5, { fontSize: 50 }), 'Hello'),
@@ -59,9 +60,9 @@ it('keeps one-line text on one line when its size or face changes (D-070)', () =
   const centred = updateNodes(hug, ['n'], n => ({ ...n, align: 'center', frames: { main: { ...n.frames.main, rect: { ...n.frames.main.rect, x: 400 } } } }));
   const c = w(hugText(centred, grow(centred, 150), 'n', charMeasure)); expect(c.x + c.w / 2).toBeCloseTo(400 + 153 / 2, 5);
   expect(w(hugText(hug, updateNodes(grow(hug, 150), ['n'], n => ({ ...n, align: 'center' })), 'n', charMeasure)).x).toBe(50);
-  // A free label slides back to stay on the canvas, keeping its inset up to a twentieth of the width; one too long for
-  // a line wraps on its aligned side (D-070, D-081, D-083).
-  const huge = grow(hug, 400); expect(w(hugText(hug, huge, 'n', charMeasure))).toMatchObject({ x: 100, w: 850 });
+  // A free label slides back to stay on the canvas, keeping its inset up to a twentieth of the width; a word too long
+  // for any line takes the whole span (D-070, D-081, D-083, D-085).
+  const huge = grow(hug, 400); expect(w(hugText(hug, huge, 'n', charMeasure))).toMatchObject({ x: 50, w: 900 });
   const two = updateNodes(wide, ['n'], n => ({ ...n, text: 'a\nb' }));
   expect(hugText(two, grow(two, 150), 'n', charMeasure)).toEqual(grow(two, 150));
   expect(hugText(hug, hug, 'missing', charMeasure)).toBe(hug);
@@ -191,4 +192,27 @@ it('keeps a centred label beside a photo where it was when retyped longer then s
   const long = hugText(start, updateNodes(start, ['t'], n => ({ ...n, text: 'Hi there everyone' })), 't', charMeasure);
   const back = hugText(long, updateNodes(long, ['t'], n => ({ ...n, text: 'Hi' })), 't', charMeasure).nodes[1].frames.main.rect;
   expect(back.x + back.w / 2).toBeCloseTo(449.6 + 33, 5);
+});
+it('turns autofit off keeping every other size at the size autofit gave it (D-085)', () => {
+  const head = { ...textNode('h', frame(45, 45, 910, 300, { fontSize: 200 }), 'Sydney Uni Film Society Screening Night'), fit: true } as TextNode;
+  const d = { ...doc([head]), sizes: [size(), size({ id: 'story', ratio: 'story' })] };
+  d.nodes[0] = { ...head, frames: { main: head.frames.main, story: frame(45, 45, 910, 500, { fontSize: 200 }) } };
+  const before = textBox(d.nodes[0] as TextNode, d.nodes[0].frames.story, charMeasure, typeScale('thirds', { w: 1000, h: 1777.8 })).size;
+  const out = unfit(d, 'h', charMeasure, 'main'), n = out.nodes[0] as TextNode;
+  expect(n.fit).toBeUndefined();
+  expect(n.frames.story.fontSize).toBeCloseTo(before, 6); expect(n.frames.story.fontSize).toBeLessThan(200);
+  expect(n.frames.main.fontSize).toBe(200);
+  expect(unfit(out, 'h', charMeasure)).toBe(out);
+});
+it('places a typed label where a pasted one goes, and keeps a narrow block only when its longest word fits (D-085)', () => {
+  const start = doc([textNode('t', frame(600, 100, 80, 32, { fontSize: 30 }), 'Note')]);
+  const words = 'Free entry for students with a valid UNSW ID card at the door';
+  let typed = start;
+  for (let k = 1; k <= words.length; k++) typed = hugText(start, updateNodes(typed, ['t'], n => ({ ...n, text: words.slice(0, k) })), 't', charMeasure);
+  const pasted = hugText(start, updateNodes(start, ['t'], n => ({ ...n, text: words })), 't', charMeasure);
+  expect(typed.nodes[0].frames.main.rect).toEqual(pasted.nodes[0].frames.main.rect);
+  // A badge 150 wide cannot hold "students" at 30 (8 × 18 = 144 plus its inset), so the label takes the canvas bounds.
+  const badge = doc([rectNode('b', frame(800, 700, 150, 120)), textNode('l', frame(810, 720, 80, 32, { fontSize: 30 }), 'Hi')]);
+  const r = hugText(badge, updateNodes(badge, ['l'], n => ({ ...n, text: words })), 'l', charMeasure).nodes[1].frames.main.rect;
+  expect(r.w).toBeGreaterThan(150);
 });

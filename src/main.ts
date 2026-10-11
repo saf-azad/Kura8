@@ -175,7 +175,7 @@ function fresh(): void {
   if (had) toast('New design · Undo brings the last one back', 2200);
   ed.lift();
   // A slow second click on Start (up to a second) still leaves the headline editor open (D-083).
-  ed.editText(headline); ed.ignorePointerUntil = performance.now() + 1000; ed.ignoreKeysUntil = performance.now() + 650;
+  ed.editText(headline); ed.ignorePointerUntil = performance.now() + 1000; ed.ignoreKeysUntil = performance.now() + 1500;
 }
 let screen = '';
 store.on(() => {

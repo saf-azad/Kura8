@@ -1,10 +1,11 @@
-import type { DocNode, Frame, KuraDoc, TextNode } from '../../core/document';
+import type { DocNode, Frame, KuraDoc } from '../../core/document';
 import { center, containsRotated, rotatedBounds, unionRect, norm, type Point, type Rect } from '../../core/geometry';
 import { CENTRE } from '../../core/images';
 import { resizeLocal } from './resize';
 import { snap, snapAngle, snapLines, type Handle, type SnapLine } from '../../core/snap';
 import { setFrames } from '../../core/ops';
 import { textBox } from '../../core/fit';
+import { unfit as unfitText } from '../../core/flow';
 import { measure } from '../measure';
 import { handlePoints, HANDLE_PX } from './overlay';
 import { emptyLive, type Editor } from '../editor';
@@ -153,8 +154,8 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
         if (!node.fit || corner) frame = { ...frame, rect: { ...frame.rect, h: textBox({ ...node, fit: undefined }, frame, measure, scale).rect.h } };
         else if (drag.handle === 'e' || drag.handle === 'w') frame = { ...frame, rect: { ...frame.rect, h: f.rect.h } };
       }
-      let doc = setFrames(drag.before, ed.sizeId, { [node.id]: frame });
-      if (unfit) doc = { ...doc, nodes: doc.nodes.map(n => { if (n.id !== node.id) return n; const t = { ...n } as TextNode; delete t.fit; return t; }) };
+      // Autofit off keeps every other linked size at the size autofit gave it (D-085).
+      const doc = setFrames(unfit ? unfitText(drag.before, node.id, measure, ed.sizeId) : drag.before, ed.sizeId, { [node.id]: frame });
       drag.last = doc; ed.store.set(doc); return;
     }
     drag.moved = true;

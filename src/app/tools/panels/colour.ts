@@ -57,7 +57,7 @@ export function colourPanel(ed: Editor): HTMLElement {
   drag(sv, 'sv'); drag(hueBar, 'h');
   // Six hex digits, or three (#fff), with or without '#' (D-082); spaces and a full-width or doubled '#' are forgiven,
   // and nothing is cut short to fit the field (D-083).
-  const digits = () => hex.value.normalize('NFKC').replace(/\s+/g, '').replace(/^#+/, '');
+  const digits = () => hex.value.normalize('NFKC').replace(/[\s\u200B-\u200D\u2060\uFEFF]+/g, '').replace(/^#+/, '');
   const typed = () => { const v = digits(); return /^[0-9a-f]{6}$/i.test(v) ? `#${v.toLowerCase()}` : /^[0-9a-f]{3}$/i.test(v) ? `#${[...v.toLowerCase()].map(c => c + c).join('')}` : null; };
   /** Text in the field that is not a colour ("white", "#12345"): said, rather than silently using the last colour. */
   const garbled = () => editingHex && !typed() && digits().toLowerCase() !== focusValue;
@@ -176,11 +176,12 @@ export function colourPanel(ed: Editor): HTMLElement {
         // Only the failing text takes a passing shade, each block the one nearest its own colour on what lies behind
         // it; the rest of the selection keeps its colours (D-082, D-083).
         use.addEventListener('click', () => {
-          const fixes = [...failing.values()].flatMap(f => { const s = passingShade(f.text.fill, f.bg, p); return s ? [{ id: f.text.id, ...s }] : []; });
-          if (!fixes.length) return;
+          const open = [...failing.values()].filter(f => !f.text.locked), locked = failing.size - open.length;
+          const fixes = open.flatMap(f => { const s = passingShade(f.text.fill, f.bg, p); return s ? [{ id: f.text.id, ...s }] : []; });
+          if (!fixes.length) { if (locked) toast('Locked · unlock it to change its colour'); return; }
           ed.fillEach(Object.fromEntries(fixes.map(f => [f.id, f.ref])));
-          const low = Math.min(...fixes.map(f => f.ratio)), missed = failing.size - fixes.length;
-          toast(`Contrast ${low.toFixed(1)} : 1${missed ? ` · ${missed} still fails: no shade on its row passes` : ''}`);
+          const low = Math.min(...fixes.map(f => f.ratio)), missed = open.length - fixes.length;
+          toast(`Contrast ${low.toFixed(1)} : 1${missed ? ` · ${missed} still fails: no shade on its row passes` : ''}${locked ? ` · ${locked} locked left as it is` : ''}`);
         });
         contrastBox.replaceChildren(h('span', { className: 'muted' }, 'Contrast'), h('span', {}, `${ratio.toFixed(1)} : 1  fails`), h('span'),
           ...(fix ? [h('span', { className: 'muted' }, 'Nearest pass'), h('span', {}, `${fix.ratio.toFixed(1)} : 1`), use] : [h('span', { className: 'muted' }, 'No shade on this row passes')]));

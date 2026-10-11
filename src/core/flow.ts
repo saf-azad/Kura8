@@ -67,6 +67,22 @@ export function flowText(before: KuraDoc, after: KuraDoc, id: string, measure: M
   }
   return doc;
 }
+/**
+ * Autofit off for a text block (a hand-set size, 5q): each size keeps the size autofit gave it, so no other linked size
+ * jumps to the larger set size (D-085). `except` is the size whose new size the caller sets.
+ */
+export function unfit(doc: KuraDoc, id: string, measure: Measure, except?: string): KuraDoc {
+  const n = doc.nodes.find(x => x.id === id);
+  if (n?.kind !== 'text' || !n.fit) return doc;
+  const frames = { ...n.frames };
+  for (const s of doc.sizes) {
+    const f = frames[s.id]; if (!f || s.id === except) continue;
+    const b = textBox(n, f, measure, typeScale(s.guide, canvasSize(s.ratio)));
+    frames[s.id] = { ...f, fontSize: b.size, rect: { ...f.rect, h: textHeight(b.lines.length, b.size) } };
+  }
+  const t = { ...n, frames } as TextNode; delete t.fit;
+  return { ...doc, nodes: doc.nodes.map(x => x.id === id ? t : x) };
+}
 /** The narrowest width that keeps a text on one line (a word wider than the line counts as wrapping). */
 export function oneLineWidth(text: string, size: number, weight: 400 | 700, measure: Measure, font?: TextNode['font'], max = 8000): number {
   let lo = 0, hi = max;
@@ -114,25 +130,30 @@ export function hugText(before: KuraDoc, after: KuraDoc, id: string, measure: Me
     const natural0 = oneLineWidth(was.text, b0.size, w0, measure, was.font), natural1 = Math.max(...now.text.split('\n').map(p => p.trim() ? oneLineWidth(p, s1, w1, measure, now.font) : 0)) * 1.02;
     const free = !now.slot, hugging = free && f0.rect.w <= natural0 * 1.15 + 1, r = f1.rect, lines = measure(now.text, s1, w1, r.w, now.font);
     if (!hugging && (paragraphs || lines.length < 2 || !splitsWord(now.text, lines))) continue;
-    const canvas = canvasSize(spec.ratio), side = physicalAlign(now.align, direction(now.text)), cx = r.x + r.w / 2;
+    const canvas = canvasSize(spec.ratio), side = physicalAlign(now.align, direction(now.text)), whole = { x: 0, y: 0, ...canvas };
     // A free label keeps the inset it has from the canvas edge, or from the block it sits on (a badge, a photo caption),
     // up to a twentieth of that width, on both sides, so it never grows flush against an edge or out of its block (D-083).
     // Both are judged from the box as the edit began, so a label sliding along while it grows keeps its bounds; it sits on
-    // a block only when the block holds all of it.
-    const on = free && !f0.rot ? sitsOn(before, id, spec.id, f0.rect, true) : null, b = on ? before.nodes.find(n => n.id === on)!.frames[spec.id]?.rect ?? { x: 0, y: 0, ...canvas } : { x: 0, y: 0, ...canvas };
-    const m = Math.max(0, Math.min(f0.rect.x - b.x, b.x + b.w - f0.rect.x - f0.rect.w, b.w / 20)), lo = b.x + m, hi = b.x + b.w - m;
+    // a block only when the block holds all of it, and only while the block is wide enough for its longest word (D-085).
+    const g = f0.rect, inset = (b: Rect) => Math.max(0, Math.min(g.x - b.x, b.x + b.w - g.x - g.w, b.w / 20));
+    const on = free && !f0.rot ? sitsOn(before, id, spec.id, g, true) : null;
+    const longest = free ? Math.max(0, ...now.text.split(/\s+/).filter(Boolean).sort((p, q) => q.length - p.length).slice(0, 3).map(word => oneLineWidth(word, s1, w1, measure, now.font))) * 1.02 : 0;
+    let b = on ? before.nodes.find(n => n.id === on)!.frames[spec.id]?.rect ?? whole : whole;
+    if (b !== whole && longest > b.w - 2 * inset(b)) b = whole;
+    const m = inset(b), lo = b.x + m, hi = b.x + b.w - m, span = hi - lo, gx = g.x + g.w / 2;
     // It grows from its aligned edge and wraps there when that side has at least half its bounds; a label near the far
-    // edge slides back instead to keep one line, or wraps at three fifths of its bounds.
-    const g = f0.rect, gx = g.x + g.w / 2, span = hi - lo;
+    // edge slides back instead to keep one line, or wraps at three fifths of its bounds, never narrower than its longest word.
     const aligned = Math.max(0, side === 'left' ? hi - Math.max(lo, g.x) : side === 'right' ? Math.min(hi, g.x + g.w) - lo : 2 * Math.min(gx - lo, hi - gx));
-    const room = free ? (f1.rot ? canvas.w : natural1 <= aligned || aligned >= span / 2 ? aligned : natural1 <= span ? span : span * .6) : roomFor(now, f1, canvas);
+    const room = free ? (f1.rot ? canvas.w : Math.max(Math.min(longest, span), natural1 <= aligned || aligned >= span / 2 ? aligned : natural1 <= span ? span : span * .6)) : roomFor(now, f1, canvas);
     const floor = hugging ? Math.min(natural1, f0.rect.w) : r.w, cap = Math.max(room, floor), w = Math.max(floor, Math.min(natural1, cap));
-    if (Math.abs(w - r.w) < 1e-6) continue;
-    // Keep the aligned edge's point fixed on the page: the centre moves along the box's own x axis.
-    const a = (width: number) => side === 'left' ? -width / 2 : side === 'right' ? width / 2 : 0, t = f1.rot * Math.PI / 180, d = a(r.w) - a(w);
-    const c = { x: cx + d * Math.cos(t), y: r.y + r.h / 2 + d * Math.sin(t) };
+    // Keep the aligned edge's point fixed on the page: the centre moves along the box's own x axis. A free label is placed
+    // from its box as the edit began, so typing key by key ends where a paste does (D-085).
+    const base = free ? { ...g, y: r.y, h: r.h } : r, cx = base.x + base.w / 2;
+    const a = (width: number) => side === 'left' ? -width / 2 : side === 'right' ? width / 2 : 0, t = f1.rot * Math.PI / 180, d = a(base.w) - a(w);
+    const c = { x: cx + d * Math.cos(t), y: base.y + base.h / 2 + d * Math.sin(t) };
     // A free label near an edge (an Arabic label against the left edge) slides back rather than wrapping.
-    const x = free && !f1.rot ? Math.max(Math.min(c.x - w / 2, hi - w), Math.min(lo, r.x)) : c.x - w / 2;
+    const x = free && !f1.rot ? Math.max(Math.min(c.x - w / 2, hi - w), Math.min(lo, g.x)) : c.x - w / 2;
+    if (Math.abs(w - r.w) < 1e-6 && Math.abs(x - r.x) < 1e-6) continue;
     doc = { ...doc, nodes: doc.nodes.map(n => n.id === id ? { ...n, frames: { ...n.frames, [spec.id]: { ...f1, rect: { ...r, x, y: c.y - r.h / 2, w } } } } : n) };
   }
   return doc;

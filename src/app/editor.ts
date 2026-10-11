@@ -5,11 +5,11 @@ import { guideById } from '../core/guides';
 import { canvasSize, ratioById, ratioNumbers } from '../core/ratios';
 import { contrast, resolve } from '../core/palette';
 import { defaultShapeSize, shapeLibrary, ICON_SHAPE } from '../core/shapes';
-import { LINE_HEIGHT, roomSize, textBox, textHeight, typeScale, crossing, type TypeScale } from '../core/fit';
+import { LINE_HEIGHT, roomSize, splitsWord, textBox, textHeight, typeScale, crossing, type TypeScale } from '../core/fit';
 import { addNodes, addUnderText, setName, duplicateNodes, nodeById, nudge, pasteNodes, removeNodes, reorder, setFill, setFrames, setGround, setHidden, setLocked, updateNodes, type Order } from '../core/ops';
 import { reRatioKept, flagsFor, type RatioOrigin } from '../core/reratio';
-import { flowText, hugText, roomFor, wholeWordSize } from '../core/flow';
-import { keepReadable } from '../core/compositions';
+import { flowText, hugText, unfit } from '../core/flow';
+import { keepReadable, layoutPad } from '../core/compositions';
 import { align, distribute, matchSize, type AlignMode } from '../core/arrange';
 import { drawnWeight, fontById } from '../core/fonts';
 import { letterOf } from './tools/shortcuts';
@@ -106,7 +106,7 @@ export class Editor {
     this.renderer = new Canvas2DRenderer(this.docCanvas);
     this.imageBar.addEventListener('click', e => {
       const b = (e.target as Element).closest('button'), n = this.one();
-      if (b?.dataset.act === 'circle' && this.pictures()) { this.toggleCircle(this.selected().map(x => x.id)); return; }
+      if (b?.dataset.act === 'circle' && this.pictures()) { const sel = this.selected(), open = sel.filter(x => !x.locked && !this.frame(x).hidden); this.toggleCircle(open.map(x => x.id)); if (open.length < sel.length) toast(`${sel.length - open.length} locked or hidden left as they are`); return; }
       if (!b || n?.kind !== 'image') return;
       if (b.dataset.act === 'pick') { this.finishReposition(); this.pickImage(n.id); }
       else if (b.dataset.act === 'move') { if (this.store.ui.reposition) this.finishReposition(); else this.startReposition(n.id); }
@@ -147,7 +147,7 @@ export class Editor {
   selected(): DocNode[] { const s = new Set(this.store.ui.sel); return this.doc.nodes.filter(n => s.has(n.id)); }
   one(): DocNode | undefined { const s = this.selected(); return s.length === 1 ? s[0] : undefined; }
   /** Several unlocked pictures selected (a tiled team page): the picture bar offers Circle for all of them (D-083). */
-  pictures(): boolean { const s = this.selected(); return s.length > 1 && s.every(n => n.kind === 'image' && !n.locked && !this.frame(n).hidden); }
+  pictures(): boolean { const s = this.selected(); return s.length > 1 && s.every(n => n.kind === 'image') && s.filter(n => !n.locked && !this.frame(n).hidden).length > 0; }
   palette(): Palette { const p = this.doc.palette, d = this.store.ui.previewDark; return d === null ? p : { ...p, dark: d }; }
   colour(ref: ColourRef): string { return resolve(ref, this.palette()); }
   /** Unit-space point under a pointer event. */
@@ -352,7 +352,8 @@ export class Editor {
   addText(): void {
     const node: TextNode = { id: newId(), kind: 'text', text: 'Text', weight: 400, align: 'start', fill: { role: 'ink' }, frames: {} };
     for (const s of this.doc.sizes) {
-      const c = canvasSize(s.ratio), size = typeScale(s.guide, c).steps[2], w = textWidth(node.text, size, 400) * 1.02, h = textHeight(1, size);
+      // One step above body, but in a short size (Header, Banner) never above what its layout gives a headline (D-085).
+      const c = canvasSize(s.ratio), ts = typeScale(s.guide, c), size = Math.max(ts.body, Math.min(ts.steps[2], c.h * .06)), w = textWidth(node.text, size, 400) * 1.02, h = textHeight(1, size);
       const at = freeSpot({ size: { w: Math.min(c.w * .4, w * 4), h }, canvas: c, cells: this.cells(s.id), ...this.occupied(s.id), pad: Math.min(c.w, c.h) * .045 });
       node.frames[s.id] = { rect: { x: at.x, y: at.y, w, h }, rot: 0, fontSize: size };
     }
@@ -428,7 +429,9 @@ export class Editor {
       // A see-through picture (logo, sticker) dropped on a photo goes on top of it; onto an empty frame it fills the
       // frame and the frame takes the picture's proportions, so a logo is never cropped (D-047).
       if (ring) {
-        const img: ImageNode = { id: newId(), kind: 'image', asset: stored.key, mask: 'circle', frames: structuredClone(ring.frames), ...(ring.opacity !== undefined ? { opacity: ring.opacity } : {}) };
+        // An oval circle shape gives a round picture centred in it, in every size (D-085).
+        const frames = Object.fromEntries(Object.entries(ring.frames).map(([k, f]) => { const side = Math.min(f.rect.w, f.rect.h); return [k, { ...f, rect: { x: f.rect.x + (f.rect.w - side) / 2, y: f.rect.y + (f.rect.h - side) / 2, w: side, h: side } }]; }));
+        const img: ImageNode = { id: newId(), kind: 'image', asset: stored.key, mask: 'circle', frames, ...(ring.opacity !== undefined ? { opacity: ring.opacity } : {}) };
         const id = ring.id; ring = null; fills.length = 0;
         put({ ...this.doc, nodes: this.doc.nodes.map(n => n.id === id ? img : n) }, 'Filled the circle'); this.select([img.id]); continue;
       }
@@ -586,32 +589,69 @@ export class Editor {
     this.store.commit(doc, { key }); this.flagAllText();
   }
   fontStep(dir: 1 | -1): void {
-    let note = '';
-    this.editTexts(n => {
-      const f = this.frame(n), size = textBox(n, f, measure, this.typeScale()).size;
-      let next = Math.max(6, size + dir * Math.max(2, Math.round(size * .1)));
-      if (dir > 0) {
-        const r = this.sizeCap(n, f, next, size); next = r.size; note = r.note || note;
-      }
-      // A manual size turns autofit off (5q, D-034); Larger stops at the room the autofit box had (D-083).
-      const t = { ...n, frames: { ...n.frames, [this.sizeId]: { ...f, fontSize: next } } }; delete t.fit; return t;
-    }, 'font');
-    if (note) toast(note, 1800);
+    const r = this.resizeTexts(current => Math.max(6, current + dir * Math.max(2, Math.round(current * .1))));
+    if (!r) return;
+    this.store.commit(r.doc, { key: 'font' }); this.flagAllText();
+    if (r.note) toast(r.note, 1800);
+  }
+  private withSize(doc: KuraDoc, id: string, size: number): KuraDoc {
+    return updateNodes(doc, [id], x => ({ ...x, frames: { ...x.frames, [this.sizeId]: { ...x.frames[this.sizeId], fontSize: size } } }) as TextNode);
   }
   /**
-   * The size a text block can take when asked for `want` (Larger or a typed size): an autofit block stops at the
-   * largest size its room holds (`roomSize`); other text stops where a word would break even at the widest the box can
-   * grow (D-077, D-081). A block whose word already breaks keeps its size rather than shrinking (D-083).
+   * Where a text block's bottom may grow to in the active size: above the first unturned picture or shape below it
+   * (the poster band), else the canvas bottom, less the layout margin; never above where it already reaches (D-085).
    */
-  private sizeCap(n: TextNode, f: Frame, want: number, current: number): { size: number; note: string } {
+  private bottomLimit(doc: KuraDoc, n: TextNode): number {
+    const s = this.spec(doc), c = canvasSize(s.ratio), pad = layoutPad(c), b = textBox(n, n.frames[s.id], measure, typeScale(s.guide, c)).rect;
+    let limit = c.h - pad;
+    for (const o of doc.nodes) {
+      const f = o.frames[s.id];
+      if (o.id === n.id || o.kind === 'text' || o.kind === 'ink' || !f || f.hidden || f.rot) continue;
+      const r = f.rect;
+      if (r.x < b.x + b.w && b.x < r.x + r.w && r.y >= b.y + b.h - 1e-6) limit = Math.min(limit, r.y - pad);
+    }
+    return limit;
+  }
+  /**
+   * The size a text block can take when asked for `want` (Larger or a typed size). An autofit block stops at the
+   * largest size its room holds (`roomSize`). Other text stops where a word would break, at the width it would really
+   * grow to, or where its bottom would pass the block below it or the canvas bottom (D-077, D-081, D-085). A block whose
+   * word already breaks keeps its size rather than shrinking (D-083).
+   */
+  private sizeCap(doc: KuraDoc, id: string, want: number, current: number): { size: number; note: string } {
+    if (want <= current + 1e-6) return { size: want, note: '' };
+    const n = nodeById(doc, id) as TextNode, f = n.frames[this.sizeId], scale = this.typeScale();
     if (n.fit) {
       const got = roomSize({ text: n.text, size: want, width: f.rect.w, height: f.rect.h, weight: drawnWeight(n.font, n.weight), measure, font: n.font });
-      return got < want - 1e-6 ? { size: Math.max(got, Math.min(current, want)), note: 'Largest size that fits its room' } : { size: want, note: '' };
+      return got < want - 1e-6 ? { size: Math.max(got, current), note: 'Largest size that fits its room' } : { size: want, note: '' };
     }
-    const whole = wholeWordSize(n.text, want, Math.max(f.rect.w, roomFor(n, f, this.canvas())), drawnWeight(n.font, n.weight), measure, n.font);
-    if (whole >= want - 1e-6) return { size: want, note: '' };
-    if (whole < current - 1e-6) return { size: Math.min(current, want), note: 'A word is already wider than the box' };
-    return { size: whole, note: 'Largest size that keeps every word whole' };
+    const b0 = textBox(n, f, measure, scale).rect, limit = Math.max(this.bottomLimit(doc, n), b0.y + b0.h);
+    const test = (size: number) => {
+      const d = hugText(doc, this.withSize(doc, id, size), id, measure), m = nodeById(d, id) as TextNode, g = m.frames[this.sizeId], b = textBox(m, g, measure, scale);
+      return { whole: !splitsWord(m.text, b.lines), fits: !!g.rot || b.rect.y + b.rect.h <= limit + 1e-6 };
+    };
+    const top = test(want);
+    if (top.whole && top.fits) return { size: want, note: '' };
+    if (!test(current).whole) return { size: current, note: 'A word is already wider than the box' };
+    let lo = current, hi = want;
+    while (hi - lo > .5) { const mid = (lo + hi) / 2, t = test(mid); if (t.whole && t.fits) lo = mid; else hi = mid; }
+    return { size: Math.max(current, Math.floor(lo * 2) / 2), note: top.whole ? 'Largest size that fits its space' : 'Largest size that keeps every word whole' };
+  }
+  /**
+   * Resizes every selected unlocked text block to `want(current)`, capped (`sizeCap`). A hand-set size turns autofit off
+   * (5q, D-034), and every other linked size keeps the size autofit gave it (`unfit`, D-085).
+   */
+  private resizeTexts(want: (current: number) => number): { doc: KuraDoc; first: number; note: string } | null {
+    const ids = this.texts().filter(n => !n.locked).map(n => n.id);
+    if (!ids.length) return null;
+    let doc = this.doc, first: number | null = null, note = '';
+    for (const id of ids) {
+      const n = nodeById(doc, id) as TextNode, current = textBox(n, n.frames[this.sizeId], measure, this.typeScale()).size, w = want(current), r = this.sizeCap(doc, id, w, current);
+      if (r.size < w - 1e-6 && !note) note = r.note;
+      first ??= r.size;
+      doc = flowText(doc, hugText(doc, this.withSize(unfit(doc, id, measure, this.sizeId), id, r.size), id, measure), id, measure);
+    }
+    return { doc, first: first!, note };
   }
   /** Sets the typeface of every selected unlocked text block; text under each one follows its new height (D-046). */
   async setFont(font: FontId): Promise<void> {
@@ -631,20 +671,11 @@ export class Editor {
   }
   /** A typed font size for the selected text (D-060); a manual size turns autofit off, like Smaller and Larger. */
   setFontSize(value: number): number | null {
-    const want = Math.max(4, Math.min(2000, value));
-    const ids = this.selected().filter(n => n.kind === 'text' && !n.locked).map(n => n.id);
-    if (!ids.length) return null;
-    // A typed size stops where Larger would (D-081, D-083).
-    let doc = this.doc, first: number | null = null, note = '';
-    for (const id of ids) {
-      const n = nodeById(doc, id) as TextNode, f = n.frames[this.sizeId], r = this.sizeCap(n, f, want, textBox(n, f, measure, this.typeScale()).size);
-      if (r.size < want - 1e-6 && !note) note = `${r.note}: ${Math.round(r.size * 10) / 10}`;
-      first ??= r.size;
-      doc = flowText(doc, hugText(doc, updateNodes(doc, [id], x => { const t = { ...x, frames: { ...x.frames, [this.sizeId]: { ...x.frames[this.sizeId], fontSize: r.size } } } as TextNode; delete t.fit; return t; }), id, measure), id, measure);
-    }
-    if (note) toast(note, 2200);
-    this.store.commit(doc, {}); this.flagAllText();
-    return first;
+    const want = Math.max(4, Math.min(2000, value)), r = this.resizeTexts(() => want);
+    if (!r) return null;
+    if (r.note) toast(`${r.note}: ${Math.round(r.first * 10) / 10}`, 2200);
+    this.store.commit(r.doc, {}); this.flagAllText();
+    return r.first;
   }
   /** A typed angle for the selection, about each block's centre (D-060). */
   setAngle(deg: number): number | null {
@@ -666,10 +697,11 @@ export class Editor {
   /** Autofit on keeps today's box; the size then steps down the type scale as text grows (5q). */
   toggleFit(): void {
     const on = !this.texts()[0]?.fit;
+    // Off: every size keeps the size autofit gave it (D-085).
+    if (!on) { let doc = this.doc; for (const n of this.texts().filter(x => !x.locked)) doc = unfit(doc, n.id, measure); if (doc !== this.doc) this.store.commit(doc, {}); return; }
     this.editTexts(n => {
-      if (!on) { const t = { ...n }; delete t.fit; return t; }
-      // The box keeps today's height, but never more than the room left above the canvas bottom.
-      const f = this.frame(n), b = this.box(n), c = this.canvas(), room = c.h - f.rect.y - Math.min(c.w, c.h) * .045;
+      // The box keeps today's height, but never more than the space above the block below it or the canvas bottom (D-085).
+      const f = this.frame(n), b = this.box(n), room = this.bottomLimit(this.doc, n) - f.rect.y;
       return { ...n, fit: true, frames: { ...n.frames, [this.sizeId]: { ...f, rect: { ...f.rect, h: Math.max(Math.min(b.h, room), this.typeScale().body * LINE_HEIGHT) } } } };
     });
   }
@@ -793,7 +825,8 @@ export class Editor {
   finishText(): void {
     const area = this.textarea;
     if (!area) return;
-    this.textarea = null; const id = this.store.ui.editing, before = this.textBefore; this.textBefore = null; this.fresh = null;
+    // A label the Text tool just added is one undo step with its first typing (D-085).
+    this.textarea = null; const id = this.store.ui.editing, fresh = id !== null && id === this.fresh, before = this.textBefore; this.textBefore = null; this.fresh = null;
     area.remove(); this.store.setUI({ editing: null });
     const node = id ? nodeById(this.doc, id) : undefined;
     if (!node || node.kind !== 'text') return;
@@ -818,7 +851,7 @@ export class Editor {
     if (!node.text.trim()) { this.store.commit(removeNodes(this.doc, [node.id]), { before: before ?? undefined }); this.select([]); return; }
     const f = this.frame(node), b = this.box(node);
     const synced = node.fit ? this.doc : updateNodes(this.doc, [node.id], n => ({ ...n, frames: { ...n.frames, [this.sizeId]: { ...f, rect: { ...f.rect, h: b.h } } } }));
-    if (before && JSON.stringify(nodeById(before, node.id)) !== JSON.stringify(nodeById(synced, node.id))) this.store.commit(synced, { before }); else this.store.set(synced);
+    if (before && JSON.stringify(nodeById(before, node.id)) !== JSON.stringify(nodeById(synced, node.id))) this.store.commit(synced, { before: fresh ? null : before }); else this.store.set(synced);
     this.flagAllText();
   }
   // 5d: on the first open ever, blocks lift 2px one after another, once.
