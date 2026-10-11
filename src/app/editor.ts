@@ -5,7 +5,7 @@ import { guideById } from '../core/guides';
 import { canvasSize, ratioById, ratioNumbers } from '../core/ratios';
 import { contrast, resolve } from '../core/palette';
 import { defaultShapeSize, shapeLibrary, ICON_SHAPE } from '../core/shapes';
-import { LINE_HEIGHT, textBox, textHeight, typeScale, crossing, type TypeScale } from '../core/fit';
+import { LINE_HEIGHT, roomSize, textBox, textHeight, typeScale, crossing, type TypeScale } from '../core/fit';
 import { addNodes, addUnderText, setName, duplicateNodes, nodeById, nudge, pasteNodes, removeNodes, reorder, setFill, setFrames, setGround, setHidden, setLocked, updateNodes, type Order } from '../core/ops';
 import { reRatioKept, flagsFor, type RatioOrigin } from '../core/reratio';
 import { flowText, hugText, roomFor, wholeWordSize } from '../core/flow';
@@ -593,19 +593,19 @@ export class Editor {
       if (dir > 0) {
         const r = this.sizeCap(n, f, next, size); next = r.size; note = r.note || note;
       }
-      // Autofit text keeps autofitting: Larger stops at its room and retyped copy still steps down (D-083).
-      return { ...n, frames: { ...n.frames, [this.sizeId]: { ...f, fontSize: next } } };
+      // A manual size turns autofit off (5q, D-034); Larger stops at the room the autofit box had (D-083).
+      const t = { ...n, frames: { ...n.frames, [this.sizeId]: { ...f, fontSize: next } } }; delete t.fit; return t;
     }, 'font');
     if (note) toast(note, 1800);
   }
   /**
    * The size a text block can take when asked for `want` (Larger or a typed size): an autofit block stops at the
-   * largest size its room holds; other text stops where a word would break even at the widest the box can grow
-   * (D-077, D-081). A block whose word already breaks keeps its size rather than shrinking (D-083).
+   * largest size its room holds (`roomSize`); other text stops where a word would break even at the widest the box can
+   * grow (D-077, D-081). A block whose word already breaks keeps its size rather than shrinking (D-083).
    */
   private sizeCap(n: TextNode, f: Frame, want: number, current: number): { size: number; note: string } {
     if (n.fit) {
-      const got = textBox(n, { ...f, fontSize: want }, measure, this.typeScale()).size;
+      const got = roomSize({ text: n.text, size: want, width: f.rect.w, height: f.rect.h, weight: drawnWeight(n.font, n.weight), measure, font: n.font });
       return got < want - 1e-6 ? { size: Math.max(got, Math.min(current, want)), note: 'Largest size that fits its room' } : { size: want, note: '' };
     }
     const whole = wholeWordSize(n.text, want, Math.max(f.rect.w, roomFor(n, f, this.canvas())), drawnWeight(n.font, n.weight), measure, n.font);
@@ -640,7 +640,7 @@ export class Editor {
       const n = nodeById(doc, id) as TextNode, f = n.frames[this.sizeId], r = this.sizeCap(n, f, want, textBox(n, f, measure, this.typeScale()).size);
       if (r.size < want - 1e-6 && !note) note = `${r.note}: ${Math.round(r.size * 10) / 10}`;
       first ??= r.size;
-      doc = flowText(doc, hugText(doc, updateNodes(doc, [id], x => ({ ...x, frames: { ...x.frames, [this.sizeId]: { ...x.frames[this.sizeId], fontSize: r.size } } }) as TextNode), id, measure), id, measure);
+      doc = flowText(doc, hugText(doc, updateNodes(doc, [id], x => { const t = { ...x, frames: { ...x.frames, [this.sizeId]: { ...x.frames[this.sizeId], fontSize: r.size } } } as TextNode; delete t.fit; return t; }), id, measure), id, measure);
     }
     if (note) toast(note, 2200);
     this.store.commit(doc, {}); this.flagAllText();

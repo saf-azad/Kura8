@@ -118,7 +118,7 @@ task is seriously blocked by one of them (we log those for the product owner).
   - Circle pictures stay round in every size, have corner handles only, and keep round through Same width/height.
   - Select several pictures (Shift-click) to Circle them all at once.
   - A circle frame tiles into circles.
-- **Autofit headlines** (poster, stack) keep autofitting after Larger, Smaller or a typed size; Larger stops at the room.
+- **Autofit headlines** (poster, stack): Larger and typed sizes stop at the largest size the room holds; a hand-set size then turns autofit off (5q).
 - **Colour.**
   - The hex field forgives spaces and a full-width ＃, and says when a value is not a colour.
   - The contrast "use" button fixes each failing block with its own shade.

@@ -28,6 +28,14 @@ export function fitText(o: { text: string; weight: 400 | 700; width: number; hei
   const size = sizes[sizes.length - 1];
   return { size, lines: o.measure(o.text, size, o.weight, o.width, o.font), overflow: true };
 }
+/** The largest size up to `size` (to half a unit) at which the text fits `height` within `width` without breaking a word; 0 when none does (D-083). */
+export function roomSize(o: { text: string; size: number; width: number; height: number; weight: 400 | 700; measure: Measure; font?: FontId }): number {
+  const fits = (s: number) => { const lines = o.measure(o.text, s, o.weight, o.width, o.font); return textHeight(lines.length, s) <= o.height + EPS && !splitsWord(o.text, lines); };
+  if (fits(o.size)) return o.size;
+  let lo = 0, hi = o.size;
+  while (hi - lo > .5) { const mid = (lo + hi) / 2; if (fits(mid)) lo = mid; else hi = mid; }
+  return Math.floor(lo * 2) / 2;
+}
 export type TextBox = { size: number; lines: string[]; rect: Rect; overflow: boolean };
 /** Effective text geometry in one size: wrapped lines, font size after autofit, and the drawn box (the frame grown to fit its text). */
 export function textBox(node: TextNode, frame: Frame, measure: Measure, scale: TypeScale): TextBox {
