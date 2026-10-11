@@ -43,6 +43,8 @@ class Session:
             .observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['class'] });
           if (document.body) go(); else document.addEventListener('DOMContentLoaded', go); })()""")
         self.page = self.ctx.new_page()
+        # A standing listener keeps file-chooser interception on, so a pick fired at once is never missed.
+        self.page.on('filechooser', lambda fc: None)
         p = self.page
         p.on('console', lambda m: self.errors.append(f'{m.type}: {m.text}') if m.type in ('error',) and not m.text.startswith('Failed to load resource') else None)
         p.on('response', lambda r: self.errors.append(f'HTTP {r.status}: {r.url}') if r.status >= 400 and not r.url.endswith('/favicon.ico') else None)

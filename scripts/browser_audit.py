@@ -48,6 +48,9 @@ class App:
     def __init__(self, browser):
         self.ctx = browser.new_context(viewport={'width': 1440, 'height': 900}, accept_downloads=True)
         self.page = self.ctx.new_page()
+        # Playwright turns file-chooser interception on without waiting for it, so a key pressed right after
+        # expect_file_chooser() could beat it and no chooser event came; a standing listener keeps it on.
+        self.page.on('filechooser', lambda fc: None)
         # Failed loads are reported from responses (with their URLs) rather than console text; the static page used to
         # reset storage asks for /favicon.ico, which the app itself never requests.
         self.page.on('console', lambda m: errors.append(f'{m.type}: {m.text}') if m.type == 'error' and not m.text.startswith('Failed to load resource') else None)
