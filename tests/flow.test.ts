@@ -248,3 +248,29 @@ it('lets a label pass a block beside it when keeping clear would wrap it off the
   const r = hugText(start, updateNodes(start, ['t'], n => ({ ...n, text: `${words} ${words}` })), 't', charMeasure).nodes[1].frames.main.rect;
   expect(r.x + r.w).toBeGreaterThan(666);
 });
+it('keeps a label’s left edge when long copy wraps in the room to its right (D-087)', () => {
+  const start = doc([textNode('t', frame(650, 120, 126, 35, { fontSize: 30 }), 'Tickets')]);
+  const words = 'Free pizza, live DJ and networking with industry guests from 6pm in the Roundhouse';
+  const r = hugText(start, updateNodes(start, ['t'], n => ({ ...n, text: words })), 't', charMeasure).nodes[0].frames.main.rect;
+  expect(r.x).toBe(650); expect(r.x + r.w).toBeCloseTo(950, 6);
+  // Near the far edge it still slides back rather than wrap into a sliver.
+  const edge = doc([textNode('t', frame(820, 120, 126, 35, { fontSize: 30 }), 'Tickets')]);
+  expect(hugText(edge, updateNodes(edge, ['t'], n => ({ ...n, text: words })), 't', charMeasure).nodes[0].frames.main.rect.x).toBeLessThan(820);
+});
+it('keeps clear of a label beside it near the canvas bottom when the canvas would not hold the copy either (D-087)', () => {
+  const photo = { id: 'p', kind: 'image', asset: 'a', frames: { main: frame(0, 0, 333, 1000) } } as DocNode;
+  const start = doc([photo, textNode('l', frame(380, 900, 101, 48, { fontSize: 42 }), 'Left'), textNode('r', frame(700, 900, 126, 48, { fontSize: 42 }), 'Right')]);
+  const out = hugText(start, updateNodes(start, ['l'], n => ({ ...n, text: 'This left label grows towards the right label beside it' })), 'l', charMeasure);
+  const r = out.nodes[1].frames.main.rect;
+  expect(r.x).toBe(380); expect(r.x + r.w).toBeLessThanOrEqual(700 - 22.5 + 1e-6);
+});
+it('widens a wrapped free label when its new copy would split a word (D-087)', () => {
+  // "Level 2" at 110 wraps in 283; retyped, "gallery," (8 × 66 = 528) would break mid-word.
+  const start = doc([rectNode('b', frame(667, 667, 333, 333)), textNode('t', frame(700, 100, 283, 48, { fontSize: 110 }), 'Level 2')]);
+  const out = hugText(start, updateNodes(start, ['t'], n => ({ ...n, text: 'Level 2 gallery, east wing' })), 't', charMeasure);
+  const t = out.nodes[1] as TextNode, b = textBox(t, t.frames.main, charMeasure, typeScale('thirds', { w: 1000, h: 1000 }));
+  expect(b.lines).not.toContain('galle'); expect(t.frames.main.rect.w).toBeGreaterThanOrEqual(8 * 66);
+  // Layout text that wraps keeps its column.
+  const slot = updateNodes(start, ['t'], n => ({ ...n, slot: 'body' }) as DocNode);
+  expect(hugText(slot, updateNodes(slot, ['t'], n => ({ ...n, text: 'Level 2 gallery, east wing' })), 't', charMeasure).nodes[1].frames.main.rect.w).toBe(283);
+});

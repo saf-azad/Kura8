@@ -4,7 +4,7 @@ import type { GuideId } from './guides/types';
 import { canvasSize } from './ratios';
 import { guideById } from './guides';
 import { textBox, textHeight, typeScale } from './fit';
-import { oneLineWidth } from './flow';
+import { oneLineWidth, sitsOn } from './flow';
 import { drawnWeight } from './fonts';
 import { direction, physicalAlign } from './script';
 import { layoutPad } from './compositions';
@@ -40,9 +40,11 @@ export function reRatioFrames(doc: KuraDoc, from: SizeSpec, to: { ratio: RatioId
     const T = pin ? onLine(box.y, l0.y, l1.y) : null, B = pin ? onLine(box.y + box.h, l0.y, l1.y) : null;
     // Going to a size at least as big both ways (a Header to a Post), text grows by the two sizes' body type rather than
     // keeping the small type of the wide size (D-081); shrinking still follows the geometry.
-    const k = node.kind === 'text' && s >= 1 - 1e-9 ? Math.max(1, typeScale(to.guide, c1).body / typeScale(from.guide, c0).body) : s;
+    // Shrinking, small text stops at three fifths of the new size's body type, so a Post's label stays legible in a Header (D-087).
+    const body1 = typeScale(to.guide, c1).body, k0 = node.kind === 'text' && s >= 1 - 1e-9 ? Math.max(1, body1 / typeScale(from.guide, c0).body) : s;
+    const fontSize = f.fontSize === undefined ? undefined : node.kind === 'text' ? Math.max(f.fontSize * k0, Math.min(f.fontSize, body1 * .6)) : f.fontSize * k0;
+    const k = fontSize !== undefined && f.fontSize ? fontSize / f.fontSize : k0;
     const w = L !== null && Rr !== null && Rr - L > 1 ? Rr - L : Math.min(c1.w, f.rect.w * k);
-    const fontSize = f.fontSize === undefined ? undefined : f.fontSize * k;
     let h = T !== null && B !== null && B - T > 1 ? B - T : f.rect.h * s;
     const next: Frame = { ...f, rect: { x: 0, y: 0, w, h }, ...(fontSize === undefined ? {} : { fontSize }) };
     if (node.kind === 'text' && !node.fit) h = boxOf(node, next, measure, c1, to.guide).h;
@@ -56,13 +58,26 @@ export function reRatioFrames(doc: KuraDoc, from: SizeSpec, to: { ratio: RatioId
       if (next.rect.x < lm - 1e-6) next.rect = { ...next.rect, x: lm };
     }
     // Text that grew (wide to tall) stops at its right margin rather than running off the canvas; a margin up to the
-    // layout's becomes the new size's layout margin, so a Header's thin margin is not carried into a Post (D-083).
+    // layout's becomes the new size's layout margin, so a Header's thin margin is not carried into a Post (D-083). Free
+    // text away from the edges may grow up to the new size's layout margin (D-087).
     if (node.kind === 'text' && !f.rot) {
-      const m0 = Math.max(0, Math.min(box.x, c0.w - box.x - box.w)), m = Math.max(m0 / c0.w * c1.w, Math.min(m0, layoutPad(c0)) / layoutPad(c0) * layoutPad(c1));
+      const m0 = Math.max(0, Math.min(box.x, c0.w - box.x - box.w)), pad0 = layoutPad(c0);
+      const m = !node.slot && m0 > pad0 ? layoutPad(c1) : Math.max(m0 / c0.w * c1.w, Math.min(m0, pad0) / pad0 * layoutPad(c1));
       const r = next.rect, room = c1.w - m - r.x;
       if (r.x + r.w > c1.w - m + 1e-6 && room >= 20) {
         const nh = node.fit ? r.h : boxOf(node, { ...next, rect: { ...r, w: room } }, measure, c1, to.guide).h;
         next.rect = { ...r, w: room, h: nh, y: T === null && B !== null ? B - nh : r.y };
+      }
+    }
+    // A one-line free label stays on one line in the new size, within its layout margins, keeping its aligned edge where
+    // it can: type that grew is never split mid-word (D-087).
+    if (node.kind === 'text' && !node.fit && !node.slot && !f.rot && !node.text.includes('\n') && textBox(node, f, measure, typeScale(from.guide, c0)).lines.length === 1) {
+      const r = next.rect, b1 = textBox(node, next, measure, typeScale(to.guide, c1)), pad1 = layoutPad(c1);
+      const natural = oneLineWidth(node.text, b1.size, drawnWeight(node.font, node.weight), measure, node.font) * 1.02;
+      if (b1.lines.length > 1 && natural > r.w && natural <= c1.w - 2 * pad1) {
+        const w2 = Math.min(natural, c1.w - 2 * pad1), x0 = side === 'left' ? r.x : side === 'right' ? r.x + r.w - w2 : r.x + (r.w - w2) / 2;
+        const x = Math.max(Math.min(x0, c1.w - pad1 - w2), Math.min(pad1, r.x)), nr = { ...r, x, w: w2 };
+        next.rect = { ...nr, h: boxOf(node, { ...next, rect: nr }, measure, c1, to.guide).h };
       }
     }
     // An icon, a loose picture (a logo, a photo placed by hand) or a circle picture keeps its proportions (D-077, D-081,
@@ -74,8 +89,22 @@ export function reRatioFrames(doc: KuraDoc, from: SizeSpec, to: { ratio: RatioId
       next.rect = { x: place(r.x, r.w, iw, L, Rr), y: place(r.y, r.h, ih, T, B), w: iw, h: ih };
     }
     frames[node.id] = next;
-    flags.push(...flagsFor(node, next, measure, c1, to.guide));
   }
+  // Text whose type grew more than its canvas (Banner to Link) can reach the text it stood above: what stood under it,
+  // on the same backing, moves down to keep clear, top to bottom (D-087).
+  const texts = doc.nodes.filter(n => n.kind === 'text' && !n.frames[from.id].rot && !n.frames[from.id].hidden && !frames[n.id].rot)
+    .map(n => ({ n, b0: boxOf(n, n.frames[from.id], measure, c0, from.guide), on: sitsOn(doc, n.id, from.id, n.frames[from.id].rect) }))
+    .sort((a, b) => a.b0.y - b.b0.y);
+  for (const lower of texts) {
+    for (const upper of texts) {
+      const a0 = upper.b0, b0 = lower.b0;
+      if (upper === lower || upper.on !== lower.on || a0.y + a0.h > b0.y + TOLERANCE || a0.x >= b0.x + b0.w || b0.x >= a0.x + a0.w) continue;
+      const a1 = boxOf(upper.n, frames[upper.n.id], measure, c1, to.guide), f1 = frames[lower.n.id], gap = Math.max(0, b0.y - a0.y - a0.h) * s;
+      if (a1.x >= f1.rect.x + f1.rect.w || f1.rect.x >= a1.x + a1.w || a1.y + a1.h <= f1.rect.y + TOLERANCE) continue;
+      frames[lower.n.id] = { ...f1, rect: { ...f1.rect, y: a1.y + a1.h + gap } };
+    }
+  }
+  for (const node of doc.nodes) flags.push(...flagsFor(node, frames[node.id], measure, c1, to.guide));
   return { frames, flags };
 }
 /** Where a text block's letters reach: each line's width on the side its alignment puts it, turned with the box (D-077). */

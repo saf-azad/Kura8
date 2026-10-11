@@ -44,17 +44,19 @@ const occupancy = (cell: Rect, taken: Rect[]): number => taken.reduce((s, t) => 
 /**
  * Boxes for several new pictures (D-058): a drop point's own cell first, then the emptiest cells nearest the point
  * (ties to the nearer one), so a batch spreads over free cells instead of piling up. A batch larger than the cells
- * splits each cell into tiles, so no two new pictures overlap (D-086). Without cells the middle half of the canvas is
- * the one cell.
+ * splits each cell into tiles, so no two new pictures overlap (D-086). Cells that hold copy (`text`) go last, and a batch
+ * larger than the cells without copy tiles only those, up to four to a cell, so a title is never covered (D-087). The
+ * boxes come in reading order, so the files keep theirs. Without cells the middle half of the canvas is the one cell.
  */
-export function spreadCells(p: Point, cells: Rect[], taken: Rect[], count: number, canvas: Size, dropped: boolean): Rect[] {
-  const d = (c: Rect) => Math.hypot(center(c).x - p.x, center(c).y - p.y);
+export function spreadCells(p: Point, cells: Rect[], taken: Rect[], count: number, canvas: Size, dropped: boolean, text: Rect[] = []): Rect[] {
+  const d = (c: Rect) => Math.hypot(center(c).x - p.x, center(c).y - p.y), words = (c: Rect) => occupancy(c, text) > 1e-9 ? 1 : 0;
   const first = dropped && cells.length ? nearestCell(p, cells, canvas) : null;
   const order = [...(first ? [first] : []), ...cells.filter(c => !first || c.x !== first.x || c.y !== first.y || c.w !== first.w || c.h !== first.h)
-    .map(c => ({ c, o: occupancy(c, taken), d: d(c) })).sort((a, b) => a.o - b.o || a.d - b.d).map(x => x.c)];
-  const base = order.length ? order : [nearestCell(p, [], canvas)], per = Math.ceil(count / base.length);
+    .map(c => ({ c, t: words(c), o: occupancy(c, taken), d: d(c) })).sort((a, b) => a.t - b.t || a.o - b.o || a.d - b.d).map(x => x.c)];
+  const clear = order.filter(c => !words(c)), roomy = count > clear.length && clear.length && Math.ceil(count / clear.length) <= 4;
+  const base = roomy ? clear : order.length ? order : [nearestCell(p, [], canvas)], per = Math.ceil(count / base.length);
   const pool = per > 1 ? base.flatMap(c => tiles(c, per, Math.min(c.w, c.h) * .04)) : base;
-  return pool.slice(0, count);
+  return pool.slice(0, count).sort((a, b) => a.y - b.y > 1e-6 || b.y - a.y > 1e-6 ? a.y - b.y : a.x - b.x);
 }
 /** Area two rectangles share. */
 const shared = (a: Rect, b: Rect): number => Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)) * Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
@@ -64,11 +66,14 @@ const shared = (a: Rect, b: Rect): number => Math.max(0, Math.min(a.x + a.w, b.x
  * to the emptiest cell first, then reading order. On a full canvas the least covered spot still wins, so repeated
  * pastes and icons never land exactly on one another. Covering text (`text`, kept `pad` / 2 clear) counts ten times as
  * much as covering pictures or blocks, so copy goes over a photo before it goes over other copy (D-081). The box stays
- * inside the canvas.
+ * inside the canvas, `pad` from its edges where it fits (D-087). A block in `backs` (a band or pill for a label) costs
+ * nothing when it holds the whole box, so a label sits on a block or beside it, never across its edge (D-087).
  */
-export function freeSpot(o: { size: Size; canvas: Size; cells: Rect[]; taken: Rect[]; pad: number; text?: Rect[] }): Point {
+export function freeSpot(o: { size: Size; canvas: Size; cells: Rect[]; taken: Rect[]; pad: number; text?: Rect[]; backs?: Rect[] }): Point {
   const { size, canvas, pad } = o, w = Math.min(size.w, canvas.w), h = Math.min(size.h, canvas.h);
-  const fit = (x: number, y: number): Point => ({ x: Math.max(0, Math.min(x, canvas.w - w)), y: Math.max(0, Math.min(y, canvas.h - h)) });
+  const px = Math.min(pad, (canvas.w - w) / 2), py = Math.min(pad, (canvas.h - h) / 2);
+  const fit = (x: number, y: number): Point => ({ x: Math.max(px, Math.min(x, canvas.w - w - px)), y: Math.max(py, Math.min(y, canvas.h - h - py)) });
+  const backs = new Set(o.backs ?? []), holds = (t: Rect, b: Rect) => b.x >= t.x - 1e-6 && b.y >= t.y - 1e-6 && b.x + b.w <= t.x + t.w + 1e-6 && b.y + b.h <= t.y + t.h + 1e-6;
   const cells = [...o.cells].map(c => ({ c, o: occupancy(c, o.taken) })).sort((a, b) => a.o - b.o).map(x => x.c);
   const step = Math.max(h, 10), spots: Point[] = [];
   for (const c of cells) for (let y = c.y + pad; y === c.y + pad || y + h <= c.y + c.h - pad + 1e-6; y += step) spots.push(fit(c.x + pad, y));
@@ -76,7 +81,7 @@ export function freeSpot(o: { size: Size; canvas: Size; cells: Rect[]; taken: Re
   const gap = pad / 2, text = (o.text ?? []).map(t => ({ x: t.x - gap, y: t.y - gap, w: t.w + 2 * gap, h: t.h + 2 * gap }));
   let best = spots[0], least = Infinity;
   for (const p of spots) {
-    const box = { ...p, w, h }, cover = o.taken.reduce((s, t) => s + shared(box, t), 0) + text.reduce((s, t) => s + 10 * shared(box, t), 0);
+    const box = { ...p, w, h }, cover = o.taken.reduce((s, t) => s + (backs.has(t) && holds(t, box) ? 0 : shared(box, t)), 0) + text.reduce((s, t) => s + 10 * shared(box, t), 0);
     if (cover < least - 1e-6) { least = cover; best = p; }
   }
   return best;

@@ -25,7 +25,7 @@ const inside = (outer: Rect, r: Rect) => r.x >= outer.x - EPS && r.y >= outer.y 
  * (null). Text flows only among blocks on the same thing, so the poster's band text never follows the headline above the
  * band, in any ratio (D-082); a caption that grows past its photo still sits on the photo (D-083).
  */
-function sitsOn(doc: KuraDoc, id: string, sizeId: string, r: Rect, whole = false): string | null {
+export function sitsOn(doc: KuraDoc, id: string, sizeId: string, r: Rect, whole = false): string | null {
   const probe = whole ? r : { x: r.x + .5, y: r.y + .5, w: 0, h: 0 };
   for (let j = doc.nodes.findIndex(n => n.id === id) - 1; j >= 0; j--) {
     const b = doc.nodes[j], f = b.frames[sizeId];
@@ -131,11 +131,12 @@ export function hugText(before: KuraDoc, after: KuraDoc, id: string, measure: Me
   for (const spec of after.sizes) {
     const f0 = was.frames[spec.id], f1 = now.frames[spec.id];
     if (!f0 || !f1) continue;
-    const scale = typeScale(spec.guide, canvasSize(spec.ratio)), b0 = textBox(was, f0, measure, scale);
-    if (b0.lines.length !== 1) continue;
+    const scale = typeScale(spec.guide, canvasSize(spec.ratio)), b0 = textBox(was, f0, measure, scale), oneLine = b0.lines.length === 1;
     const w0 = drawnWeight(was.font, was.weight), w1 = drawnWeight(now.font, now.weight), s1 = f1.fontSize ?? scale.body;
     const natural0 = oneLineWidth(was.text, b0.size, w0, measure, was.font), natural1 = Math.max(...now.text.split('\n').map(p => p.trim() ? oneLineWidth(p, s1, w1, measure, now.font) : 0)) * 1.02;
-    const free = !now.slot, hugging = free && f0.rect.w <= natural0 * 1.15 + 1, r = f1.rect, lines = measure(now.text, s1, w1, r.w, now.font);
+    const free = !now.slot, hugging = free && oneLine && f0.rect.w <= natural0 * 1.15 + 1, r = f1.rect, lines = measure(now.text, s1, w1, r.w, now.font);
+    // A free label that already wraps only widens when its new copy would split a word (D-087).
+    if (!oneLine && (!free || !splitsWord(now.text, lines))) continue;
     if (!hugging && (paragraphs || lines.length < 2 || !splitsWord(now.text, lines))) continue;
     const canvas = canvasSize(spec.ratio), side = physicalAlign(now.align, direction(now.text)), whole = { x: 0, y: 0, ...canvas };
     // A free label keeps the inset it has from the canvas edge, or from the block it sits on (a badge, a photo caption),
@@ -146,13 +147,25 @@ export function hugText(before: KuraDoc, after: KuraDoc, id: string, measure: Me
     const on = free && !f0.rot ? sitsOn(before, id, spec.id, g, true) : null;
     const longest = free ? Math.max(0, ...now.text.split(/\s+/).filter(Boolean).sort((p, q) => q.length - p.length).slice(0, 3).map(word => oneLineWidth(word, s1, w1, measure, now.font))) * 1.02 : 0;
     let b = on ? before.nodes.find(n => n.id === on)!.frames[spec.id]?.rect ?? whole : whole;
-    // A block too narrow for its longest word, or one its copy wrapped in would run off the canvas bottom from, gives way
-    // to the canvas (D-086).
-    if (b !== whole && (longest > b.w - 2 * inset(b) || g.y + textHeight(measure(now.text, s1, w1, Math.max(1, b.x + b.w - inset(b) - g.x), now.font).length, s1) > canvas.h)) b = whole;
+    // It grows from its aligned edge and wraps there when that side has at least three tenths of its bounds and the copy
+    // stays on the canvas (always from half); a label near the far edge slides back instead to keep one line, or wraps at
+    // three fifths of its bounds, never narrower than its longest word (D-084, D-087).
+    const gx = g.x + g.w / 2, down = (width: number) => g.y + textHeight(measure(now.text, s1, w1, Math.max(1, width), now.font).length, s1) <= canvas.h;
+    const roomIn = (lo: number, hi: number) => {
+      const span = hi - lo, aligned = Math.max(0, side === 'left' ? hi - Math.max(lo, g.x) : side === 'right' ? Math.min(hi, g.x + g.w) - lo : 2 * Math.min(gx - lo, hi - gx));
+      const wrap = natural1 <= aligned || aligned >= span / 2 || aligned >= span * .3 && down(aligned);
+      return Math.max(Math.min(longest, span), wrap ? aligned : natural1 <= span ? span : span * .6);
+    };
+    /** Whether the copy, in these bounds, stays above the canvas bottom. */
+    const holds = (lo: number, hi: number) => down(Math.min(natural1, roomIn(lo, hi)));
+    // A block too narrow for its longest word, or one its copy would run off the canvas bottom from while the canvas would
+    // hold it, gives way to the canvas (D-086, D-087).
+    const mw = inset(whole);
+    if (b !== whole && (longest > b.w - 2 * inset(b) || !holds(b.x + inset(b), b.x + b.w - inset(b)) && holds(mw, canvas.w - mw))) b = whole;
     const m = inset(b);
     let lo = b.x + m, hi = b.x + b.w - m;
     // Blocks beside it on its first line (a photo column, the accent block, other text) bound it too, unless that leaves
-    // no room for its longest word or would wrap it off the canvas bottom (D-086).
+    // no room for its longest word, or would wrap it off the canvas bottom where its wider bounds would not (D-086, D-087).
     if (free && !f0.rot) {
       const gap = layoutPad(canvas) / 2;
       let l = lo, h = hi;
@@ -164,13 +177,9 @@ export function hugText(before: KuraDoc, after: KuraDoc, id: string, measure: Me
         if (r.x + r.w <= g.x + EPS) l = Math.max(l, r.x + r.w + gap);
         else if (r.x >= g.x + g.w - EPS) h = Math.min(h, r.x - gap);
       }
-      if (h - l >= longest && g.y + textHeight(measure(now.text, s1, w1, Math.max(1, h - Math.max(l, g.x)), now.font).length, s1) <= canvas.h) { lo = l; hi = h; }
+      if (h - l >= longest && (holds(l, h) || !holds(lo, hi))) { lo = l; hi = h; }
     }
-    const span = hi - lo, gx = g.x + g.w / 2;
-    // It grows from its aligned edge and wraps there when that side has at least half its bounds; a label near the far
-    // edge slides back instead to keep one line, or wraps at three fifths of its bounds, never narrower than its longest word.
-    const aligned = Math.max(0, side === 'left' ? hi - Math.max(lo, g.x) : side === 'right' ? Math.min(hi, g.x + g.w) - lo : 2 * Math.min(gx - lo, hi - gx));
-    const room = free ? (f1.rot ? canvas.w : Math.max(Math.min(longest, span), natural1 <= aligned || aligned >= span / 2 ? aligned : natural1 <= span ? span : span * .6)) : roomFor(now, f1, canvas);
+    const room = free ? (f1.rot ? canvas.w : roomIn(lo, hi)) : roomFor(now, f1, canvas);
     const floor = hugging ? Math.min(natural1, f0.rect.w) : r.w, cap = Math.max(room, floor), w = Math.max(floor, Math.min(natural1, cap));
     // Keep the aligned edge's point fixed on the page: the centre moves along the box's own x axis. A free label is placed
     // from its box as the edit began, so typing key by key ends where a paste does (D-085).

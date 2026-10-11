@@ -6,6 +6,7 @@ import { snap, snapAngle, snapLines, type Handle, type SnapLine } from '../../co
 import { setFrames } from '../../core/ops';
 import { textBox } from '../../core/fit';
 import { unfit as unfitText } from '../../core/flow';
+import { keepReadable } from '../../core/compositions';
 import { measure } from '../measure';
 import { handlePoints, HANDLE_PX } from './overlay';
 import { emptyLive, type Editor } from '../editor';
@@ -38,9 +39,10 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
   };
   const handleAt = (p: Point): { id: string; handle: Handle | 'rotate' } | null => {
     for (const box of ed.boxes()) {
-      // A press well inside a small box (a short label, a thin rule) moves it; its handles are caught from outside (D-086).
-      const r = box.rect, q = rotatePoint(p, center(r), -box.rot), m = 3 * px();
-      const inner = Math.min(r.w, r.h) * ed.scale < 48 && q.x > r.x + m && q.x < r.x + r.w - m && q.y > r.y + m && q.y < r.y + r.h - m;
+      // A press inside a small box (a short label, a thin rule) moves it, up to its edge; its handles are caught from
+      // outside (D-086, D-087).
+      const r = box.rect, q = rotatePoint(p, center(r), -box.rot);
+      const inner = Math.min(r.w, r.h) * ed.scale < 48 && q.x > r.x && q.x < r.x + r.w && q.y > r.y && q.y < r.y + r.h;
       for (const { handle, at } of handlePoints(box, ed.scale)) if (!(inner && handle !== 'rotate') && Math.hypot(at.x - p.x, at.y - p.y) <= (HANDLE_PX / 2 + 4) * px()) return { id: box.id, handle };
     }
     return null;
@@ -184,7 +186,8 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
     if (d.kind === 'marquee' || d.kind === 'pan') { ed.invalidate(); return; }
     if (d.last && ed.doc !== d.last) { ed.invalidate(); return; }
     // Text moved, resized or turned past the canvas edge is flagged at once, not only in Export (D-077).
-    if (d.moved && ed.doc !== d.before) { ed.store.commit(ed.doc, { before: d.before }); ed.flagText(ed.store.ui.sel); }
+    // Automatic text moved onto or off a band or pill takes the colour that reads there (D-087).
+    if (d.moved && ed.doc !== d.before) { ed.store.commit(d.kind === 'move' ? keepReadable(ed.doc) : ed.doc, { before: d.before }); ed.flagText(ed.store.ui.sel); }
     else if (d.kind === 'move' && d.cycle) ed.select([d.cycle]);
     else if (d.kind === 'move' && d.release) ed.select(ed.store.ui.sel.filter(x => x !== d.release));
     else if (d.kind === 'move' && !e.shiftKey && ed.store.ui.sel.length > 1) { const hit = ed.hitTest(ed.toUnits(e)); if (hit) ed.select([hit.id]); }

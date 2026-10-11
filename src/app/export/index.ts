@@ -1,5 +1,5 @@
 import type { KuraDoc } from '../../core/document';
-import type { Size } from '../../core/geometry';
+import { rotatedBounds, type Size } from '../../core/geometry';
 import { buildScene, type SceneOp } from '../../core/scene';
 import { exportSize, ratioById, type ExportScale } from '../../core/ratios';
 import { svg, pdf, pageSize, licences, nameStem, type TextShift } from '../../core/export';
@@ -22,11 +22,17 @@ import groteskViet700 from '@fontsource/space-grotesk/files/space-grotesk-vietna
 // image frames are left out and counted (5y); PNG can leave an unfilled ground transparent (5z).
 export type Format = 'png' | 'jpg' | 'svg' | 'pdf';
 export type ExportChoice = { format: Format; scale: ExportScale; ground: boolean };
-export function summary(doc: KuraDoc, sizeId: string): { hidden: number; empty: number; icons: number; offText: number; otherScripts: boolean } {
+export function summary(doc: KuraDoc, sizeId: string): { hidden: number; empty: number; icons: number; offText: number; outside: number; otherScripts: boolean } {
   const scene = buildScene(doc, sizeId, measure), size = scene.size;
   // By the letters, like the canvas flag, so an empty stretch of a box past the edge is not reported (D-077).
   const spec = doc.sizes.find(s => s.id === sizeId)!, offText = doc.nodes.filter(n => n.kind === 'text' && n.frames[sizeId] && flagsFor(n, n.frames[sizeId], measure, size, spec.guide).some(f => f.kind === 'off-canvas')).length;
-  return { hidden: scene.hidden, empty: scene.empty, icons: licences(doc, sizeId).length, offText, otherScripts: doc.nodes.some(n => n.kind === 'text' && !n.frames[sizeId]?.hidden && scriptOf(n.text) !== 'latin') };
+  // Pictures, shapes and strokes wholly off the canvas do not show in the file at all (D-087); one partly off is a bleed.
+  const outside = doc.nodes.filter(n => {
+    const f = n.frames[sizeId]; if (n.kind === 'text' || !f || f.hidden || n.kind === 'image' && !n.asset) return false;
+    const b = rotatedBounds(f.rect, f.rot);
+    return b.x >= size.w || b.y >= size.h || b.x + b.w <= 0 || b.y + b.h <= 0;
+  }).length;
+  return { hidden: scene.hidden, empty: scene.empty, icons: licences(doc, sizeId).length, offText, outside, otherScripts: doc.nodes.some(n => n.kind === 'text' && !n.frames[sizeId]?.hidden && scriptOf(n.text) !== 'latin') };
 }
 /** File name: the headline's words, the ratio as the dial names it (post, grid, print …), scale and transparency (D-077). */
 export function fileName(doc: KuraDoc, sizeId: string, c: ExportChoice, stem = nameStem(doc, sizeId)): string {

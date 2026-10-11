@@ -142,6 +142,37 @@ Append-only. New entries supersede named old entries; do not edit history. Forma
     - Left-aligned text at a Header's thin left margin takes the new size's layout margin on Change ratio and linked sizes.
     - Start ignores a second click near the first one for 1.5 s; a click elsewhere, or after a key-started Start or Go, answers at once.
   - Why: loop 6 cohorts Q (46 sessions, 19 of 25 loop-5 items fixed, 6 partly) and R (12 fresh jobs, 31 sessions).
+- **D-087** 2026-10-11 fable — Loop 7 cohorts T and U.
+  - **T then a click.** A label's growth is judged from where the click put it (`hugBase`), so the first key no longer sends it back to where T added it. A click on the untouched "Text" keeps it selected, so typing replaces it.
+  - **Free labels, supersedes part of D-084.**
+    - A label wraps at its aligned side when that side has three tenths of its bounds and the wrapped copy stays on the canvas (always from half), so long copy no longer slides over the headline or out of a list.
+    - A block beside it, or the block it sits on, gives way to the canvas only when the wider bounds would hold the copy above the canvas bottom.
+    - A wrapped label widens when its new copy would split a word.
+  - **New labels.**
+    - A just-added label settles on a band or pill that holds all of it rather than across its edge (`freeSpot` `backs`).
+    - It lifts onto the canvas when its copy runs off the bottom.
+    - Placed spots keep the layout margin from the canvas edges.
+    - A paragraph pasted into it arrives at body size, as pasted copy does (D-074).
+  - **Readable labels.** `keepReadable` re-picks automatic text on any solid, unturned shape that holds it (a pill, an ink block), not only the accent band. It runs after a move and after a new label settles.
+  - **Sizes.**
+    - Larger and typed sizes on several blocks that share a size keep them sharing it ("Largest size that fits them all").
+    - A free label on a block grows only as far as the block holds it.
+    - The note names what stops it: a word, the space, the block, or for a free label the canvas bottom ("move it up for more").
+  - **Linked sizes and Change ratio, supersedes part of D-081.**
+    - A one-line free label stays on one line within the new size's margins.
+    - Free text away from the edges may grow to the new size's layout margin.
+    - Shrinking, text stops at three fifths of the new size's body type (a Post label in a Header is 9, not 4.5).
+    - Text that stood under other text on the same backing moves down to keep clear when the one above grew (Banner to Link).
+  - **Pasted text** hugs its widest line (a price list is as wide as its prices), up to 60 % of the width.
+  - **Arrange and Export.**
+    - Unturned text aligns by its letters.
+    - Align says when it sends a block past the canvas edge.
+    - Export counts pictures, shapes and strokes wholly outside the canvas ("not included").
+  - **Pictures.**
+    - Batches keep off guide cells that hold copy when the other cells can take them, up to four tiles to a cell. They arrive in reading order, so the files keep theirs.
+    - One picture dropped at a point goes on top where it was put, so a logo dropped over the headline is what a press there takes. Picks and batches still go under the text (supersedes part of D-047).
+  - **Handles.** A press anywhere inside a small box moves it; its handles are caught from outside.
+  - Why: loop 7 cohorts T (47 sessions; 18 of 21 loop-6 items fixed, 3 partly) and U (12 fresh jobs, 20 sessions).
 
 ## Next steps
 

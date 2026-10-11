@@ -2,6 +2,7 @@ import type { Measure, Rect, Size } from './geometry';
 import type { ColourRef, CompId, DocNode, KuraDoc, Palette, Slot } from './document';
 import { contrast, resolve } from './palette';
 import { contains } from './geometry';
+import { ICON_SHAPE } from './shapes';
 import type { GuideId } from './guides/types';
 import { fractionsOf } from './guides';
 import { textHeight, typeScale } from './fit';
@@ -59,25 +60,27 @@ export function textRoleOn(slots: Layout, text: Rect, palette: Palette): ColourR
 /** An automatic text colour: ink, ground, or the black or white chosen for a band; anything else was the person's choice. */
 export const autoFill = (fill: ColourRef): boolean => 'role' in fill && fill.role !== 'accent' || 'hex' in fill && /^#(000000|ffffff)$/i.test(fill.hex);
 /**
- * After a palette or ground change (a hue, Dark ground, a filled ground), text in an automatic colour that no longer reaches
- * 4.5 : 1 on what lies behind it takes the readable colour again (D-077, D-081): on an accent block in any size, the
- * accent; on nothing but the ground and other text in every size, the ground (D-083). Text that still reads, text over
- * pictures or other blocks, and chosen colours stay.
+ * After a palette or ground change (a hue, Dark ground, a filled ground) or a move, text in an automatic colour that no
+ * longer reaches 4.5 : 1 on what lies behind it takes the readable colour again (D-077, D-081): on a solid shape that
+ * holds it in an unturned size (a band, a pill), that shape's colour (D-087); on nothing but the ground and other text in
+ * every size, the ground (D-083). Text that still reads, text over pictures or partly over blocks, and chosen colours stay.
  */
 export function keepReadable(doc: KuraDoc): KuraDoc {
-  const accent = resolve({ role: 'accent' }, doc.palette), ground = resolve(doc.ground ?? { role: 'ground' }, doc.palette);
+  const ground = resolve(doc.ground ?? { role: 'ground' }, doc.palette);
   const inside = (outer: Rect, inner: Rect) => contains(outer, { x: inner.x, y: inner.y }) && contains(outer, { x: inner.x + inner.w, y: inner.y + inner.h });
   const meets = (a: Rect, b: Rect) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
   const nodes = doc.nodes.map((n, i) => {
     // Black or white counts as automatic only on layout text (the band's fallback); on a free label it was chosen (D-082).
     if (n.kind !== 'text' || !autoFill(n.fill) || 'hex' in n.fill && !n.slot) return n;
     const below = doc.nodes.slice(0, i), sizes = doc.sizes.filter(({ id }) => n.frames[id] && !n.frames[id].hidden);
-    const onBand = sizes.some(({ id }) => {
+    let onBand: string | null = null;
+    for (const { id } of sizes) {
       const t = n.frames[id];
-      return !t.rot && below.some(b => { const f = b.frames[id]; return b.kind === 'shape' && b.shape === 'rect' && 'role' in b.fill && b.fill.role === 'accent' && f && !f.hidden && !f.rot && inside(f.rect, t.rect); });
-    });
+      const back = t.rot ? undefined : [...below].reverse().find(b => { const f = b.frames[id]; return b.kind === 'shape' && b.shape !== ICON_SHAPE && (b.opacity ?? 1) >= 1 && f && !f.hidden && !f.rot && inside(f.rect, t.rect); });
+      if (back?.kind === 'shape') { onBand = resolve(back.fill, doc.palette); break; }
+    }
     const bare = !onBand && sizes.length > 0 && sizes.every(({ id }) => below.every(b => { const f = b.frames[id]; return !f || f.hidden || b.kind === 'ink' || b.kind === 'text' || !meets(f.rect, n.frames[id].rect); }));
-    const bg = onBand ? accent : bare ? ground : null;
+    const bg = onBand ?? (bare ? ground : null);
     return bg && contrast(resolve(n.fill, doc.palette), bg) < 4.5 ? { ...n, fill: readableOn(bg, doc.palette) } : n;
   });
   return nodes.some((n, i) => n !== doc.nodes[i]) ? { ...doc, nodes } : doc;

@@ -4,7 +4,8 @@ import { relayout } from '../src/core/relayout';
 import { addSize, removeSize, closestSize } from '../src/core/sizes';
 import { layout, starterNodes } from '../src/core/compositions';
 import { canvasSize } from '../src/core/ratios';
-import { validateDocument, type DocNode, type KuraDoc } from '../src/core/document';
+import { validateDocument, type DocNode, type KuraDoc, type TextNode } from '../src/core/document';
+import { textBox, typeScale } from '../src/core/fit';
 import { fakeMeasure, doc, frame, rectNode, textNode, ids, size } from './helpers';
 describe('re-ratio (5v)', () => {
   it('lists edge, centre and guide lines per axis', () => {
@@ -72,8 +73,11 @@ describe('re-ratio (5v)', () => {
     const t = textNode('t', frame(100, 100, 300, 20, { fontSize: 16.7 }), 'Hi'), header = doc([t], size({ ratio: 'cover' }));
     const post = reRatio(header, 'main', { ratio: 'square' }, fakeMeasure).doc.nodes[0].frames.main;
     expect(post.fontSize).toBeCloseTo(16.7 * 28 / 15, 6); expect(post.rect.w).toBeCloseTo(300 * 28 / 15, 6);
+    // Shrinking follows the geometry down to three fifths of the Header's body type (15), so it stays legible (D-087).
     const back = reRatio(doc([t]), 'main', { ratio: 'cover' }, fakeMeasure).doc.nodes[0].frames.main;
-    expect(back.fontSize).toBeCloseTo(16.7 / 4, 6);
+    expect(back.fontSize).toBeCloseTo(9, 6);
+    const big = reRatio(doc([{ ...t, frames: { main: { ...t.frames.main, fontSize: 80 } } }]), 'main', { ratio: 'cover' }, fakeMeasure).doc.nodes[0].frames.main;
+    expect(big.fontSize).toBeCloseTo(20, 6);
   });
   it('keeps a stack of left- or right-aligned labels aligned in a new ratio (D-082)', () => {
     const d = doc([textNode('a', frame(120, 400, 300, 23, { fontSize: 20 }), 'Teams of 4'), textNode('b', frame(120, 440, 160, 23, { fontSize: 20 }), 'RSVP'),
@@ -83,9 +87,14 @@ describe('re-ratio (5v)', () => {
   });
   it('keeps grown text inside its right margin going from a Header to a Post (D-083)', () => {
     const d = doc([textNode('t', frame(345, 100, 640, 20, { fontSize: 15 }), 'Careers fair 2026 meet forty employers')], size({ ratio: 'cover' }));
-    const r = reRatio(d, 'main', { ratio: 'square' }, fakeMeasure).doc.nodes[0].frames.main.rect;
-    // The Header's thin margin becomes the Post's layout margin (45).
-    expect(r.x + r.w).toBeCloseTo(1000 - 45, 6); expect(r.x).toBeCloseTo(345, 6);
+    const out = reRatio(d, 'main', { ratio: 'square' }, fakeMeasure).doc, r = out.nodes[0].frames.main.rect;
+    // The Header's thin margin becomes the Post's layout margin (45); the one-line label slides back to stay one line (D-087).
+    expect(r.x + r.w).toBeLessThanOrEqual(1000 - 45 + 1e-6); expect(r.x).toBeLessThan(345);
+    expect(textBox(out.nodes[0] as TextNode, out.nodes[0].frames.main, fakeMeasure, typeScale('thirds', { w: 1000, h: 1000 })).lines).toHaveLength(1);
+    // Copy too long for one line in the Post keeps its place and wraps at the margin.
+    const long = doc([textNode('t', frame(345, 100, 640, 20, { fontSize: 9 }), 'Careers fair 2026 meet forty employers in the Roundhouse')], size({ ratio: 'cover' }));
+    const q = reRatio(long, 'main', { ratio: 'square' }, fakeMeasure).doc.nodes[0].frames.main.rect;
+    expect(q.x).toBeCloseTo(345, 6); expect(q.x + q.w).toBeCloseTo(955, 6);
   });
   it('gives text at a Header’s thin left margin the Post’s layout margin (D-086)', () => {
     const d = doc([textNode('t', frame(11.25, 150, 900, 20, { fontSize: 15 }), 'Careers fair 2026 meet forty employers')], size({ ratio: 'cover' }));
@@ -203,5 +212,25 @@ describe('band text colour on relayout (D-076)', () => {
     expect(out.nodes.find(n => n.slot === 'body')).toMatchObject({ fill: { role: 'ink' } });
     const mine = { ...d, nodes: d.nodes.map(n => n.slot === 'body' ? { ...n, fill: { hex: '#123456' } } : n) };
     expect(relayout(mine, 'main', { ratio: 'portrait', guide: 'golden', comp: 'cover' }, fakeMeasure).doc.nodes.find(n => n.slot === 'body')).toMatchObject({ fill: { hex: '#123456' } });
+  });
+});
+describe('linked sizes keep labels whole and text clear (D-087)', () => {
+  const scale = (r: 'square' | 'cover' | 'banner' | 'landscape' | 'link') => typeScale('thirds', canvasSize(r));
+  it('keeps a row of one-line labels on one line in a Banner and a Slide made from a Header', () => {
+    const words = ['Analytics', 'Content', 'Social'], d = doc(words.map((w, i) => textNode(`l${i}`, frame(600 + i * 120, 140, w.length * 18 * .6 * 1.02, 21, { fontSize: 18 }), w)), size({ ratio: 'cover' }));
+    for (const ratio of ['banner', 'landscape'] as const) {
+      const out = addSize(d, ratio, 'b', fakeMeasure).doc;
+      for (const n of out.nodes) expect(textBox(n as TextNode, n.frames.b, fakeMeasure, scale(ratio)).lines).toHaveLength(1);
+    }
+  });
+  it('moves text that stood under a growing headline down to keep clear, on the same backing only', () => {
+    const d = doc([textNode('h', frame(45, 40, 700, 58, { fontSize: 50.5 }), 'Đêm hội Trăng Rằm 2026', { slot: 'headline' } as Partial<DocNode>),
+      textNode('b', frame(45, 110, 600, 23, { fontSize: 20 }), 'Hội trường lớn', { slot: 'body' } as Partial<DocNode>)], size({ ratio: 'banner' }));
+    const out = addSize(d, 'link', 'k', fakeMeasure).doc, [h, b] = out.nodes, hb = textBox(h as TextNode, h.frames.k, fakeMeasure, scale('link'));
+    expect(b.frames.k.rect.y).toBeGreaterThanOrEqual(hb.rect.y + hb.rect.h - 1e-6);
+    // Text on a band under the headline is not pushed by it.
+    const band = rectNode('band', frame(0, 100, 1000, 233)), onBand = doc([band, ...d.nodes], size({ ratio: 'banner' }));
+    const kept = addSize(onBand, 'link', 'k', fakeMeasure).doc, kh = textBox(kept.nodes[1] as TextNode, kept.nodes[1].frames.k, fakeMeasure, scale('link'));
+    expect(kept.nodes[2].frames.k.rect.y).toBeLessThan(kh.rect.y + kh.rect.h);
   });
 });

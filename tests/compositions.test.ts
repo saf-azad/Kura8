@@ -136,3 +136,12 @@ it('re-picks text that lies over other text on a filled ground, as a label paste
   const out = keepReadable(d);
   expect(contrast(resolve((out.nodes[1] as TextNode).fill, p), '#0a0a0a')).toBeGreaterThanOrEqual(4.5);
 });
+it('re-picks an automatic label on a pill or an ink block for that block’s colour, and leaves a turned or see-through one (D-087)', () => {
+  const p: Palette = { hue: 90, dark: false, custom: [] }, shape = (id: string, s: string, fill: object, extra = {}) => ({ id, kind: 'shape', shape: s, fill, frames: { main: { rect: { x: 0, y: 500, w: 600, h: 200 }, rot: 0 } }, ...extra }) as DocNode;
+  const label = { id: 'l', kind: 'text', text: 'Apply by Fri', weight: 400, align: 'start', fill: { role: 'ink' }, frames: { main: { rect: { x: 50, y: 550, w: 300, h: 30 }, rot: 0 } } } as DocNode;
+  const on = (back: DocNode) => { const d: KuraDoc = { version: 2, id: 'd', createdAt: '', palette: p, ground: null, sizes: [{ id: 'main', ratio: 'square', guide: null, comp: null }], nodes: [back, label] }; return keepReadable(d).nodes[1] as TextNode; };
+  expect(contrast(resolve(on(shape('pill', 'pill', { role: 'ink' })).fill, p), resolve({ role: 'ink' }, p))).toBeGreaterThanOrEqual(4.5);
+  expect(contrast(resolve(on(shape('pill', 'pill', { row: 'accent', step: 5 })).fill, p), resolve({ row: 'accent', step: 5 }, p))).toBeGreaterThanOrEqual(4.5);
+  expect(on(shape('pill', 'pill', { role: 'ink' }, { opacity: .5 })).fill).toEqual({ role: 'ink' });
+  expect(on(shape('pill', 'icon', { role: 'ink' })).fill).toEqual({ role: 'ink' });
+});

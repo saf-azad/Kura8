@@ -31,9 +31,11 @@ it('pans the picture inside its frame by moving the focus, never past the pictur
 it('spreads several new pictures over the emptiest cells, the drop cell first (D-058)', () => {
   const canvas = { w: 900, h: 300 }, cells = [0, 300, 600].map(x => ({ x, y: 0, w: 300, h: 300 })), taken = [{ x: 0, y: 0, w: 300, h: 300 }];
   expect(spreadCells({ x: 50, y: 50 }, cells, taken, 2, canvas, true)).toEqual([cells[0], cells[1]]);
-  expect(spreadCells({ x: 450, y: 150 }, cells, taken, 3, canvas, false)).toEqual([cells[1], cells[2], cells[0]]);
+  // The emptiest cells nearest the point, in reading order so the files keep theirs (D-087).
+  expect(spreadCells({ x: 450, y: 150 }, cells, taken, 2, canvas, false)).toEqual([cells[1], cells[2]]);
+  expect(spreadCells({ x: 450, y: 150 }, cells, taken, 3, canvas, false)).toEqual([cells[0], cells[1], cells[2]]);
   // A batch larger than the cells splits them into tiles, so no two pictures overlap (D-086).
-  expect(spreadCells({ x: 450, y: 150 }, cells, [], 4, canvas, false)[3]).toEqual(tiles(cells[0], 2, 12)[1]);
+  expect(spreadCells({ x: 450, y: 150 }, cells, [], 4, canvas, false)).toEqual([...tiles(cells[0], 2, 12), ...tiles(cells[1], 2, 12)]);
   expect(spreadCells({ x: 0, y: 0 }, [{ x: 600, y: 0, w: 300, h: 300 }], [], 2, canvas, false)).toEqual(tiles({ x: 600, y: 0, w: 300, h: 300 }, 2, 12));
   expect(spreadCells({ x: 0, y: 0 }, [], taken, 2, canvas, true)).toEqual(tiles({ x: 225, y: 75, w: 450, h: 150 }, 2, 6));
 });
@@ -67,4 +69,13 @@ it('puts copy over a photo before it puts it over other copy, keeping clear of t
   expect(p.y + 40).toBeLessThanOrEqual(580);
   const q = freeSpot({ size: { w: 300, h: 40 }, canvas, cells: [], taken: [], text: [{ x: 0, y: 0, w: 1000, h: 100 }], pad: 40 });
   expect(q.y).toBeGreaterThanOrEqual(120);
+});
+it('keeps a batch of pictures off the cells that hold copy, tiling the rest, and in reading order (D-087)', () => {
+  const canvas = { w: 900, h: 900 }, cells = [0, 1, 2].flatMap(r => [0, 1, 2].map(c => ({ x: c * 300, y: r * 300, w: 300, h: 300 })));
+  const title = { x: 20, y: 20, w: 500, h: 80 }, boxes = spreadCells({ x: 450, y: 450 }, cells, [title], 9, canvas, false, [title]);
+  expect(boxes).toHaveLength(9);
+  expect(boxes.every(b => b.y >= 300 || b.x >= 600)).toBe(true);
+  for (let i = 1; i < boxes.length; i++) expect(boxes[i].y > boxes[i - 1].y + 1e-6 || Math.abs(boxes[i].y - boxes[i - 1].y) < 1e-6 && boxes[i].x > boxes[i - 1].x).toBe(true);
+  // Too many for the clear cells at four to a cell: every cell takes tiles again.
+  expect(spreadCells({ x: 450, y: 450 }, cells, [title], 40, canvas, false, [title]).some(b => b.x < 600 && b.y < 300)).toBe(true);
 });

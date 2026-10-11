@@ -86,6 +86,7 @@ export function exportSheet(ed: Editor): HTMLElement {
     const lines: string[] = [];
     if (s.hidden) lines.push(`${s.hidden} hidden object${s.hidden > 1 ? 's' : ''} not included`);
     if (s.offText) lines.push(`${s.offText} text block${s.offText > 1 ? 's run' : ' runs'} past the canvas edge`);
+    if (s.outside) lines.push(`${s.outside} block${s.outside > 1 ? 's lie' : ' lies'} outside the canvas, not included`);
     if (s.empty) lines.push(`${s.empty} empty image frame${s.empty > 1 ? 's' : ''} not included`);
     if (vector && s.icons) lines.push('Icon licences are written into the file');
     if (vector && s.otherScripts) lines.push('Text in other scripts uses the viewer’s system fonts');
