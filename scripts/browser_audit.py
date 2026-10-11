@@ -251,7 +251,7 @@ def s_matrix(app):
 @step('5b dial reopens on the last setting and a hub tap goes straight to the canvas')
 def s_5b(app):
     app.fresh({'ratio': 'story', 'comp': 'band', 'guide': 'divisions', 'hue': None, 'dark': True}); p = app.page
-    check('Story 9:16' in p.locator('.card').nth(0).inner_text() and 'Band' in p.locator('.card').nth(1).inner_text(), 'dial did not reopen on stored settings')
+    check('Instagram story 9:16' in p.locator('.card').nth(0).inner_text() and 'Band' in p.locator('.card').nth(1).inner_text(), 'dial did not reopen on stored settings')
     p.locator('.hub').click(); p.wait_for_timeout(400)
     check(p.locator('.dial').count() == 0 or not p.locator('.dial').is_visible(), 'hub tap did not open the canvas')
     p.keyboard.press('Escape')
