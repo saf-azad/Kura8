@@ -7,6 +7,7 @@ import { textBox, textHeight, typeScale } from './fit';
 import { oneLineWidth } from './flow';
 import { drawnWeight } from './fonts';
 import { direction, physicalAlign } from './script';
+import { layoutPad } from './compositions';
 // Re-ratio (5v): an edge that sits on a guide line, a canvas edge or the centre line keeps that line id in the new
 // geometry; everything else scales about its centre. Anything off the canvas or overflowing is flagged, never cropped.
 export type Flag = { id: string; kind: 'off-canvas' | 'overflow' };
@@ -49,9 +50,20 @@ export function reRatioFrames(doc: KuraDoc, from: SizeSpec, to: { ratio: RatioId
     const side = node.kind === 'text' ? physicalAlign(node.align, direction(node.text)) : 'center';
     const free = side === 'left' ? box.x / c0.w * c1.w : side === 'right' ? (box.x + box.w) / c0.w * c1.w - w : cx - w / 2;
     next.rect = { x: L !== null ? L : Rr !== null ? Rr - w : free, y: T !== null ? T : B !== null ? B - h : cy - h / 2, w, h };
-    // An icon or a loose picture (a logo, a photo placed by hand) keeps its proportions (D-077, D-081): it fits the mapped
-    // box, against the edges that stayed on a line, else centred. A layout's picture slot takes the new slot's shape.
-    if ((node.kind === 'shape' && node.icon || node.kind === 'image' && !node.slot) && f.rect.h > 0) {
+    // Text that grew (wide to tall) stops at its right margin rather than running off the canvas; a margin up to the
+    // layout's becomes the new size's layout margin, so a Header's thin margin is not carried into a Post (D-083).
+    if (node.kind === 'text' && !f.rot) {
+      const m0 = Math.max(0, Math.min(box.x, c0.w - box.x - box.w)), m = Math.max(m0 / c0.w * c1.w, Math.min(m0, layoutPad(c0)) / layoutPad(c0) * layoutPad(c1));
+      const r = next.rect, room = c1.w - m - r.x;
+      if (r.x + r.w > c1.w - m + 1e-6 && room >= 20) {
+        const nh = node.fit ? r.h : boxOf(node, { ...next, rect: { ...r, w: room } }, measure, c1, to.guide).h;
+        next.rect = { ...r, w: room, h: nh, y: T === null && B !== null ? B - nh : r.y };
+      }
+    }
+    // An icon, a loose picture (a logo, a photo placed by hand) or a circle picture keeps its proportions (D-077, D-081,
+    // D-083): it fits the mapped box, against the edges that stayed on a line, else centred. A layout's picture slot
+    // takes the new slot's shape.
+    if ((node.kind === 'shape' && node.icon || node.kind === 'image' && (!node.slot || node.mask === 'circle')) && f.rect.h > 0) {
       const a = f.rect.w / f.rect.h, r = next.rect, iw = Math.min(r.w, r.h * a), ih = iw / a;
       const place = (start: number, span: number, size: number, lo: number | null, hi: number | null) => lo !== null && hi === null ? start : hi !== null && lo === null ? start + span - size : start + (span - size) / 2;
       next.rect = { x: place(r.x, r.w, iw, L, Rr), y: place(r.y, r.h, ih, T, B), w: iw, h: ih };

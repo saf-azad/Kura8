@@ -130,3 +130,9 @@ it('keeps black or white chosen for a free label on the band (D-082)', () => {
   const d: KuraDoc = { version: 2, id: 'd', createdAt: '', palette: { ...p, dark: true }, ground: null, sizes: [{ id: 'main', ratio: 'square', guide: null, comp: null }], nodes: [band, label] };
   expect(keepReadable(d)).toBe(d);
 });
+it('re-picks text that lies over other text on a filled ground, as a label pasted into a headline room (D-083)', () => {
+  const p: Palette = { hue: 210, dark: false, custom: [] }, t = (id: string, y: number) => ({ id, kind: 'text', text: 'Hi', weight: 400, align: 'start', fill: { role: 'ink' }, frames: { main: { rect: { x: 50, y, w: 600, h: 300 }, rot: 0 } } }) as DocNode;
+  const d: KuraDoc = { version: 2, id: 'd', createdAt: '', palette: p, ground: { hex: '#0a0a0a' }, sizes: [{ id: 'main', ratio: 'square', guide: null, comp: null }], nodes: [t('room', 50), t('label', 100)] };
+  const out = keepReadable(d);
+  expect(contrast(resolve((out.nodes[1] as TextNode).fill, p), '#0a0a0a')).toBeGreaterThanOrEqual(4.5);
+});

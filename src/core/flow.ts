@@ -20,14 +20,15 @@ const held = (n: TextNode, b: TextBox): TextBox => n.fit ? b : extent(b);
 const overlaps = (a: Rect, b: Rect) => a.x < b.x + b.w - EPS && b.x < a.x + a.w - EPS;
 const inside = (outer: Rect, r: Rect) => r.x >= outer.x - EPS && r.y >= outer.y - EPS && r.x + r.w <= outer.x + outer.w + EPS && r.y + r.h <= outer.y + outer.h + EPS;
 /**
- * What a text block sits on in a size: the topmost unturned picture or shape under it that holds it whole, else the
- * ground (null). Text flows only among blocks on the same thing, so the poster's band text never follows the headline
- * above the band, in any ratio (D-082).
+ * What a text block sits on in a size: the topmost unturned picture or shape under its top-left corner, else the ground
+ * (null). Text flows only among blocks on the same thing, so the poster's band text never follows the headline above the
+ * band, in any ratio (D-082); a caption that grows past its photo still sits on the photo (D-083).
  */
 function sitsOn(doc: KuraDoc, id: string, sizeId: string, r: Rect): string | null {
+  const corner = { x: r.x + .5, y: r.y + .5 };
   for (let j = doc.nodes.findIndex(n => n.id === id) - 1; j >= 0; j--) {
     const b = doc.nodes[j], f = b.frames[sizeId];
-    if (b.kind !== 'text' && b.kind !== 'ink' && f && !f.hidden && !f.rot && inside(f.rect, r)) return b.id;
+    if (b.kind !== 'text' && b.kind !== 'ink' && f && !f.hidden && !f.rot && inside(f.rect, { ...corner, w: 0, h: 0 })) return b.id;
   }
   return null;
 }
@@ -113,14 +114,21 @@ export function hugText(before: KuraDoc, after: KuraDoc, id: string, measure: Me
     const natural0 = oneLineWidth(was.text, b0.size, w0, measure, was.font), natural1 = Math.max(...now.text.split('\n').map(p => p.trim() ? oneLineWidth(p, s1, w1, measure, now.font) : 0)) * 1.02;
     const free = !now.slot, hugging = free && f0.rect.w <= natural0 * 1.15 + 1, r = f1.rect, lines = measure(now.text, s1, w1, r.w, now.font);
     if (!hugging && (paragraphs || lines.length < 2 || !splitsWord(now.text, lines))) continue;
-    const canvas = canvasSize(spec.ratio), side = physicalAlign(now.align, direction(now.text)), cx = r.x + r.w / 2, room = free ? canvas.w : roomFor(now, f1, canvas);
+    const canvas = canvasSize(spec.ratio), side = physicalAlign(now.align, direction(now.text)), cx = r.x + r.w / 2;
+    // A free label keeps the inset it has from the canvas edge, or from the block it sits on (a badge, a photo caption),
+    // up to a twentieth of that width, on both sides, so it never grows flush against an edge or out of its block (D-083).
+    const on = free && !f1.rot ? sitsOn(after, id, spec.id, r) : null, b = on ? after.nodes.find(n => n.id === on)!.frames[spec.id].rect : { x: 0, y: 0, ...canvas };
+    const m = Math.max(0, Math.min(r.x - b.x, b.x + b.w - r.x - r.w, b.w / 20)), lo = b.x + m, hi = b.x + b.w - m;
+    // It slides along to keep one line when that fits; copy that wraps anyway wraps on its aligned side instead.
+    const aligned = side === 'left' ? hi - Math.max(lo, r.x) : side === 'right' ? Math.min(hi, r.x + r.w) - lo : 2 * Math.min(cx - lo, hi - cx);
+    const room = free ? (f1.rot ? canvas.w : natural1 <= hi - lo ? hi - lo : aligned) : roomFor(now, f1, canvas);
     const cap = Math.max(room, hugging ? 0 : r.w), w = Math.max(hugging ? 0 : r.w, Math.min(natural1, cap));
     if (Math.abs(w - r.w) < 1e-6) continue;
     // Keep the aligned edge's point fixed on the page: the centre moves along the box's own x axis.
     const a = (width: number) => side === 'left' ? -width / 2 : side === 'right' ? width / 2 : 0, t = f1.rot * Math.PI / 180, d = a(r.w) - a(w);
     const c = { x: cx + d * Math.cos(t), y: r.y + r.h / 2 + d * Math.sin(t) };
-    // A free label at the canvas edge (an Arabic label against the left edge) slides back rather than wrapping.
-    const x = free && !f1.rot ? Math.max(Math.min(c.x - w / 2, canvas.w - w), Math.min(0, r.x)) : c.x - w / 2;
+    // A free label near an edge (an Arabic label against the left edge) slides back rather than wrapping.
+    const x = free && !f1.rot ? Math.max(Math.min(c.x - w / 2, hi - w), Math.min(lo, r.x)) : c.x - w / 2;
     doc = { ...doc, nodes: doc.nodes.map(n => n.id === id ? { ...n, frames: { ...n.frames, [spec.id]: { ...f1, rect: { ...r, x, y: c.y - r.h / 2, w } } } } : n) };
   }
   return doc;

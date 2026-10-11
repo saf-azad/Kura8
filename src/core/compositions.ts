@@ -12,10 +12,12 @@ export type TextSlot = { rect: Rect; fontSize: number; fit?: boolean };
 export type Layout = { image: Rect | null; accent: Rect; headline: TextSlot; body: TextSlot };
 export type LayoutInput = { canvas: Size; guide: GuideId; comp: CompId; measure: Measure; headline: string; body: string };
 export const STARTER = { headline: 'Headline', body: 'Body text' };
+/** A layout's margin: 4.5 % of the canvas's shorter side. */
+export const layoutPad = (canvas: Size): number => Math.min(canvas.w, canvas.h) * .045;
 const R = (x: number, y: number, w: number, h: number): Rect => ({ x, y, w, h });
 export function layout(o: LayoutInput): Layout {
   const W = o.canvas.w, H = o.canvas.h, F = fractionsOf(o.guide), a = F[0], b = F[F.length - 1], scale = typeScale(o.guide, o.canvas);
-  const pad = Math.min(W, H) * .045, ax = a * W, bx = b * W, ay = a * H, by = b * H;
+  const pad = layoutPad(o.canvas), ax = a * W, bx = b * W, ay = a * H, by = b * H;
   let fs = Math.min(scale.headline, H * .075), image: Rect | null = null, accent: Rect, cap = 0;
   let head: { x: number; y: number; w: number }, body: { x: number; y: number; w: number } | null = null;
   switch (o.comp) {
@@ -59,8 +61,8 @@ export const autoFill = (fill: ColourRef): boolean => 'role' in fill && fill.rol
 /**
  * After a palette or ground change (a hue, Dark ground, a filled ground), text in an automatic colour that no longer reaches
  * 4.5 : 1 on what lies behind it takes the readable colour again (D-077, D-081): on an accent block in any size, the
- * accent; on nothing at all in every size, the ground. Text that still reads, text over pictures or other blocks, and
- * chosen colours stay.
+ * accent; on nothing but the ground and other text in every size, the ground (D-083). Text that still reads, text over
+ * pictures or other blocks, and chosen colours stay.
  */
 export function keepReadable(doc: KuraDoc): KuraDoc {
   const accent = resolve({ role: 'accent' }, doc.palette), ground = resolve(doc.ground ?? { role: 'ground' }, doc.palette);
@@ -74,7 +76,7 @@ export function keepReadable(doc: KuraDoc): KuraDoc {
       const t = n.frames[id];
       return !t.rot && below.some(b => { const f = b.frames[id]; return b.kind === 'shape' && b.shape === 'rect' && 'role' in b.fill && b.fill.role === 'accent' && f && !f.hidden && !f.rot && inside(f.rect, t.rect); });
     });
-    const bare = !onBand && sizes.length > 0 && sizes.every(({ id }) => below.every(b => { const f = b.frames[id]; return !f || f.hidden || b.kind === 'ink' || !meets(f.rect, n.frames[id].rect); }));
+    const bare = !onBand && sizes.length > 0 && sizes.every(({ id }) => below.every(b => { const f = b.frames[id]; return !f || f.hidden || b.kind === 'ink' || b.kind === 'text' || !meets(f.rect, n.frames[id].rect); }));
     const bg = onBand ? accent : bare ? ground : null;
     return bg && contrast(resolve(n.fill, doc.palette), bg) < 4.5 ? { ...n, fill: readableOn(bg, doc.palette) } : n;
   });

@@ -38,7 +38,9 @@ function op(o: SceneOp, image: (o: Extract<SceneOp, { kind: 'image' }>) => SvgIm
   const c = coverCrop(img.natural, r, o.focus);
   // A circle mask clips to the ellipse the frame bounds (D-081).
   const clip = o.circle ? `<clipPath id="m-${escapeXml(o.id)}"><ellipse cx="${n2(r.w / 2)}" cy="${n2(r.h / 2)}" rx="${n2(r.w / 2)}" ry="${n2(r.h / 2)}"/></clipPath>` : '';
-  return `${open}${clip}<svg width="${n2(r.w)}" height="${n2(r.h)}" viewBox="${n2(c.x)} ${n2(c.y)} ${n2(c.w)} ${n2(c.h)}" preserveAspectRatio="none"${o.circle ? ` clip-path="url(#m-${escapeXml(o.id)})"` : ''}><image href="${escapeXml(img.href)}" width="${img.natural.w}" height="${img.natural.h}"/></svg></g>`;
+  // The clip sits on a group in the frame's own units; on the nested svg it would be read in picture pixels (D-083).
+  const pic = `<svg width="${n2(r.w)}" height="${n2(r.h)}" viewBox="${n2(c.x)} ${n2(c.y)} ${n2(c.w)} ${n2(c.h)}" preserveAspectRatio="none"><image href="${escapeXml(img.href)}" width="${img.natural.w}" height="${img.natural.h}"/></svg>`;
+  return `${open}${clip}${o.circle ? `<g clip-path="url(#m-${escapeXml(o.id)})">${pic}</g>` : pic}</g>`;
 }
 /** SVG of a scene at `pixels` size. Empty image frames are left out; `ground: false` leaves the ground transparent. */
 export function svg(scene: Scene, o: { pixels: Size; ground: boolean; fontCss?: string; licences: Licence[]; image: (op: Extract<SceneOp, { kind: 'image' }>) => SvgImage | undefined; textShift?: TextShift }): string {

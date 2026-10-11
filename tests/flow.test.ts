@@ -1,7 +1,7 @@
 import { it, expect } from 'vitest';
 import { flowText, hugText, oneLineWidth, roomFor, wholeWordSize } from '../src/core/flow';
 import { updateNodes } from '../src/core/ops';
-import type { KuraDoc, TextNode } from '../src/core/document';
+import type { DocNode, KuraDoc, TextNode } from '../src/core/document';
 import { doc, frame, rectNode, textNode, fakeMeasure, charMeasure } from './helpers';
 // Headline 50 units (line 57.5) in a 300-wide box: "Hello" is one line, "Hello there friend" three.
 const stack = (): KuraDoc => doc([
@@ -58,9 +58,10 @@ it('keeps one-line text on one line when its size or face changes (D-070)', () =
   expect(w(hugText(wide, grow(wide, 250), 'n', charMeasure)).w).toBeCloseTo(765, 0);
   const centred = updateNodes(hug, ['n'], n => ({ ...n, align: 'center', frames: { main: { ...n.frames.main, rect: { ...n.frames.main.rect, x: 400 } } } }));
   const c = w(hugText(centred, grow(centred, 150), 'n', charMeasure)); expect(c.x + c.w / 2).toBeCloseTo(400 + 153 / 2, 5);
-  expect(w(hugText(hug, updateNodes(grow(hug, 150), ['n'], n => ({ ...n, align: 'center' })), 'n', charMeasure)).x).toBe(0);
-  // A free label slides back to stay on the canvas, up to the canvas width (D-070, D-081).
-  const huge = grow(hug, 400); expect(w(hugText(hug, huge, 'n', charMeasure))).toMatchObject({ x: 0, w: 1000 });
+  expect(w(hugText(hug, updateNodes(grow(hug, 150), ['n'], n => ({ ...n, align: 'center' })), 'n', charMeasure)).x).toBe(50);
+  // A free label slides back to stay on the canvas, keeping its inset up to a twentieth of the width; one too long for
+  // a line wraps on its aligned side (D-070, D-081, D-083).
+  const huge = grow(hug, 400); expect(w(hugText(hug, huge, 'n', charMeasure))).toMatchObject({ x: 100, w: 850 });
   const two = updateNodes(wide, ['n'], n => ({ ...n, text: 'a\nb' }));
   expect(hugText(two, grow(two, 150), 'n', charMeasure)).toEqual(grow(two, 150));
   expect(hugText(hug, hug, 'missing', charMeasure)).toBe(hug);
@@ -133,14 +134,14 @@ it('finds the largest size that keeps every word whole, and the room a block may
   expect(roomFor(t, { ...t.frames.main, rot: 10 }, canvas)).toBe(1000);
   expect(roomFor({ ...t, slot: undefined }, t.frames.main, canvas)).toBe(1000);
 });
-it('keeps layout text in its slot when retyped, and slides a free label at the left edge back on (D-081)', () => {
+it('keeps layout text in its slot when retyped, and slides a free label near the left edge back to its inset (D-081, D-083)', () => {
   // The starter headline nearly fills its slot, so it looked like a hugging label and grew across the picture column.
   const slot = doc([textNode('h', frame(378, 0, 400, 69, { fontSize: 60 }), 'Headline', { slot: 'headline' } as Partial<TextNode>)]);
   const retyped = updateNodes(slot, ['h'], n => ({ ...n, text: 'Graduate Showcase at Western Sydney University' }));
   expect(hugText(slot, retyped, 'h', charMeasure)).toBe(retyped);
   const label = doc([textNode('a', frame(20, 0, 123, 57.5, { fontSize: 50 }), '+142', { align: 'end' } as Partial<TextNode>)]);
   const big = updateNodes(label, ['a'], n => ({ ...n, frames: { main: { ...n.frames.main, fontSize: 100 } } }));
-  expect(hugText(label, big, 'a', charMeasure).nodes[0].frames.main.rect).toMatchObject({ x: 0 });
+  expect(hugText(label, big, 'a', charMeasure).nodes[0].frames.main.rect).toMatchObject({ x: 20 });
   expect(hugText(label, big, 'a', charMeasure).nodes[0].frames.main.rect.w).toBeCloseTo(240 * 1.02, 0);
 });
 it('widens a hugging label to its widest paragraph when a paragraph is pasted in (D-082)', () => {
@@ -157,4 +158,17 @@ it('moves text only among blocks on the same thing: band text stays when the hea
   // Two blocks on the same band still flow together.
   const both = doc([band, textNode('h', frame(0, 62, 300, 23, { fontSize: 20 }), 'Hi'), textNode('b', frame(0, 90, 300, 23, { fontSize: 20 }), 'Body')]);
   expect(flowText(both, updateNodes(both, ['h'], n => ({ ...n, text: 'Hello there friend of mine' })), 'h', fakeMeasure).nodes[2].frames.main.rect.y).toBeGreaterThan(90);
+});
+it('keeps captions on a photo flowing together when the top one grows past the photo (D-083)', () => {
+  const photo = { id: 'p', kind: 'image', asset: 'a', frames: { main: frame(0, 0, 333, 1000) } } as DocNode;
+  const d = doc([photo, textNode('a', frame(20, 400, 280, 23, { fontSize: 20 }), 'Night'), textNode('b', frame(20, 433, 280, 23, { fontSize: 20 }), 'Market')]);
+  const grown = updateNodes(d, ['a'], n => ({ ...n, text: 'Night market every Friday from six', frames: { main: { ...n.frames.main, rect: { ...n.frames.main.rect, w: 360 } } } }));
+  expect(flowText(d, grown, 'a', fakeMeasure).nodes[2].frames.main.rect.y).toBeGreaterThan(433);
+});
+it('keeps a label on a block inside the block when it grows (D-083)', () => {
+  const badge = rectNode('b', frame(100, 100, 380, 120));
+  const tag = doc([badge, textNode('t', frame(130, 140, 129, 32, { fontSize: 30 }), 'Tagline')]);
+  const longer = updateNodes(tag, ['t'], n => ({ ...n, text: 'Tagline for the whole of the spring term' }));
+  const r = hugText(tag, longer, 't', charMeasure).nodes[1].frames.main.rect;
+  expect(r.x).toBe(130); expect(r.x + r.w).toBeCloseTo(100 + 380 - 19, 5);
 });

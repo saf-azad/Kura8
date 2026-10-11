@@ -158,6 +158,8 @@ function go(): void {
   const next = keepReadable({ ...out.doc, palette });
   store.setUI({ screen: 'editor', size: spec.id });
   route();
+  // A double press on Go lands on the dial's empty editor, not on a block (D-083).
+  const guarded = ensureEditor(); guarded.ignorePointerUntil = guarded.ignoreKeysUntil = performance.now() + 650;
   if (next !== before && JSON.stringify(next) !== JSON.stringify(before)) {
     store.commit(next, {}); store.setUI({ flags: out.flags });
     const ed = ensureEditor();
@@ -172,7 +174,8 @@ function fresh(): void {
   const ed = ensureEditor();
   if (had) toast('New design · Undo brings the last one back', 2200);
   ed.lift();
-  ed.editText(headline); ed.ignorePointerUntil = performance.now() + 650;
+  // A slow second click on Start (up to a second) still leaves the headline editor open (D-083).
+  ed.editText(headline); ed.ignorePointerUntil = performance.now() + 1000; ed.ignoreKeysUntil = performance.now() + 650;
 }
 let screen = '';
 store.on(() => {

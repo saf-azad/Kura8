@@ -85,11 +85,13 @@ input.readout{width:58px;text-align:center;font:inherit;font-size:13px;backgroun
 .info{position:absolute;left:90px;bottom:44px;font-size:12px;display:flex;gap:10px;pointer-events:none;transition:opacity var(--fast)}
 .info span:first-child{max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .shortcut-hint{position:absolute;right:40px;bottom:36px;display:flex;align-items:center;gap:8px;font-size:12px}
-.toast{position:fixed;left:50%;bottom:36px;transform:translateX(-50%);height:36px;padding:0 18px;border-radius:var(--r-pill);background:var(--ink);color:var(--white);display:flex;align-items:center;font-size:13px;pointer-events:none;opacity:0;transition:opacity var(--fast);z-index:30;white-space:nowrap}
+.toast{position:fixed;left:50%;bottom:36px;transform:translateX(-50%);height:36px;padding:0 18px;border-radius:var(--r-pill);background:var(--ink);color:var(--white);display:flex;align-items:center;font-size:13px;pointer-events:none;opacity:0;transition:opacity var(--fast);z-index:46;white-space:nowrap}
 .toast.on{opacity:1}
 .tip{position:fixed;transform:translateX(-50%);padding:5px 10px;border-radius:var(--r-sm);background:var(--ink);color:var(--white);font-size:12px;white-space:nowrap;pointer-events:none;z-index:50;opacity:0;transition:opacity var(--fast)}
 .tip.on{opacity:1}
-.help{position:fixed;left:40px;bottom:36px;display:flex;align-items:flex-end;gap:10px;z-index:40}
+/* The help strip's empty area passes clicks through to the panels it overlaps (D-083). */
+.help{position:fixed;left:40px;bottom:36px;display:flex;align-items:flex-end;gap:10px;z-index:40;pointer-events:none}
+.help>button{pointer-events:auto}
 .help>button{width:36px;height:36px;border:var(--stroke) solid var(--ink);border-radius:var(--r-pill);font-size:16px;transition:background var(--fast)}
 .help>button:hover{background:var(--slate-a15)}.help>button[aria-pressed=true]{background:var(--ink);color:var(--white)}
 .help-box{width:320px;padding:12px 15px;border:var(--stroke) solid var(--ink);border-radius:var(--r-md);background:var(--paper);display:flex;flex-direction:column;gap:4px;pointer-events:none;transition:opacity var(--fast),transform var(--base) var(--ease)}
@@ -159,7 +161,7 @@ input[type=range]{width:100%;accent-color:#000;margin:0}
 .keys{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:40px}
 .keys>div{display:flex;flex-direction:column;gap:10px}
 .keys .row span:last-child{display:flex;gap:4px}
-.sheet{position:fixed;left:50%;bottom:0;width:min(660px,100vw);margin-left:max(-330px,-50vw);padding:15px 40px 40px;border:var(--stroke) solid var(--ink);border-bottom:0;border-radius:49px 49px 0 0;background:var(--paper);display:flex;flex-direction:column;gap:25px;z-index:20;transition:transform var(--sheet) var(--ease)}
+.sheet{position:fixed;left:50%;bottom:0;width:min(660px,100vw);margin-left:max(-330px,-50vw);padding:15px 40px 40px;border:var(--stroke) solid var(--ink);border-bottom:0;border-radius:49px 49px 0 0;background:var(--paper);display:flex;flex-direction:column;gap:25px;z-index:45;max-height:100vh;overflow-y:auto;transition:transform var(--sheet) var(--ease)}
 .sheet[hidden]{display:flex!important;transform:translateY(110%)}
 .sheet .grabber{align-self:center;width:40px;height:5px;border-radius:2.5px;background:var(--ink);opacity:.6}
 .sheet .body{display:grid;grid-template-columns:220px minmax(0,1fr);gap:40px;align-items:center}

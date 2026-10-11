@@ -81,6 +81,12 @@ describe('re-ratio (5v)', () => {
     const out = reRatio(d, 'main', { ratio: 'cover' }, fakeMeasure).doc.nodes.map(n => n.frames.main.rect);
     expect(out[0].x).toBeCloseTo(out[1].x, 6); expect(out[2].x + out[2].w).toBeCloseTo(out[3].x + out[3].w, 6);
   });
+  it('keeps grown text inside its right margin going from a Header to a Post (D-083)', () => {
+    const d = doc([textNode('t', frame(345, 100, 640, 20, { fontSize: 15 }), 'Careers fair 2026 meet forty employers')], size({ ratio: 'cover' }));
+    const r = reRatio(d, 'main', { ratio: 'square' }, fakeMeasure).doc.nodes[0].frames.main.rect;
+    // The Header's thin margin becomes the Post's layout margin (45).
+    expect(r.x + r.w).toBeCloseTo(1000 - 45, 6); expect(r.x).toBeCloseTo(345, 6);
+  });
   it('treats rotated nodes as free and changes the guide when asked', () => {
     const d = doc([rectNode('r', frame(0, 0, 100, 100, { rot: 30 }))]);
     const out = reRatioFrames(d, d.sizes[0], { ratio: 'landscape', guide: null }, fakeMeasure);

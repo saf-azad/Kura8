@@ -31,8 +31,8 @@ export function toolbar(ed: Editor, panels: Panels): HTMLElement {
     // Enter applies and keeps the field focused with its value selected, so a corrective Backspace edits the number.
     const commit = () => {
       if (el.value === shown) return;
-      // Arabic-Indic, Persian and full-width digits read as digits (D-081).
-      const digits = el.value.replace(/[\u0660-\u0669]/g, d => String(d.charCodeAt(0) - 0x660)).replace(/[\u06F0-\u06F9]/g, d => String(d.charCodeAt(0) - 0x6F0)).replace(/[\uFF10-\uFF19]/g, d => String(d.charCodeAt(0) - 0xFF10)).replace(/[\u066B\uFF0E]/g, '.').replace(/\uFF0C/g, ',');
+      // Digits of any script (Arabic-Indic, Persian, Devanagari, full-width …) read as digits (D-081, D-083).
+      const digits = el.value.replace(/[^0-9]/g, d => { if (!/\p{Nd}/u.test(d)) return d; let zero = d.codePointAt(0)!; while (d.codePointAt(0)! - zero < 9 && /\p{Nd}/u.test(String.fromCodePoint(zero - 1))) zero--; return String(d.codePointAt(0)! - zero); }).replace(/[\u066B\uFF0E]/g, '.').replace(/\uFF0C/g, ',');
       // A plain number reads as itself (1e3); "1.234,5" is European thousands; a lone comma is a decimal point (D-081, D-082).
       const plain = digits.replace(/[\u2212\u2013\u2014]/g, '-').trim(), european = plain.replace(/^(-?\d{1,3}(?:\.\d{3})+),(\d+)$/, (_, a: string, b: string) => `${a.replace(/\./g, '')}.${b}`);
       const v = Number.isFinite(Number(european)) && european !== '' ? Number(european) : parseFloat(european.replace(/^([^,.]*),(\d*)$/, '$1.$2').replace(/[^0-9.\-]/g, ''));
@@ -129,7 +129,7 @@ export function toolbar(ed: Editor, panels: Panels): HTMLElement {
     bar.style.transform = `translateX(-50%) scale(${k})`;
     const top = `${Math.max(100, Math.ceil(y + bar.offsetHeight * k + 16))}px`;
     // Panels under the toolbar scroll rather than run off the window (zoom, short windows, D-082); in the bar's own scale.
-    bar.style.setProperty('--panel-max', `${Math.max(160, (window.innerHeight - (y + bar.offsetHeight * k) - 24) / k - 12)}px`);
+    bar.style.setProperty('--panel-max', `${Math.max(96, (window.innerHeight - (y + bar.offsetHeight * k) - 24) / k - 12)}px`);
     if (document.documentElement.style.getPropertyValue('--stage-top') !== top) { document.documentElement.style.setProperty('--stage-top', top); ed.fit(); }
   } });
   return bar;

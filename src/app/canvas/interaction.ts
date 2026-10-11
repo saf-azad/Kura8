@@ -135,8 +135,8 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
       drag.moved = true;
       const id = drag.id, node = drag.before.nodes.find(n => n.id === id)!, f = drag.frame, corner = drag.handle.length === 2;
       // A filled picture keeps its proportions on the corners; its edges reshape the frame, which the picture re-covers,
-      // and an empty frame resizes freely, so equal tiles are possible (D-073).
-      const lockAspect = corner && (node.kind === 'image' ? !!node.asset : node.kind === 'text' || node.kind === 'shape' && !!node.icon) || e.shiftKey && corner;
+      // and an empty frame resizes freely, so equal tiles are possible (D-073). A circle stays round (D-083).
+      const lockAspect = corner && (node.kind === 'image' ? !!node.asset || node.mask === 'circle' : node.kind === 'text' || node.kind === 'shape' && !!node.icon) || e.shiftKey && corner;
       const min = { w: Math.min(MIN, drag.box.w), h: Math.min(MIN, drag.box.h) };
       const raw = resizeLocal(drag.box, f.rot, drag.handle, p, { lockAspect, min });
       let rect = raw.rect;
