@@ -107,3 +107,22 @@ task is seriously blocked by one of them (we log those for the product owner).
   - The contrast line shows "passes".
 - **Placement and Arrange.** Pastes avoid covering text. A locked background is ignored by Space evenly.
 - **Fill canvas** applies in every size. Hide says "in this size". The active size survives a reload.
+
+## New in loop 6 (from loop-5 findings)
+- **The Text tool (T)** adds a small regular-weight label in free space. It grows as you type and pushes no other text. Bold it with Mod+B; resize it with Larger, Smaller or the size field.
+- **Labels.**
+  - A free label keeps its gap from the canvas edge.
+  - A label on a shape or photo stays inside that block.
+  - Long copy wraps on the label's aligned side.
+- **Circles.**
+  - Circle pictures stay round in every size, have corner handles only, and keep round through Same width/height.
+  - Select several pictures (Shift-click) to Circle them all at once.
+  - A circle frame tiles into circles.
+- **Autofit headlines** (poster, stack) keep autofitting after Larger, Smaller or a typed size; Larger stops at the room.
+- **Colour.**
+  - The hex field forgives spaces and a full-width ＃, and says when a value is not a colour.
+  - The contrast "use" button fixes each failing block with its own shade.
+- **Drops.**
+  - A photo dropped on a full-canvas background is added, not swapped in.
+  - Picking several pictures is one Undo.
+- **SVG export** draws circle pictures correctly and embeds Hindi in Poppins.
