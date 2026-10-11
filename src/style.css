@@ -81,6 +81,7 @@ input.readout{width:58px;text-align:center;font:inherit;font-size:13px;backgroun
 .image-bar{position:absolute;z-index:5;transform:translate(-50%,8px);background:var(--paper)}
 .image-bar button{height:28px;padding:0 12px}
 .image-bar.inside{transform:translate(-50%,calc(-100% - 10px))}
+.image-bar.many>:not([data-act="circle"]){display:none}
 .image-bar .cut{display:inline-flex;gap:5px;padding-left:5px;border-left:var(--stroke) solid var(--slate)}
 .info{position:absolute;left:90px;bottom:44px;font-size:12px;display:flex;gap:10px;pointer-events:none;transition:opacity var(--fast)}
 .info span:first-child{max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -107,7 +108,7 @@ input.readout{width:58px;text-align:center;font:inherit;font-size:13px;backgroun
 /* colour panel */
 .colour-panel{width:300px;gap:15px}
 .arrange-panel{width:206px;gap:8px}.arrange-grid{display:grid;grid-template-columns:repeat(3,40px);gap:6px 23px}.arrange-grid .btn:hover{background:var(--slate-a15)}
-.fonts-panel{width:260px;gap:8px}.fonts-panel .icon-note{white-space:normal}
+.fonts-panel{width:310px;gap:8px}.fonts-panel .icon-note{white-space:normal}
 .font-choice{display:flex;align-items:center;gap:12px;height:40px;padding:0 10px;border-radius:var(--r-sm);font-size:17px;text-align:left}
 .font-choice:hover{background:var(--slate-a15)}.font-choice[aria-pressed=true]{background:var(--ink);color:var(--white)}
 .font-choice .sample{width:30px;font-size:20px}

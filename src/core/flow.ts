@@ -24,11 +24,11 @@ const inside = (outer: Rect, r: Rect) => r.x >= outer.x - EPS && r.y >= outer.y 
  * (null). Text flows only among blocks on the same thing, so the poster's band text never follows the headline above the
  * band, in any ratio (D-082); a caption that grows past its photo still sits on the photo (D-083).
  */
-function sitsOn(doc: KuraDoc, id: string, sizeId: string, r: Rect): string | null {
-  const corner = { x: r.x + .5, y: r.y + .5 };
+function sitsOn(doc: KuraDoc, id: string, sizeId: string, r: Rect, whole = false): string | null {
+  const probe = whole ? r : { x: r.x + .5, y: r.y + .5, w: 0, h: 0 };
   for (let j = doc.nodes.findIndex(n => n.id === id) - 1; j >= 0; j--) {
     const b = doc.nodes[j], f = b.frames[sizeId];
-    if (b.kind !== 'text' && b.kind !== 'ink' && f && !f.hidden && !f.rot && inside(f.rect, { ...corner, w: 0, h: 0 })) return b.id;
+    if (b.kind !== 'text' && b.kind !== 'ink' && f && !f.hidden && !f.rot && inside(f.rect, probe)) return b.id;
   }
   return null;
 }
@@ -117,12 +117,16 @@ export function hugText(before: KuraDoc, after: KuraDoc, id: string, measure: Me
     const canvas = canvasSize(spec.ratio), side = physicalAlign(now.align, direction(now.text)), cx = r.x + r.w / 2;
     // A free label keeps the inset it has from the canvas edge, or from the block it sits on (a badge, a photo caption),
     // up to a twentieth of that width, on both sides, so it never grows flush against an edge or out of its block (D-083).
-    const on = free && !f1.rot ? sitsOn(after, id, spec.id, r) : null, b = on ? after.nodes.find(n => n.id === on)!.frames[spec.id].rect : { x: 0, y: 0, ...canvas };
-    const m = Math.max(0, Math.min(r.x - b.x, b.x + b.w - r.x - r.w, b.w / 20)), lo = b.x + m, hi = b.x + b.w - m;
-    // It slides along to keep one line when that fits; copy that wraps anyway wraps on its aligned side instead.
-    const aligned = side === 'left' ? hi - Math.max(lo, r.x) : side === 'right' ? Math.min(hi, r.x + r.w) - lo : 2 * Math.min(cx - lo, hi - cx);
-    const room = free ? (f1.rot ? canvas.w : natural1 <= hi - lo ? hi - lo : aligned) : roomFor(now, f1, canvas);
-    const cap = Math.max(room, hugging ? 0 : r.w), w = Math.max(hugging ? 0 : r.w, Math.min(natural1, cap));
+    // Both are judged from the box as the edit began, so a label sliding along while it grows keeps its bounds; it sits on
+    // a block only when the block holds all of it.
+    const on = free && !f0.rot ? sitsOn(before, id, spec.id, f0.rect, true) : null, b = on ? before.nodes.find(n => n.id === on)!.frames[spec.id]?.rect ?? { x: 0, y: 0, ...canvas } : { x: 0, y: 0, ...canvas };
+    const m = Math.max(0, Math.min(f0.rect.x - b.x, b.x + b.w - f0.rect.x - f0.rect.w, b.w / 20)), lo = b.x + m, hi = b.x + b.w - m;
+    // It grows from its aligned edge and wraps there when that side has at least half its bounds; a label near the far
+    // edge slides back instead to keep one line, or wraps at three fifths of its bounds.
+    const g = f0.rect, gx = g.x + g.w / 2, span = hi - lo;
+    const aligned = Math.max(0, side === 'left' ? hi - Math.max(lo, g.x) : side === 'right' ? Math.min(hi, g.x + g.w) - lo : 2 * Math.min(gx - lo, hi - gx));
+    const room = free ? (f1.rot ? canvas.w : natural1 <= aligned || aligned >= span / 2 ? aligned : natural1 <= span ? span : span * .6) : roomFor(now, f1, canvas);
+    const floor = hugging ? Math.min(natural1, f0.rect.w) : r.w, cap = Math.max(room, floor), w = Math.max(floor, Math.min(natural1, cap));
     if (Math.abs(w - r.w) < 1e-6) continue;
     // Keep the aligned edge's point fixed on the page: the centre moves along the box's own x axis.
     const a = (width: number) => side === 'left' ? -width / 2 : side === 'right' ? width / 2 : 0, t = f1.rot * Math.PI / 180, d = a(r.w) - a(w);

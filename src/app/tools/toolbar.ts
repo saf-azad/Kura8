@@ -45,6 +45,8 @@ export function toolbar(ed: Editor, panels: Panels): HTMLElement {
       else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); el.value = shown; el.blur(); }
       // Mod+Z in the field undoes the last change to the design rather than the field's typing.
       else if ((e.metaKey || e.ctrlKey) && !e.altKey && letterOf(e) === 'z') { e.preventDefault(); e.stopPropagation(); el.value = shown; el.blur(); if (e.shiftKey) ed.redo(); else ed.undo(); }
+      // Mod+B straight after a typed size bolds the text, as it would from the canvas (D-084).
+      else if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && letterOf(e) === 'b') { e.preventDefault(); e.stopPropagation(); commit(); el.blur(); ed.toggleBold(); }
     });
     el.addEventListener('blur', commit);
     return el;
@@ -128,8 +130,9 @@ export function toolbar(ed: Editor, panels: Panels): HTMLElement {
     bar.style.left = `${Math.max(span.left + half, Math.min(window.innerWidth / 2, span.right - half))}px`;
     bar.style.transform = `translateX(-50%) scale(${k})`;
     const top = `${Math.max(100, Math.ceil(y + bar.offsetHeight * k + 16))}px`;
-    // Panels under the toolbar scroll rather than run off the window (zoom, short windows, D-082); in the bar's own scale.
-    bar.style.setProperty('--panel-max', `${Math.max(96, (window.innerHeight - (y + bar.offsetHeight * k) - 24) / k - 12)}px`);
+    // Panels under the toolbar scroll rather than run off the window (zoom, short windows, D-082), and stop above the help
+    // button in the bottom corner (D-083); in the bar's own scale.
+    bar.style.setProperty('--panel-max', `${Math.max(96, (window.innerHeight - (y + bar.offsetHeight * k) - 84) / k - 12)}px`);
     if (document.documentElement.style.getPropertyValue('--stage-top') !== top) { document.documentElement.style.setProperty('--stage-top', top); ed.fit(); }
   } });
   return bar;

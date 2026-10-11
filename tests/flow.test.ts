@@ -172,3 +172,23 @@ it('keeps a label on a block inside the block when it grows (D-083)', () => {
   const r = hugText(tag, longer, 't', charMeasure).nodes[1].frames.main.rect;
   expect(r.x).toBe(130); expect(r.x + r.w).toBeCloseTo(100 + 380 - 19, 5);
 });
+it('keeps a label beside a photo column whole as it is retyped long, keystroke by keystroke (D-083)', () => {
+  const photo = { id: 'p', kind: 'image', asset: 'a', frames: { main: frame(0, 0, 333.3, 1000) } } as DocNode;
+  const start = doc([photo, textNode('t', frame(378.3, 45, 74, 32, { fontSize: 30 }), 'SALE')]);
+  const words = 'SALE 50% OFF EVERYTHING IN STORE THIS WEEKEND ONLY AT THE MARKET';
+  let d = start;
+  for (let k = 5; k <= words.length; k++) d = hugText(start, updateNodes(d, ['t'], n => ({ ...n, text: words.slice(0, k) })), 't', charMeasure);
+  const r = d.nodes[1].frames.main.rect;
+  expect(r.w).toBeGreaterThan(500); expect(r.x).toBeGreaterThanOrEqual(50 - 1e-6); expect(r.x + r.w).toBeLessThanOrEqual(950 + 1e-6);
+  // A long paste into a label at the right edge wraps at three fifths of the canvas, not in a sliver.
+  const edge = doc([textNode('e', frame(900, 120, 40, 32, { fontSize: 30 }), 'Hi')]);
+  const e = hugText(edge, updateNodes(edge, ['e'], n => ({ ...n, text: words + ' ' + words })), 'e', charMeasure).nodes[0].frames.main.rect;
+  expect(e.w).toBeCloseTo(900 * .6, 5); expect(e.x + e.w).toBeCloseTo(950, 5);
+});
+it('keeps a centred label beside a photo where it was when retyped longer then shorter (D-084)', () => {
+  const photo = { id: 'p', kind: 'image', asset: 'a', frames: { main: frame(0, 0, 333.3, 1000) } } as DocNode;
+  const start = doc([photo, textNode('t', frame(449.6, 700, 66, 32, { fontSize: 30 }), 'Hi', { align: 'center' } as Partial<TextNode>)]);
+  const long = hugText(start, updateNodes(start, ['t'], n => ({ ...n, text: 'Hi there everyone' })), 't', charMeasure);
+  const back = hugText(long, updateNodes(long, ['t'], n => ({ ...n, text: 'Hi' })), 't', charMeasure).nodes[1].frames.main.rect;
+  expect(back.x + back.w / 2).toBeCloseTo(449.6 + 33, 5);
+});

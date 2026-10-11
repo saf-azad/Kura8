@@ -65,6 +65,8 @@ export class Editor {
   foreign: KuraDoc | null = null;
   /** Presses anywhere are ignored until then: the second click of a double-click on Start (D-062). */
   ignorePointerUntil = 0;
+  /** A block the Text tool just added: while it is first typed it pushes no other text, which was not stacked under it (D-083). */
+  private fresh: string | null = null;
   /** A repeated Enter or Space from Start or Go is ignored until then, or until another key is typed. */
   ignoreKeysUntil = 0;
   private textBefore: KuraDoc | null = null;
@@ -104,12 +106,13 @@ export class Editor {
     this.renderer = new Canvas2DRenderer(this.docCanvas);
     this.imageBar.addEventListener('click', e => {
       const b = (e.target as Element).closest('button'), n = this.one();
+      if (b?.dataset.act === 'circle' && this.pictures()) { this.toggleCircle(this.selected().map(x => x.id)); return; }
       if (!b || n?.kind !== 'image') return;
       if (b.dataset.act === 'pick') { this.finishReposition(); this.pickImage(n.id); }
       else if (b.dataset.act === 'move') { if (this.store.ui.reposition) this.finishReposition(); else this.startReposition(n.id); }
       else if (b.dataset.act === 'fit') this.fitFrame(n.id);
       else if (b.dataset.act === 'fill') this.fillCanvas(n.id);
-      else if (b.dataset.act === 'circle') this.toggleCircle(n.id);
+      else if (b.dataset.act === 'circle') this.toggleCircle([n.id]);
       else this.setCutout(b.dataset.cut === '1');
     });
     this.file.addEventListener('change', () => { const files = [...this.file.files ?? []]; this.file.value = ''; const target = this.fillTarget; this.fillTarget = null; void this.placeFiles(files, null, target); });
@@ -143,6 +146,8 @@ export class Editor {
   visible(doc = this.doc): DocNode[] { return doc.nodes.filter(n => !n.frames[this.spec(doc).id]?.hidden); }
   selected(): DocNode[] { const s = new Set(this.store.ui.sel); return this.doc.nodes.filter(n => s.has(n.id)); }
   one(): DocNode | undefined { const s = this.selected(); return s.length === 1 ? s[0] : undefined; }
+  /** Several unlocked pictures selected (a tiled team page): the picture bar offers Circle for all of them (D-083). */
+  pictures(): boolean { const s = this.selected(); return s.length > 1 && s.every(n => n.kind === 'image' && !n.locked && !this.frame(n).hidden); }
   palette(): Palette { const p = this.doc.palette, d = this.store.ui.previewDark; return d === null ? p : { ...p, dark: d }; }
   colour(ref: ColourRef): string { return resolve(ref, this.palette()); }
   /** Unit-space point under a pointer event. */
@@ -241,8 +246,18 @@ export class Editor {
     this.info.replaceChildren(h('span', {}, one ? layerName(one) : `${sel.length} selected`), h('span', { className: 'muted' }, b ? `${Math.round(b.w)} × ${Math.round(b.h)}` : ''));
   }
   private updateImageBar(): void {
-    const n = this.one(), ui = this.store.ui, show = n?.kind === 'image' && !n.locked && !this.display && !ui.tool && !ui.armed;
-    this.imageBar.classList.toggle('hidden', !show);
+    const n = this.one(), ui = this.store.ui, free = !this.display && !ui.tool && !ui.armed, show = n?.kind === 'image' && !n.locked && free;
+    const many = !show && free && this.pictures();
+    this.imageBar.classList.toggle('hidden', !show && !many);
+    this.imageBar.classList.toggle('many', many);
+    if (many) {
+      const sel = this.selected(), all = sel.every(x => x.kind === 'image' && x.mask === 'circle'), b = sel.map(x => rotatedBounds(this.box(x), this.frame(x).rot));
+      const x0 = Math.min(...b.map(r => r.x)), x1 = Math.max(...b.map(r => r.x + r.w)), y1 = Math.max(...b.map(r => r.y + r.h));
+      this.imageBar.querySelector('[data-act="circle"]')!.setAttribute('aria-pressed', String(all));
+      this.imageBar.classList.remove('inside');
+      this.imageBar.style.left = `${(x0 + x1) / 2 * this.scale}px`; this.imageBar.style.top = `${Math.min(y1, this.canvas().h) * this.scale}px`;
+      return;
+    }
     if (!show || n?.kind !== 'image') return;
     const moving = ui.reposition === n.id, cut = !!n.asset && this.cutouts.has(n.asset) && !moving, [pick, move, fit, fill, circle] = [...this.imageBar.querySelectorAll<HTMLButtonElement>('[data-act]')];
     const natural = this.natural(n), r = this.frame(n).rect;
@@ -279,15 +294,15 @@ export class Editor {
     this.commit(reorder({ ...this.doc, nodes: this.doc.nodes.map(x => x.id === id ? fill(x) : x) }, [id], 'back'), 'Fills the canvas · sent to the back');
   }
   /** Circle (D-081): the picture shows in the ellipse its frame bounds; turning it on squares the frame about its centre in this size. */
-  toggleCircle(id: string): void {
-    const n = nodeById(this.doc, id); if (n?.kind !== 'image' || n.locked) return;
-    const on = n.mask !== 'circle';
-    let doc = updateNodes(this.doc, [id], x => { const m = { ...x } as ImageNode; if (on) m.mask = 'circle'; else delete m.mask; return m; });
+  toggleCircle(ids: string[]): void {
+    const pics = ids.map(id => nodeById(this.doc, id)).filter((n): n is ImageNode => n?.kind === 'image' && !n.locked); if (!pics.length) return;
+    const on = !pics.every(n => n.mask === 'circle');
+    let doc = updateNodes(this.doc, pics.map(n => n.id), x => { const m = { ...x } as ImageNode; if (on) m.mask = 'circle'; else delete m.mask; return m; });
     // A circle is round in every linked size (D-083): each frame becomes the square centred in it.
-    if (on) for (const s of doc.sizes) {
-      const f = n.frames[s.id]; if (!f) continue;
+    if (on) for (const n of pics) for (const s of doc.sizes) {
+      const f = n.frames[s.id]; if (!f || n.mask === 'circle') continue;
       const side = Math.min(f.rect.w, f.rect.h);
-      doc = setFrames(doc, s.id, { [id]: { ...f, rect: { x: f.rect.x + (f.rect.w - side) / 2, y: f.rect.y + (f.rect.h - side) / 2, w: side, h: side } } });
+      doc = setFrames(doc, s.id, { [n.id]: { ...f, rect: { x: f.rect.x + (f.rect.w - side) / 2, y: f.rect.y + (f.rect.h - side) / 2, w: side, h: side } } });
     }
     this.commit(doc, on ? 'Circle' : 'Full frame');
   }
@@ -304,6 +319,8 @@ export class Editor {
     if (before && before !== this.doc) this.store.commit(this.doc, { before });
   }
   /** The picture's natural proportions (its working copy) when it is loaded. */
+  /** A picture whose frame shows all of it (after Fit, or placed whole). */
+  fitted(n: ImageNode): boolean { const a = this.natural(n), r = this.frame(n).rect; return !!a && r.h > 0 && Math.abs(Math.log((r.w / r.h) / (a.w / a.h))) < .01; }
   natural(n: ImageNode): Size | null { const b = n.asset ? this.image(n.asset, !!n.cutout) : null; return b ? { w: b.width, h: b.height } : null; }
   nudgePicture(id: string, dx: number, dy: number): void { const n = nodeById(this.doc, id); if (n?.kind === 'image') this.panPicture(id, n.focus ?? CENTRE, { x: dx, y: dy }); }
   panPicture(id: string, focus0: Point, delta: Point): void {
@@ -328,9 +345,18 @@ export class Editor {
     this.store.setUI({ sel: nodes.map(n => n.id), armed: null, panel: this.store.ui.panel === 'colour' ? null : this.store.ui.panel });
   }
   centred(w: number, hgt: number): Rect { const c = this.canvas(), o = this.nextOffset(); return { x: (c.w - w) / 2 + o, y: (c.h - hgt) / 2 + o, w, h: hgt }; }
+  /**
+   * The Text tool adds a label (D-083): one step above body size, regular weight, hugging its word so it grows as it is
+   * typed, in the spot the blocks in each size cover least, so it never lands on a face, a number or the headline.
+   */
   addText(): void {
-    const c = this.canvas(), size = this.typeScale().headline, w = c.w * .5, node: TextNode = { id: newId(), kind: 'text', text: 'Text', weight: 700, align: 'start', fill: { role: 'ink' }, frames: this.framesFor(this.centred(w, size * LINE_HEIGHT), { fontSize: size }) };
-    this.add([node]); this.editText(node.id);
+    const node: TextNode = { id: newId(), kind: 'text', text: 'Text', weight: 400, align: 'start', fill: { role: 'ink' }, frames: {} };
+    for (const s of this.doc.sizes) {
+      const c = canvasSize(s.ratio), size = typeScale(s.guide, c).steps[2], w = textWidth(node.text, size, 400) * 1.02, h = textHeight(1, size);
+      const at = freeSpot({ size: { w: Math.min(c.w * .4, w * 4), h }, canvas: c, cells: this.cells(s.id), ...this.occupied(s.id), pad: Math.min(c.w, c.h) * .045 });
+      node.frames[s.id] = { rect: { x: at.x, y: at.y, w, h }, rot: 0, fontSize: size };
+    }
+    this.add([node]); this.editText(node.id); this.fresh = node.id;
   }
   addShape(key: string): void {
     const def = shapeLibrary[key], s = defaultShapeSize(def.ar, this.canvas()), swatch = this.store.ui.swatch, rect = this.centred(s.w, s.h);
@@ -671,7 +697,11 @@ export class Editor {
     const others = key ? shown.filter(n => n !== key && !n.locked && !lines(n)) : [];
     if (!key || !others.length) { toast(mode === 'h' ? 'Text takes its height from its lines' : 'Nothing to match'); return; }
     const rects = matchSize(others.map(n => ({ id: n.id, rect: this.frame(n).rect, keepAspect: n.kind === 'shape' && !!n.icon || n.kind === 'image' && n.mask === 'circle', rot: this.frame(n).rot })), this.frame(key).rect, mode);
-    this.commit(setFrames(this.doc, this.sizeId, Object.fromEntries(others.map(n => [n.id, { ...this.frame(n), rect: rects[n.id] }]))), mode === 'w' ? 'Same width' : 'Same height');
+    // Pictures match exactly and re-cover their frames (D-081); one that showed whole now crops, which is said (D-084).
+    const cropped = others.filter(n => n.kind === 'image' && n.mask !== 'circle' && this.fitted(n)).map(n => n.id);
+    const doc = setFrames(this.doc, this.sizeId, Object.fromEntries(others.map(n => [n.id, { ...this.frame(n), rect: rects[n.id] }])));
+    const crops = cropped.filter(id => { const n = nodeById(doc, id); return n?.kind === 'image' && !this.fitted({ ...n, frames: n.frames }); }).length;
+    this.commit(doc, `${mode === 'w' ? 'Same width' : 'Same height'}${crops ? ` · ${crops === 1 ? 'a picture now crops' : `${crops} pictures now crop`}; Fit shows it whole` : ''}`);
     this.flagAllText();
   }
   // A step that swaps whole designs (across New, or the one Undo kept after a reload) says so (D-077).
@@ -739,7 +769,11 @@ export class Editor {
     this.positionTextarea(); area.focus({ preventScroll: true }); area.select();
     // Whether the block hugs its words is judged as the edit began, not at each keystroke: a column whose line happens to
     // fill its box while typing must not start growing (D-082).
-    area.addEventListener('input', () => { const cur = nodeById(this.doc, id), prev = this.doc; if (cur?.kind === 'text') { this.store.set(flowText(prev, hugText(before, updateNodes(prev, [id], n => ({ ...n, text: area.value })), id, measure), id, measure)); this.positionTextarea(); } });
+    area.addEventListener('input', () => {
+      const cur = nodeById(this.doc, id), prev = this.doc; if (cur?.kind !== 'text') return;
+      const next = hugText(before, updateNodes(prev, [id], n => ({ ...n, text: area.value })), id, measure);
+      this.store.set(id === this.fresh ? next : flowText(prev, next, id, measure)); this.positionTextarea();
+    });
     area.addEventListener('keydown', e => {
       const mod = (e.metaKey || e.ctrlKey) && !e.altKey;
       // Undo before typing anything leaves the text and undoes the last change (e.g. New); Mod+B bolds the block being typed.
@@ -759,7 +793,7 @@ export class Editor {
   finishText(): void {
     const area = this.textarea;
     if (!area) return;
-    this.textarea = null; const id = this.store.ui.editing, before = this.textBefore; this.textBefore = null;
+    this.textarea = null; const id = this.store.ui.editing, before = this.textBefore; this.textBefore = null; this.fresh = null;
     area.remove(); this.store.setUI({ editing: null });
     const node = id ? nodeById(this.doc, id) : undefined;
     if (!node || node.kind !== 'text') return;

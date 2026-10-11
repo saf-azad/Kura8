@@ -35,7 +35,11 @@ import lora400cyr from '@fontsource/lora/files/lora-cyrillic-400-normal.woff2?ur
 import lora700cyr from '@fontsource/lora/files/lora-cyrillic-700-normal.woff2?url';
 import caveat400cyr from '@fontsource/caveat/files/caveat-cyrillic-400-normal.woff2?url';
 import caveat700cyr from '@fontsource/caveat/files/caveat-cyrillic-700-normal.woff2?url';
-export const FONT_FILES: { font: FontId; weight: 400 | 700; subset: 'latin' | 'latin-ext' | 'vietnamese' | 'cyrillic'; url: string }[] = [
+import poppins400deva from '@fontsource/poppins/files/poppins-devanagari-400-normal.woff2?url';
+import poppins700deva from '@fontsource/poppins/files/poppins-devanagari-700-normal.woff2?url';
+export const FONT_FILES: { font: FontId; weight: 400 | 700; subset: 'latin' | 'latin-ext' | 'vietnamese' | 'cyrillic' | 'devanagari'; url: string }[] = [
+  { font: 'poppins', weight: 400, subset: 'devanagari', url: poppins400deva },
+  { font: 'poppins', weight: 700, subset: 'devanagari', url: poppins700deva },
   { font: 'poppins', weight: 400, subset: 'latin', url: poppins400latin },
   { font: 'poppins', weight: 400, subset: 'latin-ext', url: poppins400latinext },
   { font: 'poppins', weight: 700, subset: 'latin', url: poppins700latin },
