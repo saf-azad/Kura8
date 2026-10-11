@@ -140,7 +140,7 @@ Append-only. New entries supersede named old entries; do not edit history. Forma
   - **Feedback and margins.**
     - Background removal says it runs on this computer and can take up to a minute.
     - Left-aligned text at a Header's thin left margin takes the new size's layout margin on Change ratio and linked sizes.
-    - Start ignores a second click for 1.5 s.
+    - Start ignores a second click near the first one for 1.5 s; a click elsewhere, or after a key-started Start or Go, answers at once.
   - Why: loop 6 cohorts Q (46 sessions, 19 of 25 loop-5 items fixed, 6 partly) and R (12 fresh jobs, 31 sessions).
 
 ## Next steps

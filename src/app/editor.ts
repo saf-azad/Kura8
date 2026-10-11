@@ -65,6 +65,8 @@ export class Editor {
   foreign: KuraDoc | null = null;
   /** Presses anywhere are ignored until then: the second click of a double-click on Start (D-062). */
   ignorePointerUntil = 0;
+  /** Where the click that started it was, in window pixels; the guard covers only clicks near it (D-086). */
+  ignorePointerAt: { x: number; y: number } | null = null;
   /** A block the Text tool just added: while it is first typed it pushes no other text, which was not stacked under it (D-083). */
   private fresh: string | null = null;
   /** True while a click places a just-added label: the editor's blur is not a finish (D-086). */
@@ -98,7 +100,9 @@ export class Editor {
     for (const type of ['pointerdown', 'mousedown', 'click', 'dblclick'] as const) {
       document.addEventListener(type, e => {
         const t = e.target instanceof Element ? e.target : null;
-        if (performance.now() < this.ignorePointerUntil && t !== this.textarea && t?.closest('.stage') && !t.closest('button, input')) { e.preventDefault(); e.stopPropagation(); }
+        // Only near where the Start or Go click was: a click anywhere else is a choice and answers at once (D-086).
+        const near = !this.ignorePointerAt || Math.hypot((e as MouseEvent).clientX - this.ignorePointerAt.x, (e as MouseEvent).clientY - this.ignorePointerAt.y) < 60;
+        if (performance.now() < this.ignorePointerUntil && near && t !== this.textarea && t?.closest('.stage') && !t.closest('button, input')) { e.preventDefault(); e.stopPropagation(); }
       }, true);
     }
     // Likewise a second Enter or Space on Start would put an empty line or a space at the start of the headline.

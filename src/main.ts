@@ -159,13 +159,17 @@ function go(): void {
   store.setUI({ screen: 'editor', size: spec.id });
   route();
   // A double press on Go lands on the dial's empty editor, not on a block (D-083).
-  const guarded = ensureEditor(); guarded.ignorePointerUntil = guarded.ignoreKeysUntil = performance.now() + 650;
+  const guarded = ensureEditor(), at = lastPress(); guarded.ignoreKeysUntil = performance.now() + 650; guarded.ignorePointerUntil = at ? performance.now() + 650 : 0; guarded.ignorePointerAt = at;
   if (next !== before && JSON.stringify(next) !== JSON.stringify(before)) {
     store.commit(next, {}); store.setUI({ flags: out.flags });
     const ed = ensureEditor();
     if (spec.ratio === s.ratio && !same) { store.paused = true; ed.tween.start(before, next, spec.id, d => { ed.display = d; ed.invalidate(); }, () => { ed.display = null; store.paused = false; ed.invalidate(); }); }
   }
 }
+/** The last press on the page, when it was within the last half second: the click on Start or Go (D-086). */
+let pressed: { x: number; y: number; t: number } | null = null;
+document.addEventListener('pointerdown', e => { pressed = { x: e.clientX, y: e.clientY, t: performance.now() }; }, true);
+const lastPress = (): { x: number; y: number } | null => pressed && performance.now() - pressed.t < 500 ? { x: pressed.x, y: pressed.y } : null;
 function fresh(): void {
   const had = !!store.doc, { doc, headline } = starter(store.dial);
   store.commit(doc, { before: store.doc });
@@ -175,7 +179,9 @@ function fresh(): void {
   if (had) toast('New design · Undo brings the last one back', 2200);
   ed.lift();
   // A slow second click on Start (up to a second and a half) still leaves the headline editor open (D-083, D-086).
-  ed.editText(headline); ed.ignorePointerUntil = performance.now() + 1500; ed.ignoreKeysUntil = performance.now() + 1500;
+  // Only a second click where the first one was counts; Enter or Space starts leave clicks alone (D-086).
+  const at = lastPress();
+  ed.editText(headline); ed.ignorePointerUntil = at ? performance.now() + 1500 : 0; ed.ignorePointerAt = at; ed.ignoreKeysUntil = performance.now() + 1500;
 }
 let screen = '';
 store.on(() => {
