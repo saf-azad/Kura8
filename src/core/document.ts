@@ -1,7 +1,7 @@
 import type { Point, Rect } from './geometry';
 import type { GuideId } from './guides/types';
 import { isShape, ICON_SHAPE } from './shapes';
-export type RatioId = 'square' | 'portrait' | 'landscape' | 'story' | 'a4' | 'banner';
+export type RatioId = 'square' | 'portrait' | 'tall' | 'story' | 'pin' | 'a4' | 'landscape' | 'link' | 'banner' | 'cover';
 export type CompId = 'cover' | 'split' | 'stack' | 'poster' | 'frame' | 'band';
 export type Role = 'ground' | 'ink' | 'accent';
 export type RowId = 'base' | 'accent' | `c${number}`;
@@ -27,7 +27,8 @@ export type NodeKind = DocNode['kind'];
 export type SizeSpec = { id: string; ratio: RatioId; guide: GuideId | null; comp: CompId | null };
 export type KuraDoc = { version: 2; id: string; createdAt: string; palette: Palette; ground: ColourRef | null; sizes: SizeSpec[]; nodes: DocNode[] };
 
-export const ratioIds: RatioId[] = ['square', 'portrait', 'landscape', 'story', 'a4', 'banner'];
+/** Dial ring order: upright formats, then wide ones (D-069). */
+export const ratioIds: RatioId[] = ['square', 'portrait', 'tall', 'story', 'pin', 'a4', 'landscape', 'link', 'banner', 'cover'];
 export const compIds: CompId[] = ['cover', 'split', 'stack', 'poster', 'frame', 'band'];
 export const guideIds: GuideId[] = ['thirds', 'golden', 'divisions'];
 export const fontIds: FontId[] = ['grotesk', 'poppins', 'playfair', 'lora', 'bebas', 'caveat', 'mono'];

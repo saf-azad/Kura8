@@ -29,8 +29,8 @@ Resolve scope, design and feature questions in this order:
 
 Everything working in `Kura8 Prototype.dc.html` and the refinement cards 5a–5z in `Kura8 Editor.dc.html`, except handwriting:
 
-- **Dial:** four rotating rings (ratio 6, layout 6, guide 3, colour 12 hues + neutral) turned by drag, scroll, arrows or Enter; lens focus; live hub preview; readout panel; light/dark ground; any-colour accent picker; Start/Go. Refinements 5a–5c, 5f; first-open lift 5d.
-- **Ratios:** square, portrait, landscape, story, banner, A4, each with a destination label (5a). Ratio change and linked sizes (5v, 5w).
+- **Dial:** four rotating rings (ratio 10, layout 6, guide 3, colour 12 hues + neutral) turned by drag, scroll, arrows or Enter; lens focus; live hub preview; readout panel; light/dark ground; any-colour accent picker; Start/Go. Refinements 5a–5c, 5f; first-open lift 5d.
+- **Ratios:** square, portrait, tall 3:4, story, pin 2:3, A4, landscape, link 1.91:1, banner, cover 4:1 (D-069), each with a destination label (5a). Ratio change and linked sizes (5v, 5w).
 - **Layouts:** cover, split, stack, poster, frame, band, as pure functions of ratio and guide.
 - **Guides:** thirds, golden, quarters (id `divisions`), with type-scale factors 1.5, φ, √2.
 - **Colour:** ground/ink/accent roles from hue, 7-step shade rows, custom 14th hue (5g), contrast check with nearest passing shade (5h), dark mirror (5i), armed paint (5e), SV picker and hex.
@@ -106,12 +106,12 @@ Core never measures text itself. Functions that need line breaks take an injecte
 
 ### Ratios
 
-`square` 1:1 (Post), `portrait` 4:5 (Portrait), `landscape` 16:9 (Slide), `story` 9:16 (Story), `a4` 1:√2 with √2 computed (Print), `banner` 3:1 (Banner). Labels are defaults pending Safwat. `exportSize(ratio, { scale: 1|2|3 } | { dpi: 300 })`: social ratios export 1080 wide except landscape 1920 and banner 1500; A4 at 1× is 1240 wide (150 dpi) and at 300 dpi 2480 × 3508 from its paper size (`mm`); dpi on a ratio without a paper size throws. `MAX_PIXELS = 16_777_216`; larger export options are disabled.
+`square` 1:1 (Post), `portrait` 4:5 (Portrait), `tall` 3:4 (Grid), `story` 9:16 (Story), `pin` 2:3 (Pin), `a4` 1:√2 with √2 computed (Print), `landscape` 16:9 (Slide), `link` 1.91:1 (Link), `banner` 3:1 (Banner), `cover` 4:1 (Cover), in that dial-ring order (D-069). Labels are defaults pending Safwat. A new linked size is seeded from the existing size with the closest proportions (`closestSize`). `exportSize(ratio, { scale: 1|2|3 } | { dpi: 300 })`: social ratios export 1080 wide except pin 1000 (1000 × 1500), landscape 1920, link 1200 (1200 × 628), banner 1500 and cover 1584 (1584 × 396); A4 at 1× is 1240 wide (150 dpi) and at 300 dpi 2480 × 3508 from its paper size (`mm`); dpi on a ratio without a paper size throws. `MAX_PIXELS = 16_777_216`; larger export options are disabled.
 
 ### Document v2
 
 ```ts
-export type RatioId = 'square' | 'portrait' | 'landscape' | 'story' | 'a4' | 'banner';
+export type RatioId = 'square' | 'portrait' | 'tall' | 'story' | 'pin' | 'a4' | 'landscape' | 'link' | 'banner' | 'cover';
 export type CompId = 'cover' | 'split' | 'stack' | 'poster' | 'frame' | 'band';
 export type Role = 'ground' | 'ink' | 'accent';
 export type RowId = 'base' | 'accent' | `c${number}`;
@@ -217,7 +217,7 @@ Tag `study-v1` (4061227) is the Phase 0 study build: wheel → guide entry, `?mo
 
 1. `npm test` passes with core at 100 % line coverage; every snapping rule has a named test.
 2. `npm run build` yields a static bundle running from `vite preview` without app console errors and without off-origin requests.
-3. Dial → editor works for all 6 ratios × 6 layouts × 3 guides, with hub previews, 5b reopen and the 5f round trip.
+3. Dial → editor works for all 10 ratios × 6 layouts × 3 guides, with hub previews, 5b reopen and the 5f round trip.
 4. Every refinement 5a–5z and every prototype tool (except handwriting) is checked by a named step of the Phase 1 browser audit.
 5. Exports open at exact sizes (A4 2480 × 3508), PNG No ground has real transparency, SVG parses with licence metadata, PDF header and page size are valid.
 6. Reload restores the document and its images; undo/redo, re-ratio flags and linked-size edits behave as specified.

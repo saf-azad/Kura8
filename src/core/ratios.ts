@@ -2,13 +2,19 @@ import type { RatioId } from './document';
 import type { Size } from './geometry';
 /** `name` is the canvas shape, `label` the destination the dial names under the number (5a), `mm` the print size. */
 export type Ratio = { id: RatioId; name: string; label: string; w: number; h: number; exportWidth: number; mm?: Size };
+// Social formats added by D-069: 3:4 (Instagram's grid, 1080 × 1440), 2:3 (Pinterest pin, 1000 × 1500),
+// 1.91:1 (link posts and Facebook event covers, 1200 × 628) and 4:1 (LinkedIn banner, 1584 × 396).
 export const ratios: Ratio[] = [
   { id: 'square', name: 'Square', label: 'Post', w: 1, h: 1, exportWidth: 1080 },
   { id: 'portrait', name: 'Portrait', label: 'Portrait', w: 4, h: 5, exportWidth: 1080 },
-  { id: 'landscape', name: 'Landscape', label: 'Slide', w: 16, h: 9, exportWidth: 1920 },
+  { id: 'tall', name: 'Tall', label: 'Grid', w: 3, h: 4, exportWidth: 1080 },
   { id: 'story', name: 'Story', label: 'Story', w: 9, h: 16, exportWidth: 1080 },
+  { id: 'pin', name: 'Pin', label: 'Pin', w: 2, h: 3, exportWidth: 1000 },
   { id: 'a4', name: 'A4', label: 'Print', w: 1, h: Math.SQRT2, exportWidth: 1240, mm: { w: 210, h: 297 } },
+  { id: 'landscape', name: 'Landscape', label: 'Slide', w: 16, h: 9, exportWidth: 1920 },
+  { id: 'link', name: 'Link', label: 'Link', w: 1.91, h: 1, exportWidth: 1200 },
   { id: 'banner', name: 'Banner', label: 'Banner', w: 3, h: 1, exportWidth: 1500 },
+  { id: 'cover', name: 'Cover', label: 'Cover', w: 4, h: 1, exportWidth: 1584 },
 ];
 export const ratioById = (id: RatioId): Ratio => ratios.find(r => r.id === id)!;
 export const canvasSize = (id: RatioId): Size => { const r = ratioById(id); return { w: 1000, h: 1000 * r.h / r.w }; };

@@ -88,7 +88,7 @@ describe('migrate', () => {
     const d = doc([rectNode('r', f)]);
     expect(migrate(d)).toEqual({ doc: d, inline: [] });
     for (const x of [null, {}, { version: 3, nodes: [] }, { version: 1 }]) expect(() => migrate(x)).toThrow('Unknown');
-    expect(() => migrate({ ...v1, ratio: 'tall' })).toThrow('Invalid version 1');
+    expect(() => migrate({ ...v1, ratio: 'huge' })).toThrow('Invalid version 1');
     expect(migrate(v1, 's1').doc.sizes[0].id).toBe('s1');
   });
 });

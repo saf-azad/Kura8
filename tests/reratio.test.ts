@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { reRatio, reRatioFrames, reRatioKept, anchorLines, flagsFor, boxOf } from '../src/core/reratio';
 import { relayout } from '../src/core/relayout';
-import { addSize, removeSize } from '../src/core/sizes';
+import { addSize, removeSize, closestSize } from '../src/core/sizes';
 import { layout, starterNodes } from '../src/core/compositions';
 import { canvasSize } from '../src/core/ratios';
 import { validateDocument, type KuraDoc } from '../src/core/document';
@@ -114,5 +114,13 @@ describe('change ratio without drift (D-054)', () => {
   it('honours a guide change', () => {
     const r = reRatioKept(start(), 'main', { ratio: 'square', guide: 'golden' }, fakeMeasure);
     expect(r.doc.sizes[0].guide).toBe('golden'); expect(r.origin.a.guide).toBe('thirds');
+  });
+});
+describe('linked sizes seed from the closest proportions (D-069)', () => {
+  it('picks the existing size nearest in aspect', () => {
+    const d: KuraDoc = doc([rectNode('a', frame(0, 0, 100, 100))], size({ ratio: 'link' }));
+    const two = addSize(d, 'pin', 'tall', fakeMeasure).doc;
+    expect(closestSize(two, 'tall')).toBe('tall'); expect(closestSize(two, 'cover')).toBe('main');
+    expect(addSize(two, 'cover', 'c', fakeMeasure).doc.nodes[0].frames.c).toEqual(addSize(two, 'cover', 'c', fakeMeasure, 'main').doc.nodes[0].frames.c);
   });
 });

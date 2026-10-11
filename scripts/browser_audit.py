@@ -15,11 +15,11 @@ BASE = next((a for a in sys.argv[1:] if a.startswith('http')), 'http://127.0.0.1
 ORIGIN = BASE.split('/', 3)[0] + '//' + BASE.split('/', 3)[2]
 OUT = Path(__file__).resolve().parent.parent / 'private' / 'browser-audit'
 OUT.mkdir(parents=True, exist_ok=True)
-RATIOS = ['square', 'portrait', 'landscape', 'story', 'a4', 'banner']
+RATIOS = ['square', 'portrait', 'tall', 'story', 'pin', 'a4', 'landscape', 'link', 'banner', 'cover']
 COMPS = ['cover', 'split', 'stack', 'poster', 'frame', 'band']
 GUIDES = ['thirds', 'golden', 'divisions']
-HEIGHT = {'square': 1000, 'portrait': 1250, 'landscape': 562.5, 'story': 1000 * 16 / 9, 'a4': 1000 * 2 ** .5, 'banner': 1000 / 3}
-EXPORT = {'square': (1080, 1080), 'portrait': (1080, 1350), 'landscape': (1920, 1080), 'story': (1080, 1920), 'a4': (1240, 1754), 'banner': (1500, 500)}
+HEIGHT = {'square': 1000, 'portrait': 1250, 'tall': 1000 * 4 / 3, 'story': 1000 * 16 / 9, 'pin': 1500, 'a4': 1000 * 2 ** .5, 'landscape': 562.5, 'link': 1000 / 1.91, 'banner': 1000 / 3, 'cover': 250}
+EXPORT = {'square': (1080, 1080), 'portrait': (1080, 1350), 'tall': (1080, 1440), 'story': (1080, 1920), 'pin': (1000, 1500), 'a4': (1240, 1754), 'landscape': (1920, 1080), 'link': (1200, 628), 'banner': (1500, 500), 'cover': (1584, 396)}
 results, errors, offorigin = [], [], []
 
 
@@ -169,7 +169,7 @@ def s_load(app):
 @step('5a ratio ring names destinations and hovering previews the hub')
 def s_5a(app):
     app.fresh(); p = app.page
-    for label in ['Post 1:1', 'Portrait 4:5', 'Slide 16:9', 'Story 9:16', 'Print A4', 'Banner 3:1']:
+    for label in ['Post 1:1', 'Portrait 4:5', 'Grid 3:4', 'Story 9:16', 'Pin 2:3', 'Print A4', 'Slide 16:9', 'Link 1.91:1', 'Banner 3:1', 'Cover 4:1']:
         check(p.locator(f'[data-ring="ratio"][data-tip="{label}"]').count() == 1, f'missing {label}')
     before = p.locator('.hub canvas').bounding_box()
     g = p.locator('[data-ring="ratio"][data-tip="Banner 3:1"] > g').bounding_box(); p.mouse.move(g['x'] + g['width'] / 2, g['y'] + g['height'] / 2); p.wait_for_timeout(700)
@@ -182,7 +182,7 @@ def s_5a(app):
 def s_dial_keys(app):
     app.fresh(); p = app.page
     p.keyboard.press('ArrowRight'); p.wait_for_timeout(100)
-    check('Slide 16:9' in p.locator('.card').nth(0).inner_text(), 'ratio did not turn to landscape')
+    check('Grid 3:4' in p.locator('.card').nth(0).inner_text(), 'ratio did not turn to 3:4')
     p.keyboard.press('ArrowDown'); p.keyboard.press('ArrowRight'); p.wait_for_timeout(100)
     check('Split' in p.locator('.card').nth(1).inner_text(), 'layout did not turn')
     p.keyboard.press('ArrowDown'); p.keyboard.press('ArrowLeft'); p.wait_for_timeout(100)
@@ -192,7 +192,7 @@ def s_dial_keys(app):
     p.locator('.ground-toggle button[aria-label="Dark ground"]').click(); p.evaluate('document.activeElement.blur()')
     p.keyboard.press('Enter'); p.wait_for_timeout(500)
     d = app.doc()
-    check(d['sizes'][0] == {'id': 'main', 'ratio': 'landscape', 'guide': 'thirds', 'comp': 'split'}, f'wrong size {d["sizes"]}')
+    check(d['sizes'][0] == {'id': 'main', 'ratio': 'tall', 'guide': 'thirds', 'comp': 'split'}, f'wrong size {d["sizes"]}')
     check(d['palette']['hue'] == 240 and d['palette']['dark'] is True, f'wrong palette {d["palette"]}')
 
 
@@ -212,7 +212,7 @@ def s_dial_drag(app):
     check('Quarters' in p.locator('.card').nth(2).inner_text() or 'Thirds' in p.locator('.card').nth(2).inner_text(), 'scroll did not turn')
 
 
-@step('dial to editor for all 6 ratios × 6 layouts × 3 guides, every block inside the canvas')
+@step('dial to editor for all 10 ratios × 6 layouts × 3 guides, every block inside the canvas')
 def s_matrix(app):
     p = app.page; bad = []
     for ratio in RATIOS:

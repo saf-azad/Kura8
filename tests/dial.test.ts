@@ -1,7 +1,7 @@
 import { it, expect } from 'vitest';
 import { RINGS, ringPath, stepOf, rotationFor, indexAt, detent, settle } from '../src/core/dial';
-it('defines four rings: ratio 6, layout 6, guide 3, colour 13', () => {
-  expect(RINGS.map(r => [r.key, r.n])).toEqual([['ratio', 6], ['comp', 6], ['guide', 3], ['hue', 13]]);
+it('defines four rings: ratio 10 (D-069), layout 6, guide 3, colour 13', () => {
+  expect(RINGS.map(r => [r.key, r.n])).toEqual([['ratio', 10], ['comp', 6], ['guide', 3], ['hue', 13]]);
   for (let i = 1; i < RINGS.length; i++) expect(RINGS[i].ro).toBeLessThan(RINGS[i - 1].ri);
 });
 it('draws annular segments centred on the top for index 0', () => {

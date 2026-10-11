@@ -85,9 +85,12 @@ export function toolbar(ed: Editor, panels: Panels): HTMLElement {
     pressed(arrange, u.panel === 'arrange', 'aria-expanded'); panels.arrange.style.left = `${arrange.offsetLeft - 60}px`;
     pressed(lock, sel.length > 0 && sel.every(n => n.locked)); lock.title = sel.length && sel.every(n => n.locked) ? `Unlock (${MOD} ${SHIFT} L)` : `Lock (${MOD} ${SHIFT} L)`;
     fade(undo, ed.store.history.past.length > 0); fade(redo, ed.store.history.future.length > 0);
-    // Fit between the wordmark and the corner controls: centred, scaled down on narrow windows.
-    const side = Math.max(130, (document.querySelector<HTMLElement>('.corner')?.offsetWidth ?? 0) + 60), room = window.innerWidth - 2 * side;
-    bar.style.transform = `translateX(-50%) scale(${Math.max(.45, Math.min(1, room / Math.max(1, bar.offsetWidth)))})`;
+    // Fit between the wordmark and the corner controls: centred in that span, scaled down only when it is too narrow
+    // (several linked-size pills widen the corner, D-069).
+    const left = 130, right = window.innerWidth - (document.querySelector<HTMLElement>('.corner')?.offsetWidth ?? 0) - 60, room = right - left;
+    const k = Math.max(.45, Math.min(1, room / Math.max(1, bar.offsetWidth))), half = bar.offsetWidth * k / 2;
+    bar.style.left = `${Math.max(left + half, Math.min(window.innerWidth / 2, right - half))}px`;
+    bar.style.transform = `translateX(-50%) scale(${k})`;
   } });
   return bar;
 }

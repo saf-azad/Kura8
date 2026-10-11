@@ -479,7 +479,7 @@ export class Editor {
     toast(flags.length ? `${r.label} ${ratioNumbers(ratio)} · ${new Set(flags.map(f => f.id)).size} flagged` : `${r.label} ${ratioNumbers(ratio)}`, 1800);
   }
   addSize(ratio: RatioId): void {
-    const id = newId(), { doc, flags } = addSize(this.doc, ratio, id, measure, this.sizeId);
+    const id = newId(), { doc, flags } = addSize(this.doc, ratio, id, measure);
     this.store.commit(doc, {}); this.store.setUI({ size: id, flags, sel: [] });
     toast(`Linked size ${ratioNumbers(ratio)}${flags.length ? ` · ${new Set(flags.map(f => f.id)).size} flagged` : ''}`, 1800);
   }
