@@ -5,6 +5,11 @@ const has = (ids: string[]) => { const set = new Set(ids); return (n: DocNode) =
 const unlocked = (ids: string[]) => { const pick = has(ids); return (n: DocNode) => pick(n) && !n.locked; };
 export const nodeById = (doc: KuraDoc, id: string): DocNode | undefined => doc.nodes.find(n => n.id === id);
 export const addNodes = (doc: KuraDoc, nodes: DocNode[]): KuraDoc => ({ ...doc, nodes: [...doc.nodes, ...nodes] });
+/** New pictures go just under the lowest text block, so they never cover copy (D-058); with no text, on top. */
+export function addUnderText(doc: KuraDoc, nodes: DocNode[]): KuraDoc {
+  const at = doc.nodes.findIndex(n => n.kind === 'text');
+  return at < 0 ? addNodes(doc, nodes) : { ...doc, nodes: [...doc.nodes.slice(0, at), ...nodes, ...doc.nodes.slice(at)] };
+}
 export function removeNodes(doc: KuraDoc, ids: string[]): KuraDoc {
   const gone = unlocked(ids);
   return { ...doc, nodes: doc.nodes.filter(n => !gone(n)) };

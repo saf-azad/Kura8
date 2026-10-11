@@ -22,9 +22,11 @@ export function drawOp(ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingC
   if (o.kind === 'shape') { ctx.fillStyle = o.fill; if (o.scale) ctx.scale(o.scale[0], o.scale[1]); ctx.fill(path2d(o.d), 'evenodd'); }
   else if (o.kind === 'text') {
     ctx.fillStyle = o.fill; ctx.font = `${o.weight} ${o.size}px ${o.font}`; ctx.textBaseline = 'middle'; ctx.textAlign = o.align;
-    if ('direction' in ctx) ctx.direction = o.dir;
-    const x = o.align === 'left' ? 0 : o.align === 'center' ? r.w / 2 : r.w;
-    o.lines.forEach((line, i) => ctx.fillText(line, x, i * o.lineHeight + o.lineHeight / 2));
+    o.lines.forEach((line, i) => {
+      const dir = o.bidi?.[i]?.dir ?? o.dir, align = o.bidi?.[i]?.align ?? o.align;
+      if ('direction' in ctx) ctx.direction = dir;
+      ctx.textAlign = align; ctx.fillText(line, align === 'left' ? 0 : align === 'center' ? r.w / 2 : r.w, i * o.lineHeight + o.lineHeight / 2);
+    });
   } else if (o.kind === 'ink') {
     ctx.strokeStyle = o.fill; ctx.lineWidth = o.stroke; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath();
     for (const p of o.paths) p.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y));

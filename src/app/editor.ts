@@ -1,22 +1,23 @@
 import type { ColourRef, DocNode, FontId, Frame, ImageNode, KuraDoc, Palette, RatioId, SizeSpec, TextNode } from '../core/document';
-import { center, containsRotated, intersects, rotatedBounds, type Point, type Rect, type Size } from '../core/geometry';
+import { center, containsRotated, intersects, norm, rotatedBounds, type Point, type Rect, type Size } from '../core/geometry';
 import type { Anchor } from '../core/guides/types';
 import { guideById } from '../core/guides';
 import { canvasSize, ratioById, ratioNumbers } from '../core/ratios';
 import { resolve } from '../core/palette';
 import { defaultShapeSize, shapeLibrary, ICON_SHAPE } from '../core/shapes';
 import { LINE_HEIGHT, textBox, typeScale, crossing, type TypeScale } from '../core/fit';
-import { addNodes, duplicateNodes, nodeById, nudge, pasteNodes, removeNodes, reorder, setFill, setFrames, setGround, setHidden, setLocked, updateNodes, type Order } from '../core/ops';
-import { reRatio, flagsFor } from '../core/reratio';
+import { addNodes, addUnderText, duplicateNodes, nodeById, nudge, pasteNodes, removeNodes, reorder, setFill, setFrames, setGround, setHidden, setLocked, updateNodes, type Order } from '../core/ops';
+import { reRatioKept, flagsFor, type RatioOrigin } from '../core/reratio';
 import { flowText } from '../core/flow';
+import { align, distribute, type AlignMode } from '../core/arrange';
 import { drawnWeight } from '../core/fonts';
 import { addSize, removeSize } from '../core/sizes';
-import { nearestCell, containIn, CENTRE, fullImageRect, panFocus } from '../core/images';
-import { direction, fontStack, physicalAlign } from '../core/script';
+import { containIn, CENTRE, fullImageRect, panFocus, spreadCells } from '../core/images';
+import { fontStack } from '../core/script';
 import { exportSize } from '../core/ratios';
 import type { SnapHit, SnapLine } from '../core/snap';
 import { Store, newId, type PanelId, type Tool } from './store';
-import { measure, loadFont } from './measure';
+import { measure, loadFont, textWidth } from './measure';
 import * as assets from './assets';
 import { Canvas2DRenderer } from './canvas/renderer';
 import { drawOverlay, MARGIN, type Box, type HandleSet } from './canvas/overlay';
@@ -48,6 +49,8 @@ export class Editor {
   private bitmaps = new Map<string, ImageBitmap | null>();
   private loading = new Set<string>();
   private generation = new Map<string, number>();
+  /** Per size, where each node's geometry came from before ratio changes, so round trips do not drift (D-054). */
+  private ratioOrigins = new Map<string, RatioOrigin>();
   readonly cutouts = new Set<string>();
   private missing = new Set<string>();
   private renderer: Canvas2DRenderer;
@@ -56,6 +59,8 @@ export class Editor {
   private file: HTMLInputElement;
   private fillTarget: string | null = null;
   textarea: HTMLTextAreaElement | null = null;
+  /** Presses on the canvas are ignored until then: the second click of a double-click on Start (D-062). */
+  ignorePointerUntil = 0;
   private textBefore: KuraDoc | null = null;
   /** On-image controls: choose or replace the picture, reposition it, and Before/After for a cut-out (5o). */
   readonly imageBar: HTMLDivElement;
@@ -70,7 +75,7 @@ export class Editor {
       h('span', { className: 'cut' }, h('button', { type: 'button', 'data-cut': '0' }, 'Before'), h('button', { type: 'button', 'data-cut': '1' }, 'After')));
     this.stack = h('div', { className: 'canvas-stack' }, this.docCanvas, this.overlay, this.imageBar);
     this.info = h('div', { className: 'info' });
-    this.file = h('input', { type: 'file', accept: 'image/png,image/jpeg,image/webp,image/gif', multiple: true, className: 'hidden' });
+    this.file = h('input', { type: 'file', accept: 'image/png,image/jpeg,image/webp,image/gif,image/svg+xml,.svg,image/heic,image/heif,.heic,.heif', multiple: true, className: 'hidden' });
     const stage = h('div', { className: 'stage' }, this.stack);
     root.append(stage, this.info, this.file);
     stage.addEventListener('pointerdown', e => { if (e.target !== stage) return; this.finishText(); this.store.setUI({ sel: [], panel: null }); });
@@ -207,6 +212,8 @@ export class Editor {
     move.textContent = moving ? 'Done' : 'Reposition'; move.classList.toggle('hidden', !n.asset); move.setAttribute('aria-pressed', String(moving));
     this.imageBar.querySelector('.cut')!.classList.toggle('hidden', !cut);
     const b = rotatedBounds(this.box(n), this.frame(n).rot);
+    // Inside the picture's bottom edge when it is tall enough, so the bar does not cover what sits under it.
+    this.imageBar.classList.toggle('inside', b.h * this.scale > 120);
     this.imageBar.style.left = `${(b.x + b.w / 2) * this.scale}px`; this.imageBar.style.top = `${Math.min(b.y + b.h, this.canvas().h) * this.scale}px`;
     this.imageBar.querySelectorAll<HTMLButtonElement>('[data-cut]').forEach(btn => btn.setAttribute('aria-pressed', String((btn.dataset.cut === '1') === !!n.cutout)));
   }
@@ -266,22 +273,33 @@ export class Editor {
     this.add([{ id: newId(), kind: 'shape', shape: ICON_SHAPE, fill: { role: 'ink' }, icon: { set: 'phosphor', name, d, licence: 'MIT' }, frames: this.framesFor(this.centred(side, side)) }],
       flattened ? `${title(name)} · flattened to one ink` : title(name));
   }
-  /** Image tool: with an empty frame selected it picks a file for it, otherwise it adds an empty frame. */
-  addImageFrame(): void {
+  /** Image tool (D-061): picks pictures from the computer, for a selected empty frame or as new images. */
+  imageTool(): void {
     const one = this.one();
-    if (one?.kind === 'image' && !one.asset && !one.locked) { this.pickImage(one.id); return; }
+    this.pickImage(one?.kind === 'image' && !one.asset && !one.locked ? one.id : null);
+  }
+  /** An empty image frame to drop a picture on later (Shapes panel). */
+  addImageFrame(): void {
     const c = this.canvas(); this.add([{ id: newId(), kind: 'image', asset: null, frames: this.framesFor(this.centred(c.w * .5, c.h * .35)) }], 'Image frame · drop a picture on it');
   }
   pickImage(target: string | null = null): void { this.fillTarget = target; this.file.click(); }
   maxExport(): number { return Math.max(...this.doc.sizes.map(s => { const e = exportSize(s.ratio, { scale: 1 }); return Math.max(e.w, e.h); })); }
   /** Drop, paste or pick (5p): onto an image block it fills it, cropped to cover; elsewhere a new image fills the nearest cell. */
   async placeFiles(files: File[], at: Point | null, target: string | null = null): Promise<void> {
-    const images = files.filter(f => /^image\/(png|jpeg|webp|gif)$/.test(f.type));
-    if (!images.length) { if (files.length) toast('Choose a PNG, JPEG, WebP or GIF image'); return; }
-    const hit = target ? nodeById(this.doc, target) : at ? this.hitTest(at) : undefined;
-    for (const [i, file] of images.entries()) {
-      let stored: { key: string; natural: Size }, clear = false;
-      try { stored = await assets.putImage(file, this.maxExport()); clear = await assets.hasTransparency(file); } catch { toast('That image could not be read'); continue; }
+    const kind = (f: File) => /^image\/(png|jpeg|webp|gif)$/.test(f.type) ? 'raster' : f.type === 'image/svg+xml' || /\.svg$/i.test(f.name) ? 'svg' : /^image\/hei[cf]$/.test(f.type) || /\.hei[cf]$/i.test(f.name) ? 'heic' : null;
+    const images = files.filter(f => kind(f));
+    if (!images.length) { if (files.length) toast('Choose a PNG, JPEG, WebP, GIF or SVG image', 2200); return; }
+    const hit = target ? nodeById(this.doc, target) : at ? this.hitTest(at) : undefined, added: { key: string; natural: Size }[] = [];
+    for (const [i, original] of images.entries()) {
+      let stored: { key: string; natural: Size }, clear = false, file: Blob = original;
+      try {
+        // SVG logos are drawn once at twice the largest export size; nothing they reference is fetched (D-059).
+        if (kind(original) === 'svg') file = await assets.svgToPng(original, Math.min(4096, 2 * this.maxExport()));
+        stored = await assets.putImage(file, this.maxExport()); clear = await assets.hasTransparency(file);
+      } catch {
+        toast(kind(original) === 'heic' ? 'This browser can’t open HEIC photos. Save it as JPEG (iPhone: Share → Options → Most Compatible) and try again' : 'That image could not be read', 3200);
+        continue;
+      }
       // A see-through picture (logo, sticker) dropped on a photo goes on top of it; onto an empty frame it fills the
       // frame and the frame takes the picture's proportions, so a logo is never cropped (D-047).
       if (i === 0 && hit?.kind === 'image' && !hit.locked && !(clear && hit.asset && !target)) {
@@ -289,12 +307,16 @@ export class Editor {
         this.commit(setFrames(updateNodes(this.doc, [hit.id], n => ({ ...n, asset: stored.key, cutout: false, focus: CENTRE }) as ImageNode), this.sizeId, { [hit.id]: { ...f, rect } }), 'Filled');
         this.select([hit.id]); continue;
       }
-      // The nearest cell sets the size and place; the picture keeps its own proportions inside it, so logos and
-      // photos are never cropped on arrival (D-047).
-      const c = this.canvas(), p = at ?? { x: c.w / 2, y: c.h / 2 }, rect = containIn(nearestCell(p, this.cells(), c), stored.natural);
-      if (i > 0) { rect.x += 20 * i; rect.y += 20 * i; }
-      this.add([{ id: newId(), kind: 'image', asset: stored.key, frames: this.framesFor(rect) }], 'Image');
+      added.push(stored);
     }
+    if (!added.length) return;
+    // New pictures spread over the emptiest guide cells (the drop point's cell first), keep their own proportions
+    // inside them, and go under the text (D-047, D-058). One undo step for the batch.
+    const c = this.canvas(), p = at ?? { x: c.w / 2, y: c.h / 2 }, taken = this.visible().map(n => rotatedBounds(this.box(n), this.frame(n).rot));
+    const boxes = spreadCells(p, this.cells(), taken, added.length, c, !!at);
+    const nodes: DocNode[] = added.map((a, i) => ({ id: newId(), kind: 'image', asset: a.key, frames: this.framesFor(containIn(boxes[i], a.natural)) }));
+    this.commit(addUnderText(this.doc, nodes), nodes.length > 1 ? `${nodes.length} images` : 'Image');
+    this.store.setUI({ sel: nodes.map(n => n.id), armed: null });
   }
   remove(): void {
     const ids = this.selected().filter(n => !n.locked).map(n => n.id);
@@ -315,11 +337,13 @@ export class Editor {
   addPastedText(raw: string): void {
     const text = raw.replace(/\r\n?/g, '\n').replace(/\t/g, ' ').trim();
     if (!text) return;
-    const c = this.canvas(), scale = this.typeScale(), long = text.length > 40 || text.includes('\n'), size = long ? scale.body : scale.headline, w = c.w * (long ? .6 : .5);
+    // One short line hugs its words; longer copy wraps at 60 % of the canvas width.
+    const c = this.canvas(), scale = this.typeScale(), long = text.length > 40 || text.includes('\n'), size = long ? scale.body : scale.headline;
+    const w = long ? c.w * .6 : Math.min(c.w * .8, textWidth(text, size, 700) + size * .3);
     const node: TextNode = { id: newId(), kind: 'text', text, weight: long ? 400 : 700, align: 'start', fill: { role: 'ink' }, frames: {} };
     const rect = this.centred(w, size * LINE_HEIGHT), frames = this.framesFor(rect, { fontSize: size });
     for (const id of Object.keys(frames)) frames[id].rect.h = textBox(node, frames[id], measure, this.typeScale()).rect.h;
-    this.add([{ ...node, frames }], 'Pasted text');
+    this.add([{ ...node, frames }], 'Pasted text'); this.flagText([node.id]);
   }
   cut(): void { if (!this.selected().length) return; this.copy(null); this.remove(); toast('Cut'); }
   paste(): void {
@@ -362,11 +386,22 @@ export class Editor {
     const n = this.one(); if (!n || n.locked) return;
     const next = updateNodes(this.doc, [n.id], fn);
     this.store.commit(n.kind === 'text' ? flowText(this.doc, next, n.id, measure) : next, { key });
+    if (n.kind === 'text') this.flagText([n.id]);
+  }
+  /** Selected unlocked text blocks; text controls apply to all of them (D-063). */
+  texts(): TextNode[] { return this.selected().filter((n): n is TextNode => n.kind === 'text' && !n.locked); }
+  /** Edits every selected text block; text under each one follows its new height and off-canvas text is flagged. */
+  editTexts(fn: (n: TextNode) => TextNode, key?: string): void {
+    const ids = this.texts().map(n => n.id); if (!ids.length) return;
+    let doc = this.doc;
+    for (const id of ids) doc = flowText(doc, updateNodes(doc, [id], n => fn(n as TextNode)), id, measure);
+    this.store.commit(doc, { key }); this.flagText(ids);
   }
   fontStep(dir: 1 | -1): void {
-    const n = this.one(); if (n?.kind !== 'text') return;
-    const f = this.frame(n), size = textBox(n, f, measure, this.typeScale()).size, next = Math.max(6, size + dir * Math.max(2, Math.round(size * .1)));
-    this.editOne(x => { const t = { ...x, frames: { ...x.frames, [this.sizeId]: { ...f, fontSize: next } } } as TextNode; delete t.fit; return t; }, 'font');
+    this.editTexts(n => {
+      const f = this.frame(n), size = textBox(n, f, measure, this.typeScale()).size, next = Math.max(6, size + dir * Math.max(2, Math.round(size * .1)));
+      const t = { ...n, frames: { ...n.frames, [this.sizeId]: { ...f, fontSize: next } } }; delete t.fit; return t;
+    }, 'font');
   }
   /** Sets the typeface of every selected unlocked text block; text under each one follows its new height (D-046). */
   async setFont(font: FontId): Promise<void> {
@@ -378,23 +413,53 @@ export class Editor {
     for (const id of ids) doc = flowText(doc, updateNodes(doc, [id], n => { const t = { ...n, font } as TextNode; if (font === 'grotesk') delete t.font; return t; }), id, measure);
     this.store.commit(doc, {});
   }
-  toggleBold(): void { this.editOne(n => n.kind === 'text' ? { ...n, weight: n.weight === 700 ? 400 : 700 } : n); }
-  cycleAlign(): void { this.editOne(n => n.kind === 'text' ? { ...n, align: n.align === 'start' ? 'center' : n.align === 'center' ? 'end' : 'start' } : n); }
+  /** Marks text that runs off the canvas after an edit (the 5v flag), and clears the mark once it fits again. */
+  flagText(ids: string[]): void {
+    const c = this.canvas(), guide = this.spec().guide, set = new Set(ids);
+    const fresh = this.doc.nodes.filter(n => set.has(n.id) && n.kind === 'text' && n.frames[this.sizeId]).flatMap(n => flagsFor(n, n.frames[this.sizeId], measure, c, guide));
+    this.store.setUI({ flags: [...this.store.ui.flags.filter(f => !set.has(f.id)), ...fresh] });
+  }
+  /** A typed font size for the selected text (D-060); a manual size turns autofit off, like Smaller and Larger. */
+  setFontSize(value: number): void {
+    const size = Math.max(4, Math.min(2000, value)), ids = this.selected().filter(n => n.kind === 'text' && !n.locked).map(n => n.id);
+    let doc = this.doc;
+    for (const id of ids) doc = flowText(doc, updateNodes(doc, [id], n => { const t = { ...n, frames: { ...n.frames, [this.sizeId]: { ...n.frames[this.sizeId], fontSize: size } } } as TextNode; delete t.fit; return t; }), id, measure);
+    if (ids.length) { this.store.commit(doc, {}); this.flagText(ids); }
+  }
+  /** A typed angle for the selection, about each block's centre (D-060). */
+  setAngle(deg: number): void {
+    const ids = this.selected().filter(n => !n.locked).map(n => n.id), rot = norm(deg);
+    if (ids.length) this.store.commit(setFrames(this.doc, this.sizeId, Object.fromEntries(ids.map(id => { const f = nodeById(this.doc, id)!.frames[this.sizeId]; return [id, { ...f, rot: Math.abs(rot) < 1e-9 ? 0 : rot }]; }))), {});
+  }
+  toggleBold(): void { const weight = this.texts().every(n => n.weight === 700) ? 400 : 700; this.editTexts(n => ({ ...n, weight })); }
+  cycleAlign(): void { const a = this.texts()[0]?.align, align = a === 'start' ? 'center' : a === 'center' ? 'end' : 'start'; this.editTexts(n => ({ ...n, align })); }
   /** Autofit on keeps today's box; the size then steps down the type scale as text grows (5q). */
   toggleFit(): void {
-    this.editOne(n => {
-      if (n.kind !== 'text') return n;
-      if (n.fit) { const t = { ...n }; delete t.fit; return t; }
-      const f = this.frame(n), b = this.box(n);
-      return { ...n, fit: true, frames: { ...n.frames, [this.sizeId]: { ...f, rect: { ...f.rect, h: b.h } } } };
+    const on = !this.texts()[0]?.fit;
+    this.editTexts(n => {
+      if (!on) { const t = { ...n }; delete t.fit; return t; }
+      // The box keeps today's height, but never more than the room left above the canvas bottom.
+      const f = this.frame(n), b = this.box(n), c = this.canvas(), room = c.h - f.rect.y - Math.min(c.w, c.h) * .045;
+      return { ...n, fit: true, frames: { ...n.frames, [this.sizeId]: { ...f, rect: { ...f.rect, h: Math.max(Math.min(b.h, room), this.typeScale().body * LINE_HEIGHT) } } } };
     });
+  }
+  /** Align or distribute the selection (D-063): one block to the canvas, several to their joint bounds. */
+  arrange(mode: AlignMode | 'spread-x' | 'spread-y'): void {
+    const sel = this.selected().filter(n => !n.locked && !this.frame(n).hidden);
+    if (!sel.length) return;
+    const boxes = sel.map(n => ({ id: n.id, rect: rotatedBounds(this.box(n), this.frame(n).rot) }));
+    if (mode.startsWith('spread') && boxes.length < 3) { toast('Select three or more to space evenly'); return; }
+    const moves = mode === 'spread-x' || mode === 'spread-y' ? distribute(boxes, mode === 'spread-x' ? 'x' : 'y') : align(boxes, mode, { x: 0, y: 0, ...this.canvas() });
+    const frames = Object.fromEntries(sel.map(n => { const f = this.frame(n), m = moves[n.id] ?? { dx: 0, dy: 0 }; return [n.id, { ...f, rect: { ...f.rect, x: f.rect.x + m.dx, y: f.rect.y + m.dy } }]; }));
+    this.commit(setFrames(this.doc, this.sizeId, frames), mode.startsWith('spread') ? 'Spaced evenly' : sel.length === 1 ? 'Aligned to the canvas' : 'Aligned');
   }
   undo(): void { this.finishReposition(); if (this.store.undo()) toast('Undo'); else toast('Nothing to undo'); }
   redo(): void { this.finishReposition(); if (this.store.redo()) toast('Redo'); else toast('Nothing to redo'); }
   // sizes and ratio (5v, 5w)
   changeRatio(ratio: RatioId): void {
     if (ratio === this.spec().ratio) return;
-    const { doc, flags } = reRatio(this.doc, this.sizeId, { ratio }, measure);
+    const { doc, flags, origin } = reRatioKept(this.doc, this.sizeId, { ratio }, measure, this.ratioOrigins.get(this.sizeId));
+    this.ratioOrigins.set(this.sizeId, origin);
     this.store.commit(doc, {}); this.store.setUI({ flags });
     const r = ratioById(ratio);
     toast(flags.length ? `${r.label} ${ratioNumbers(ratio)} · ${new Set(flags.map(f => f.id)).size} flagged` : `${r.label} ${ratioNumbers(ratio)}`, 1800);
@@ -424,7 +489,9 @@ export class Editor {
     try {
       const blob = await runRemoval(record.working);
       await assets.setCutout(asset, blob); this.forgetBitmap(asset); this.cutouts.add(asset);
-      this.commit(updateNodes(this.doc, this.doc.nodes.filter(x => x.kind === 'image' && x.asset === asset).map(x => x.id), x => ({ ...x, cutout: true }) as ImageNode), 'Background removed');
+      // The picture may have been deleted or replaced meanwhile: then the cut-out is only kept for later.
+      const ids = this.doc.nodes.filter(x => x.kind === 'image' && x.asset === asset && !x.locked).map(x => x.id);
+      if (ids.length) this.commit(updateNodes(this.doc, ids, x => ({ ...x, cutout: true }) as ImageNode), 'Background removed');
     } catch (e) { console.warn(e); toast('Background removal is unavailable here', 2200); }
     finally { this.scan = null; this.store.setUI({ removing: null }); }
   }
@@ -445,16 +512,21 @@ export class Editor {
     this.store.setUI({ editing: id, sel: [id], armed: null });
     this.positionTextarea(); area.focus({ preventScroll: true }); area.select();
     area.addEventListener('input', () => { const cur = nodeById(this.doc, id), prev = this.doc; if (cur?.kind === 'text') { this.store.set(flowText(prev, updateNodes(prev, [id], n => ({ ...n, text: area.value })), id, measure)); this.positionTextarea(); } });
-    area.addEventListener('keydown', e => { if (e.key === 'Escape' || e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); e.stopPropagation(); this.finishText(); this.overlay.focus({ preventScroll: true }); } });
+    area.addEventListener('keydown', e => {
+      const mod = (e.metaKey || e.ctrlKey) && !e.altKey;
+      // Undo before typing anything leaves the text and undoes the last change (e.g. New); Mod+B bolds the block being typed.
+      if (mod && e.key.toLowerCase() === 'z' && !e.shiftKey && area.value === node.text) { e.preventDefault(); e.stopPropagation(); this.finishText(); this.undo(); return; }
+      if (mod && e.key.toLowerCase() === 'b') { e.preventDefault(); e.stopPropagation(); const cur = nodeById(this.doc, id); if (cur?.kind === 'text') { this.store.set(updateNodes(this.doc, [id], n => ({ ...n, weight: (n as TextNode).weight === 700 ? 400 : 700 }) as TextNode)); this.positionTextarea(); } return; }
+      if (e.key === 'Escape' || e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); e.stopPropagation(); this.finishText(); this.overlay.focus({ preventScroll: true }); } });
     area.addEventListener('blur', () => this.finishText());
     this.textBefore = before;
   }
   positionTextarea(): void {
     const area = this.textarea, id = this.store.ui.editing, node = id && this.store.doc ? nodeById(this.doc, id) : undefined;
     if (!area || node?.kind !== 'text') return;
-    const f = this.frame(node), box = textBox(node, f, measure, this.typeScale()), k = this.scale, dir = direction(node.text || 'a');
+    const f = this.frame(node), box = textBox(node, f, measure, this.typeScale()), k = this.scale;
     area.style.cssText = `left:${box.rect.x * k}px;top:${box.rect.y * k}px;width:${box.rect.w * k}px;height:${(box.rect.h + box.size * .4) * k}px;transform:rotate(${f.rot}deg);transform-origin:${box.rect.w * k / 2}px ${box.rect.h * k / 2}px;`
-      + `font:${drawnWeight(node.font, node.weight)} ${box.size * k}px ${fontStack(node.text, node.font)};line-height:${LINE_HEIGHT};text-align:${physicalAlign(node.align, dir)};color:${this.colour(node.fill)};caret-color:${this.colour(node.fill)}`;
+      + `font:${drawnWeight(node.font, node.weight)} ${box.size * k}px ${fontStack(node.text, node.font)};line-height:${LINE_HEIGHT};text-align:${node.align};unicode-bidi:plaintext;color:${this.colour(node.fill)};caret-color:${this.colour(node.fill)}`;
   }
   finishText(): void {
     const area = this.textarea;
@@ -467,6 +539,7 @@ export class Editor {
     const f = this.frame(node), b = this.box(node);
     const synced = node.fit ? this.doc : updateNodes(this.doc, [node.id], n => ({ ...n, frames: { ...n.frames, [this.sizeId]: { ...f, rect: { ...f.rect, h: b.h } } } }));
     if (before && JSON.stringify(nodeById(before, node.id)) !== JSON.stringify(nodeById(synced, node.id))) this.store.commit(synced, { before }); else this.store.set(synced);
+    this.flagText([node.id]);
   }
   // 5d: on the first open ever, blocks lift 2px one after another, once.
   lift(): void {

@@ -15,7 +15,9 @@ export function shapesPanel(ed: Editor): HTMLElement {
     return b;
   }))));
   const iconTitle = h('h3', {}, 'Icons'), iconGrid = h('div', { className: 'shape-grid' }), note = h('div', { className: 'icon-note' }, 'Phosphor icons, MIT licence. The licence travels into SVG exports.');
-  const panel = h('div', { className: 'panel shapes-panel', hidden: true, role: 'dialog', 'aria-label': 'Shapes and icons' }, search, ...groups, h('div', { style: 'display:flex;flex-direction:column;gap:6px' }, iconTitle, iconGrid, note));
+  const frame = h('button', { type: 'button', className: 'pill', title: 'Image frame: an empty frame to drop a picture on later', style: 'height:32px;align-self:start' }, '+ Image frame');
+  frame.addEventListener('click', () => ed.addImageFrame());
+  const panel = h('div', { className: 'panel shapes-panel', hidden: true, role: 'dialog', 'aria-label': 'Shapes and icons' }, search, frame, ...groups, h('div', { style: 'display:flex;flex-direction:column;gap:6px' }, iconTitle, iconGrid, note));
   let query = '', ticket = 0;
   async function show(): Promise<void> {
     const mine = ++ticket, result = await findIcons(query);

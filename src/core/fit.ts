@@ -12,12 +12,18 @@ export function typeScale(guide: GuideId | null, canvas: Size): TypeScale {
   return { factor, body, headline: body * factor ** 2, steps: Array.from({ length: 8 }, (_, k) => body * factor ** (k - 1)) };
 }
 const EPS = 1e-6;
-/** Autofit (5q): from `size`, step down the type scale until the text fits `height`, stopping at body size; past that it overflows and the block grows. */
+/** Whether wrapping broke a word across lines (a word wider than the line). Text in scripts written without spaces wraps anywhere and never counts. */
+export function splitsWord(text: string, lines: string[]): boolean {
+  if (/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Thai}]/u.test(text)) return false;
+  const flat = (s: string) => s.replace(/\s+/g, ' ').trim();
+  return flat(lines.join(' ')) !== flat(text);
+}
+/** Autofit (5q): from `size`, step down the type scale until the text fits `height` without breaking a word (D-055), stopping at body size; past that it overflows and the block grows. */
 export function fitText(o: { text: string; weight: 400 | 700; width: number; height: number; size: number; scale: TypeScale; measure: Measure; font?: FontId }): { size: number; lines: string[]; overflow: boolean } {
   const floor = Math.min(o.size, o.scale.body), sizes = [o.size, ...o.scale.steps.filter(s => s < o.size - EPS && s >= floor - EPS).reverse()];
   for (const size of sizes) {
     const lines = o.measure(o.text, size, o.weight, o.width, o.font);
-    if (textHeight(lines.length, size) <= o.height + EPS) return { size, lines, overflow: false };
+    if (textHeight(lines.length, size) <= o.height + EPS && !splitsWord(o.text, lines)) return { size, lines, overflow: false };
   }
   const size = sizes[sizes.length - 1];
   return { size, lines: o.measure(o.text, size, o.weight, o.width, o.font), overflow: true };

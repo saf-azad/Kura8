@@ -24,7 +24,9 @@ export function handlePoints(box: Box, scale: number): { handle: Handle | 'rotat
   if (box.locked || box.handles === 'none') return [];
   const { rect: r, rot } = box, c = center(r), at = (u: number, v: number) => rotatePoint({ x: r.x + u * r.w, y: r.y + v * r.h }, c, rot);
   const pos: Record<Handle, Point> = { nw: at(0, 0), ne: at(1, 0), se: at(1, 1), sw: at(0, 1), n: at(.5, 0), e: at(1, .5), s: at(.5, 1), w: at(0, .5), move: c };
-  const knob = rotatePoint({ x: c.x, y: r.y - ROTATE_PX / scale }, c, rot);
+  // Near the top of the canvas the knob would sit under the toolbar: it hangs below the box instead.
+  let knob = rotatePoint({ x: c.x, y: r.y - ROTATE_PX / scale }, c, rot);
+  if (knob.y * scale < -20) knob = rotatePoint({ x: c.x, y: r.y + r.h + ROTATE_PX / scale }, c, rot);
   return [...LETTERS[box.handles].map(handle => ({ handle, at: pos[handle] })), { handle: 'rotate' as const, at: knob }];
 }
 export function drawOverlay(canvas: HTMLCanvasElement, s: OverlayState): void {
@@ -91,7 +93,8 @@ export function drawOverlay(canvas: HTMLCanvasElement, s: OverlayState): void {
     }
     const points = handlePoints(b, s.scale);
     if (!points.length) continue;
-    const knob = points[points.length - 1].at, top = rotatePoint({ x: center(b.rect).x, y: b.rect.y }, center(b.rect), b.rot);
+    const knob = points[points.length - 1].at, c = center(b.rect), ends = [rotatePoint({ x: c.x, y: b.rect.y }, c, b.rot), rotatePoint({ x: c.x, y: b.rect.y + b.rect.h }, c, b.rot)];
+    const top = Math.hypot(ends[0].x - knob.x, ends[0].y - knob.y) <= Math.hypot(ends[1].x - knob.x, ends[1].y - knob.y) ? ends[0] : ends[1];
     ctx.strokeStyle = '#000'; ctx.beginPath(); ctx.moveTo(top.x, top.y); ctx.lineTo(knob.x, knob.y); ctx.stroke();
     ctx.fillStyle = '#ECF0F3'; ctx.beginPath(); ctx.arc(knob.x, knob.y, 8 * px, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
     for (const { handle, at } of points) {

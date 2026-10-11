@@ -15,7 +15,7 @@ import type { SketchTools } from '../sketch';
 // `last` is the document this drag last wrote; anything else committed meanwhile (Delete, undo, a finished background
 // removal) ends the drag rather than being overwritten from `before`.
 type Drag =
-  | { kind: 'move'; ids: string[]; start: Point; before: KuraDoc; last?: KuraDoc; frames: Record<string, Frame>; box: Rect; rot: number; moved: boolean; held?: { x?: string; y?: string } }
+  | { kind: 'move'; ids: string[]; start: Point; before: KuraDoc; last?: KuraDoc; frames: Record<string, Frame>; box: Rect; rot: number; moved: boolean; held?: { x?: string; y?: string }; release?: string }
   | { kind: 'resize'; id: string; handle: Handle; before: KuraDoc; last?: KuraDoc; frame: Frame; box: Rect; size: number; moved: boolean }
   | { kind: 'rotate'; id: string; c: Point; a0: number; r0: number; before: KuraDoc; last?: KuraDoc; held: number | null; moved: boolean }
   | { kind: 'marquee'; start: Point; base: string[]; skipLocked?: boolean }
@@ -40,7 +40,7 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
     return null;
   };
   el.addEventListener('pointerdown', e => {
-    if (e.button !== 0 || drag) return;
+    if (e.button !== 0 || drag || performance.now() < ed.ignorePointerUntil) return;
     const p = ed.toUnits(e), ui = ed.store.ui;
     el.focus({ preventScroll: true });
     if (ed.textarea) ed.finishText();
@@ -63,7 +63,7 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
       el.setPointerCapture(e.pointerId); e.preventDefault(); return;
     }
     const hit = ed.hitTest(p);
-    const keepPanel = ui.panel === 'shapes' || ui.panel === 'layers' || ui.panel === 'colour' || ui.panel === 'fonts' ? ui.panel : null;
+    const keepPanel = ui.panel === 'shapes' || ui.panel === 'layers' || ui.panel === 'colour' || ui.panel === 'fonts' || ui.panel === 'arrange' ? ui.panel : null;
     if (!hit) {
       const base = e.shiftKey ? ui.sel : [];
       ed.store.setUI({ sel: base, panel: keepPanel });
@@ -75,18 +75,20 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
       drag = { kind: 'marquee', start: p, base: [], skipLocked: true }; el.setPointerCapture(e.pointerId); return;
     }
     let sel = ui.sel;
-    if (e.shiftKey) sel = sel.includes(hit.id) ? sel.filter(x => x !== hit.id) : [...sel, hit.id];
+    // Shift on an already selected block constrains a drag; only a Shift-click without a drag deselects it.
+    const release = e.shiftKey && sel.includes(hit.id) ? hit.id : undefined;
+    if (e.shiftKey && !release) sel = [...sel, hit.id];
     else if (!sel.includes(hit.id)) sel = [hit.id];
     ed.store.setUI({ sel, panel: keepPanel });
     void ed.checkCutout(hit);
     if (hit.kind === 'image' && hit.asset) ed.preloadRemoval();
     if (!sel.includes(hit.id)) return;
     const movers = ed.doc.nodes.filter(n => sel.includes(n.id) && !n.locked && !ed.frame(n).hidden);
-    if (!movers.length) return;
+    if (!movers.length) { if (release) ed.select(sel.filter(x => x !== release)); return; }
     const frames = Object.fromEntries(movers.map(n => [n.id, ed.frame(n)]));
     const single = movers.length === 1 ? movers[0] : null;
     const box = single ? ed.box(single) : unionRect(movers.map(n => rotatedBounds(ed.box(n), ed.frame(n).rot)));
-    drag = { kind: 'move', ids: movers.map(n => n.id), start: p, before: ed.doc, frames, box, rot: single ? ed.frame(single).rot : 0, moved: false };
+    drag = { kind: 'move', ids: movers.map(n => n.id), start: p, before: ed.doc, frames, box, rot: single ? ed.frame(single).rot : 0, moved: false, release };
     el.setPointerCapture(e.pointerId); e.preventDefault();
   });
   el.addEventListener('pointermove', e => {
@@ -123,7 +125,7 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
     if (drag.kind === 'resize') {
       drag.moved = true;
       const id = drag.id, node = drag.before.nodes.find(n => n.id === id)!, f = drag.frame, corner = drag.handle.length === 2;
-      const lockAspect = node.kind === 'image' || node.kind === 'text' && corner || e.shiftKey && corner;
+      const lockAspect = node.kind === 'image' || (node.kind === 'text' || node.kind === 'shape' && !!node.icon) && corner || e.shiftKey && corner;
       const min = { w: Math.min(MIN, drag.box.w), h: Math.min(MIN, drag.box.h) };
       const raw = resizeLocal(drag.box, f.rot, drag.handle, p, { lockAspect, min });
       let rect = raw.rect;
@@ -164,6 +166,7 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
     if (d.kind === 'marquee' || d.kind === 'pan') { ed.invalidate(); return; }
     if (d.last && ed.doc !== d.last) { ed.invalidate(); return; }
     if (d.moved && ed.doc !== d.before) ed.store.commit(ed.doc, { before: d.before });
+    else if (d.kind === 'move' && d.release) ed.select(ed.store.ui.sel.filter(x => x !== d.release));
     else if (d.kind === 'move' && !e.shiftKey && ed.store.ui.sel.length > 1) { const hit = ed.hitTest(ed.toUnits(e)); if (hit) ed.select([hit.id]); }
     ed.invalidate();
   };
@@ -171,6 +174,7 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
   el.addEventListener('pointercancel', finish);
   el.addEventListener('pointerleave', () => { if (ed.store.ui.tool) sketch.leave(); });
   el.addEventListener('dblclick', e => {
+    if (performance.now() < ed.ignorePointerUntil) return;
     if (ed.store.ui.tool || ed.store.ui.armed) return;
     const n: DocNode | undefined = ed.hitTest(ed.toUnits(e));
     if (ed.store.ui.reposition) { ed.finishReposition(); return; }

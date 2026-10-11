@@ -53,6 +53,22 @@ export async function hasTransparency(file: Blob): Promise<boolean> {
   } catch { /* undecodable: treat as opaque */ }
   return false;
 }
+/** An SVG drawn to a PNG with its longest side `longest` px. Drawn as an image, so nothing it references is fetched. */
+export async function svgToPng(file: Blob, longest: number): Promise<Blob> {
+  const text = await file.text(), root = text.match(/<svg\b[^>]*>/i)?.[0];
+  if (!root) throw new Error('Not an SVG');
+  const attr = (name: string) => root.match(new RegExp(`\\s${name}\\s*=\\s*["']([^"']*)["']`, 'i'))?.[1];
+  const box = attr('viewBox')?.trim().split(/[\s,]+/).map(Number), w0 = parseFloat(attr('width') ?? ''), h0 = parseFloat(attr('height') ?? '');
+  const aspect = box?.length === 4 && box[2] > 0 && box[3] > 0 ? box[2] / box[3] : w0 > 0 && h0 > 0 ? w0 / h0 : 1;
+  const w = Math.max(1, Math.round(aspect >= 1 ? longest : longest * aspect)), h = Math.max(1, Math.round(aspect >= 1 ? longest / aspect : longest));
+  const sized = text.replace(root, root.replace(/\s(width|height)\s*=\s*["'][^"']*["']/gi, '').replace(/^<svg/i, `<svg width="${w}" height="${h}"${box ? '' : ` viewBox="0 0 ${w0 > 0 ? w0 : w} ${h0 > 0 ? h0 : h}"`}`));
+  const url = URL.createObjectURL(new Blob([sized], { type: 'image/svg+xml' }));
+  try {
+    const img = new Image(); img.src = url; await img.decode();
+    const c = new OffscreenCanvas(w, h); c.getContext('2d')!.drawImage(img, 0, 0, w, h);
+    return await c.convertToBlob({ type: 'image/png' });
+  } finally { URL.revokeObjectURL(url); }
+}
 export async function setCutout(key: string, cutout: Blob): Promise<void> {
   const record = await getRecord(key);
   if (!record) throw new Error('Image missing');

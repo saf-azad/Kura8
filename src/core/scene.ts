@@ -12,7 +12,8 @@ import { CENTRE } from './images';
 /** `opacity` is present only below 1 (D-052). */
 export type SceneOp = { opacity?: number } & (
   | { kind: 'shape'; id: string; rect: Rect; rot: number; fill: string; d: string; scale?: [number, number] }
-  | { kind: 'text'; id: string; rect: Rect; rot: number; fill: string; size: number; weight: 400 | 700; align: 'left' | 'center' | 'right'; dir: 'ltr' | 'rtl'; font: string; lines: string[]; lineHeight: number }
+  | { kind: 'text'; id: string; rect: Rect; rot: number; fill: string; size: number; weight: 400 | 700; align: 'left' | 'center' | 'right'; dir: 'ltr' | 'rtl'; font: string; lines: string[]; lineHeight: number;
+      /** Per line, only when a paragraph's direction differs from the block's (D-064). */ bidi?: { dir: 'ltr' | 'rtl'; align: 'left' | 'center' | 'right' }[] }
   | { kind: 'image'; id: string; rect: Rect; rot: number; asset: string | null; cutout: boolean; focus: Point }
   | { kind: 'ink'; id: string; rect: Rect; rot: number; fill: string; stroke: number; paths: [number, number][][] });
 /** `filled` is false when the ground was never filled (5z); `hidden` counts nodes hidden in this size (5y); `empty` counts empty image frames. */
@@ -29,8 +30,11 @@ export function buildScene(doc: KuraDoc, sizeId: string, measure: Measure): Scen
       const outline = n.shape === ICON_SHAPE && n.icon ? { d: n.icon.d, scale: [rect.w / 100, rect.h / 100] as [number, number] } : shapeOutline(shapeLibrary[n.shape] ?? shapeLibrary.rect, rect.w, rect.h);
       ops.push({ kind: 'shape', id: n.id, rect, rot, fill: resolve(n.fill, p), ...outline });
     } else if (n.kind === 'text') {
-      const box = textBox(n, f, measure, scale), dir = direction(n.text);
-      ops.push({ kind: 'text', id: n.id, rect: box.rect, rot, fill: resolve(n.fill, p), size: box.size, weight: drawnWeight(n.font, n.weight), align: physicalAlign(n.align, dir), dir, font: fontStack(n.text, n.font), lines: box.lines, lineHeight: box.size * LINE_HEIGHT });
+      const box = textBox(n, f, measure, scale), dir = direction(n.text), weight = drawnWeight(n.font, n.weight);
+      // Each paragraph takes its own direction (D-064); one without a strong letter follows the block.
+      const perLine = n.text.split('\n').flatMap(para => { const d = /\p{L}/u.test(para) ? direction(para) : dir; return measure(para, box.size, weight, box.rect.w, n.font).map(() => d); });
+      const bidi = perLine.length === box.lines.length && perLine.some(d => d !== dir) ? perLine.map(d => ({ dir: d, align: physicalAlign(n.align, d) })) : undefined;
+      ops.push({ kind: 'text', id: n.id, rect: box.rect, rot, fill: resolve(n.fill, p), size: box.size, weight, align: physicalAlign(n.align, dir), dir, font: fontStack(n.text, n.font), lines: box.lines, lineHeight: box.size * LINE_HEIGHT, ...(bidi ? { bidi } : {}) });
     } else if (n.kind === 'image') {
       if (!n.asset) empty++;
       ops.push({ kind: 'image', id: n.id, rect, rot, asset: n.asset, cutout: !!n.cutout, focus: n.focus ?? CENTRE });

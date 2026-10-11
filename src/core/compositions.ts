@@ -1,11 +1,14 @@
 import type { Measure, Rect, Size } from './geometry';
-import type { CompId, DocNode, Slot } from './document';
+import type { ColourRef, CompId, DocNode, Palette, Slot } from './document';
+import { contrast, resolve } from './palette';
+import { contains } from './geometry';
 import type { GuideId } from './guides/types';
 import { fractionsOf } from './guides';
 import { textHeight, typeScale } from './fit';
 // Layouts place four slots (image, accent, headline, body) on the guide's first and last lines. They are pure
 // functions of ratio and guide, ported from the prototype's layoutFor into unit space; they never choose content.
-export type TextSlot = { rect: Rect; fontSize: number };
+/** `fit` marks a headline box that autofits (5q) to the room the layout gives it (D-055). */
+export type TextSlot = { rect: Rect; fontSize: number; fit?: boolean };
 export type Layout = { image: Rect | null; accent: Rect; headline: TextSlot; body: TextSlot };
 export type LayoutInput = { canvas: Size; guide: GuideId; comp: CompId; measure: Measure; headline: string; body: string };
 export const STARTER = { headline: 'Headline', body: 'Body text' };
@@ -23,8 +26,9 @@ export function layout(o: LayoutInput): Layout {
     case 'frame': { image = R(ax, ay, bx - ax, by - ay); const s = Math.min(ax, ay) - 2 * pad; accent = R(pad, pad, s, s); head = { x: pad, y: by + pad, w: W - 2 * pad }; body = { x: bx + pad, y: pad, w: W - bx - 2 * pad }; break; }
     default: image = R(bx, 0, W - bx, H); accent = R(pad, ay - pad * 1.8, pad * 3, pad * .7); head = { x: pad, y: ay, w: bx - 2 * pad };
   }
+  // Poster and stack give the headline a fixed room above the band: it becomes an autofit box of that height (D-055).
+  if (cap && body) return { image, accent, headline: { rect: R(head.x, head.y, head.w, cap), fontSize: fs, fit: true }, body: { rect: R(body.x, body.y, body.w, textHeight(o.measure(o.body, scale.body, 400, body.w).length, scale.body)), fontSize: scale.body } };
   let lines = o.measure(o.headline, fs, 700, head.w).length;
-  if (cap) { fs = Math.min(fs, cap / (textHeight(lines, 1))); lines = o.measure(o.headline, fs, 700, head.w).length; }
   // Short canvases: step the headline down until headline and body clear the bottom margin, never below body size.
   let bodySize = scale.body, bodyLines = 1;
   const place = () => {
@@ -38,14 +42,21 @@ export function layout(o: LayoutInput): Layout {
   }
   return { image, accent, headline: { rect: R(head.x, head.y, head.w, placed.headH), fontSize: fs }, body: { rect: R(placed.at.x, placed.at.y, placed.at.w, textHeight(bodyLines, bodySize)), fontSize: bodySize } };
 }
+/** Text that sits on the accent block (the poster band) takes ink or ground, whichever reads better on the accent (D-056). */
+export function textRoleOn(slots: Layout, text: Rect, palette: Palette): ColourRef {
+  const inside = contains(slots.accent, { x: text.x, y: text.y }) && contains(slots.accent, { x: text.x + text.w, y: text.y + text.h });
+  if (!inside) return { role: 'ink' };
+  const accent = resolve({ role: 'accent' }, palette);
+  return contrast(resolve({ role: 'ground' }, palette), accent) > contrast(resolve({ role: 'ink' }, palette), accent) ? { role: 'ground' } : { role: 'ink' };
+}
 /** Slot-tagged starter nodes for a layout: empty image frame, accent block, headline and body text. */
-export function starterNodes(slots: Layout, o: { sizeId: string; newId: () => string; headline?: string; body?: string }): DocNode[] {
+export function starterNodes(slots: Layout, o: { sizeId: string; newId: () => string; headline?: string; body?: string; palette?: Palette }): DocNode[] {
   const frames = (rect: Rect, fontSize?: number) => ({ [o.sizeId]: { rect: { ...rect }, rot: 0, ...(fontSize ? { fontSize } : {}) } });
   const out: DocNode[] = [];
   if (slots.image) out.push({ id: o.newId(), kind: 'image', slot: 'image', asset: null, frames: frames(slots.image) });
   out.push({ id: o.newId(), kind: 'shape', slot: 'accent', shape: 'rect', fill: { role: 'accent' }, frames: frames(slots.accent) });
-  out.push({ id: o.newId(), kind: 'text', slot: 'headline', text: o.headline ?? STARTER.headline, weight: 700, align: 'start', fill: { role: 'ink' }, frames: frames(slots.headline.rect, slots.headline.fontSize) });
-  out.push({ id: o.newId(), kind: 'text', slot: 'body', text: o.body ?? STARTER.body, weight: 400, align: 'start', fill: { role: 'ink' }, frames: frames(slots.body.rect, slots.body.fontSize) });
+  out.push({ id: o.newId(), kind: 'text', slot: 'headline', text: o.headline ?? STARTER.headline, weight: 700, align: 'start', fill: { role: 'ink' }, ...(slots.headline.fit ? { fit: true } : {}), frames: frames(slots.headline.rect, slots.headline.fontSize) });
+  out.push({ id: o.newId(), kind: 'text', slot: 'body', text: o.body ?? STARTER.body, weight: 400, align: 'start', fill: o.palette ? textRoleOn(slots, slots.body.rect, o.palette) : { role: 'ink' }, frames: frames(slots.body.rect, slots.body.fontSize) });
   return out;
 }
 export const slotRect = (slots: Layout, slot: Slot): { rect: Rect; fontSize?: number } | null =>

@@ -2,7 +2,7 @@ import type { Measure } from './geometry';
 import type { CompId, Frame, KuraDoc, RatioId, Slot } from './document';
 import type { GuideId } from './guides/types';
 import { canvasSize } from './ratios';
-import { layout, slotRect, STARTER } from './compositions';
+import { layout, slotRect, textRoleOn, STARTER } from './compositions';
 import { reRatioFrames, type Flag } from './reratio';
 export type Move = { id: string; from: Frame; to: Frame };
 /** Go from the dial with content kept (5f): slot-tagged nodes move into the new layout's slots, everything else re-ratios; a slot without a node stays empty. */
@@ -19,7 +19,11 @@ export function relayout(doc: KuraDoc, sizeId: string, to: { ratio: RatioId; gui
       next = { ...n.frames[sizeId], rect: { ...target.rect }, rot: 0, ...(target.fontSize ? { fontSize: target.fontSize } : {}) };
     }
     moves.push({ id: n.id, from: n.frames[sizeId], to: next });
-    return { ...n, frames: { ...n.frames, [sizeId]: next } };
+    // A headline moved into an autofit room (poster, stack) autofits there (D-055).
+    const fit = n.kind === 'text' && target && 'fit' in target && target.fit && !n.fit ? { fit: true } : {};
+    // Body text in a role colour takes the readable role for where it lands (D-056); a chosen colour stays.
+    const fill = n.kind === 'text' && n.slot === 'body' && target && 'role' in n.fill && n.fill.role !== 'accent' ? { fill: textRoleOn(slots, target.rect, doc.palette) } : {};
+    return { ...n, ...fit, ...fill, frames: { ...n.frames, [sizeId]: next } };
   });
   return { doc: { ...doc, sizes: doc.sizes.map(s => s.id === sizeId ? { ...s, ...to } : s), nodes }, moves, flags: flags.filter(f => !moved.has(f.id)) };
 }

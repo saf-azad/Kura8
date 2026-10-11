@@ -39,3 +39,5 @@ export const measure: Measure = (text, size, weight, width, font) => {
   return out;
 };
 export const clearMeasureCache = (): void => cache.clear();
+/** Width of one unwrapped line of text in units. */
+export const textWidth = (text: string, size: number, weight: 400 | 700, font?: FontId): number => { ctx.font = fontFor(text, size, weight, font); return ctx.measureText(text).width; };

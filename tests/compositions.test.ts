@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { layout, starterNodes, compositionFit, slotRect, STARTER } from '../src/core/compositions';
+import { layout, starterNodes, compositionFit, slotRect, textRoleOn, STARTER } from '../src/core/compositions';
 import { compIds, guideIds, ratioIds, validateDocument } from '../src/core/document';
 import { canvasSize } from '../src/core/ratios';
 import { fractionsOf } from '../src/core/guides';
+import { fitText, splitsWord, typeScale } from '../src/core/fit';
 import { fakeMeasure, doc, ids } from './helpers';
 const inside = (r: { x: number; y: number; w: number; h: number }, c: { w: number; h: number }) => r.x >= -1e-6 && r.y >= -1e-6 && r.x + r.w <= c.w + 1e-6 && r.y + r.h <= c.h + 1e-6 && r.w > 0 && r.h > 0;
 describe('layouts', () => {
@@ -49,5 +50,34 @@ describe('layouts', () => {
     expect(compositionFit({ canvas: canvasSize('banner'), guide: 'golden', comp: 'band', measure: fakeMeasure, headline: 'H', body: 'Body text that keeps going and going well past the bottom of a short banner canvas. '.repeat(6) })).toEqual({ ok: false, reason: 'overflow' });
     const rows = ratioIds.map(r => compIds.map(c => { const f = fit(r, c); return f.ok ? '.' : f.reason[0]; }).join(''));
     expect(rows).toMatchSnapshot();
+  });
+});
+describe('autofit headline rooms (D-055)', () => {
+  it('gives poster and stack headlines an autofit box filling the room above the band', () => {
+    const c = canvasSize('a4'), poster = layout({ canvas: c, guide: 'golden', comp: 'poster', measure: fakeMeasure, headline: 'Careers Fair 2026: meet forty employers in one afternoon', body: 'B' });
+    expect(poster.headline.fit).toBe(true); expect(poster.headline.rect.y + poster.headline.rect.h).toBeLessThanOrEqual(poster.accent.y + 1e-6);
+    const nodes = starterNodes(poster, { sizeId: 'main', newId: ids() });
+    expect(nodes.find(n => n.slot === 'headline')).toMatchObject({ fit: true });
+    expect(layout({ canvas: c, guide: 'golden', comp: 'cover', measure: fakeMeasure, headline: 'H', body: 'B' }).headline.fit).toBeUndefined();
+  });
+  it('steps autofit text down rather than breaking a word', () => {
+    const scale = typeScale('thirds', { w: 1000, h: 1000 });
+    // Breaks words wider than the line into characters, as the app's measurer does.
+    const chars = (text: string, size: number, _w: 400 | 700, width: number) => text.split(' ').flatMap(w => w.match(new RegExp(`.{1,${Math.max(1, Math.floor(width / (size * .6)))}}`, 'g'))!);
+    const out = fitText({ text: 'Rebranding', weight: 700, width: 300, height: 1000, size: scale.steps[6], scale, measure: chars });
+    expect(splitsWord('Rebranding', out.lines)).toBe(false); expect(out.size).toBeLessThan(scale.steps[6]);
+    expect(splitsWord('你好世界你好', ['你好世', '界你好'])).toBe(false);
+    expect(splitsWord('Two words', ['Two', 'words'])).toBe(false); expect(splitsWord('LETTERS', ['LETTER', 'S'])).toBe(true);
+  });
+});
+describe('readable text on the accent band (D-056)', () => {
+  const poster = () => layout({ canvas: canvasSize('portrait'), guide: 'golden', comp: 'poster', measure: fakeMeasure, headline: 'H', body: 'B' });
+  it('gives body text on the band the role that reads better on the accent', () => {
+    expect(textRoleOn(poster(), poster().body.rect, { hue: null, dark: false, custom: [] })).toEqual({ role: 'ground' });
+    expect(textRoleOn(poster(), poster().body.rect, { hue: null, dark: true, custom: [] })).toEqual({ role: 'ground' });
+    expect(textRoleOn(poster(), poster().headline.rect, { hue: null, dark: false, custom: [] })).toEqual({ role: 'ink' });
+    const nodes = starterNodes(poster(), { sizeId: 'main', newId: ids(), palette: { hue: null, dark: false, custom: [] } });
+    expect(nodes.find(n => n.slot === 'body')).toMatchObject({ fill: { role: 'ground' } });
+    expect(starterNodes(poster(), { sizeId: 'main', newId: ids() }).find(n => n.slot === 'body')).toMatchObject({ fill: { role: 'ink' } });
   });
 });

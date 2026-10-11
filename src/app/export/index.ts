@@ -19,9 +19,10 @@ import groteskExt700 from '@fontsource/space-grotesk/files/space-grotesk-latin-e
 // image frames are left out and counted (5y); PNG can leave an unfilled ground transparent (5z).
 export type Format = 'png' | 'jpg' | 'svg' | 'pdf';
 export type ExportChoice = { format: Format; scale: ExportScale; ground: boolean };
-export function summary(doc: KuraDoc, sizeId: string): { hidden: number; empty: number; icons: number; otherScripts: boolean } {
-  const scene = buildScene(doc, sizeId, measure);
-  return { hidden: scene.hidden, empty: scene.empty, icons: licences(doc, sizeId).length, otherScripts: doc.nodes.some(n => n.kind === 'text' && !n.frames[sizeId]?.hidden && scriptOf(n.text) !== 'latin') };
+export function summary(doc: KuraDoc, sizeId: string): { hidden: number; empty: number; icons: number; offText: number; otherScripts: boolean } {
+  const scene = buildScene(doc, sizeId, measure), size = scene.size;
+  const offText = scene.ops.filter(o => o.kind === 'text' && (o.rect.y + o.rect.h > size.h + .5 || o.rect.x + o.rect.w > size.w + .5 || o.rect.x < -.5 || o.rect.y < -.5)).length;
+  return { hidden: scene.hidden, empty: scene.empty, icons: licences(doc, sizeId).length, offText, otherScripts: doc.nodes.some(n => n.kind === 'text' && !n.frames[sizeId]?.hidden && scriptOf(n.text) !== 'latin') };
 }
 export function fileName(doc: KuraDoc, sizeId: string, c: ExportChoice): string {
   const ratio = doc.sizes.find(s => s.id === sizeId)!.ratio, suffix = 'dpi' in c.scale ? `-${c.scale.dpi}dpi` : c.scale.scale > 1 ? `@${c.scale.scale}x` : '';

@@ -61,7 +61,7 @@ export function installShortcuts(ed: Editor): void {
     if (e.key === 'Enter') { const one = ed.one(); if (one?.kind === 'text' && !(e.target instanceof HTMLButtonElement)) { e.preventDefault(); ed.editText(one.id); } return; }
     if (e.key === '?') { e.preventDefault(); ed.openPanel('keys'); return; }
     if (e.repeat) return;
-    const run = ({ t: () => ed.addText(), r: () => ed.addShape('rect'), o: () => ed.addShape('circle'), s: () => ed.openPanel('shapes'), i: () => ed.addImageFrame(),
+    const run = ({ t: () => ed.addText(), r: () => ed.addShape('rect'), o: () => ed.addShape('circle'), s: () => ed.openPanel('shapes'), i: () => ed.imageTool(),
       p: () => ed.setTool(ui.tool === 'pen' ? null : 'pen'), e: () => ed.setTool('erase'), l: () => ed.setTool('lasso'), c: () => ed.openPanel('colour'), g: () => ed.setGuides(!ui.guides) } as Record<string, () => void>)[e.key.toLowerCase()];
     if (run) { e.preventDefault(); run(); }
   });

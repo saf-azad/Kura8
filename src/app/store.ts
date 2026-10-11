@@ -5,7 +5,7 @@ import type { Flag } from '../core/reratio';
 // One store holds the document and the editor's UI state. Documents are immutable, so a history step is a
 // reference. Commits record history and schedule the 500 ms autosave of the one current document.
 export type Tool = 'pen' | 'erase' | 'lasso';
-export type PanelId = 'shapes' | 'colour' | 'fonts' | 'layers' | 'grid' | 'ratio' | 'keys' | 'export';
+export type PanelId = 'shapes' | 'colour' | 'fonts' | 'arrange' | 'layers' | 'grid' | 'ratio' | 'keys' | 'export';
 export type DialSettings = { ratio: RatioId; comp: CompId; guide: GuideId; hue: number | null; dark: boolean; accent?: string };
 export type UI = {
   screen: 'dial' | 'editor'; size: string; sel: string[]; panel: PanelId | null; tool: Tool | null;
@@ -15,7 +15,7 @@ export type UI = {
   /** The image whose picture is being dragged inside its frame (D-048). */ reposition: string | null;
 };
 export type Change = { doc?: boolean; ui?: boolean };
-const KEYS = { doc: 'kura8:doc', dial: 'kura8:dial', prefs: 'kura8:prefs', lifted: 'kura8:lifted' };
+const KEYS = { doc: 'kura8:doc', previous: 'kura8:previous', dial: 'kura8:dial', prefs: 'kura8:prefs', lifted: 'kura8:lifted' };
 const read = <T>(key: string): T | null => { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) as T : null; } catch { return null; } };
 const write = (key: string, value: unknown): boolean => { try { localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value)); return true; } catch { return false; } };
 export function newDocumentId(): string {
@@ -27,6 +27,12 @@ export const newId = (): string => `n${Date.now().toString(36)}${(counter++).toS
 export function loadDocument(): { doc: KuraDoc; inline: InlineImage[] } | null {
   try { const json = localStorage.getItem(KEYS.doc); return json ? migrate(JSON.parse(json)) : null; } catch { return null; }
 }
+/** The design New replaced (D-057): kept so Undo can bring it back after a reload. */
+export function loadPrevious(): KuraDoc | null {
+  try { const json = localStorage.getItem(KEYS.previous); return json ? migrate(JSON.parse(json)).doc : null; } catch { return null; }
+}
+export function keepPrevious(doc: KuraDoc | null): void { if (doc) write(KEYS.previous, serialiseDocument(doc)); else { try { localStorage.removeItem(KEYS.previous); } catch { /* ignore */ } } }
+export const DOC_KEY = KEYS.doc;
 export const defaultDial = (): DialSettings => ({ ratio: 'portrait', comp: 'cover', guide: 'golden', hue: 210, dark: false });
 export class Store {
   doc: KuraDoc | null;

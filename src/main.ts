@@ -17,7 +17,8 @@ import { createDocument, type KuraDoc } from './core/document';
 import { canvasSize } from './core/ratios';
 import { layout, starterNodes, STARTER } from './core/compositions';
 import { relayout } from './core/relayout';
-import { Store, loadDocument, newDocumentId, newId, type DialSettings } from './app/store';
+import { Store, loadDocument, loadPrevious, keepPrevious, DOC_KEY, newDocumentId, newId, type DialSettings } from './app/store';
+import { migrate } from './core/document';
 import { Editor } from './app/editor';
 import { measure, clearMeasureCache, onFontLoad } from './app/measure';
 import * as assets from './app/assets';
@@ -28,6 +29,7 @@ import { toolbar, corner } from './app/tools/toolbar';
 import { shapesPanel } from './app/tools/panels/shapes';
 import { colourPanel } from './app/tools/panels/colour';
 import { fontsPanel } from './app/tools/panels/fonts';
+import { arrangePanel } from './app/tools/panels/arrange';
 import { layersPanel } from './app/tools/panels/layers';
 import { gridPanel } from './app/tools/panels/grid';
 import { ratioPanel } from './app/tools/panels/ratio';
@@ -41,6 +43,18 @@ const app = document.querySelector<HTMLDivElement>('#app')!;
 const tips = installTips();
 const loaded = loadDocument();
 const store = new Store(loaded?.doc ?? null);
+// The design New replaced stays one Undo away, also after a reload (D-057).
+const previous = loadPrevious();
+let previousId: string | null = previous?.id ?? null;
+if (previous && store.doc && previous.id !== store.doc.id) store.history = { past: [previous], future: [] }; else if (previous) { keepPrevious(null); previousId = null; }
+store.on(() => { if (previousId && store.doc?.id === previousId) { keepPrevious(null); previousId = null; } });
+// Another tab saved the design: take its version (one Undo brings this tab's back) instead of overwriting it later.
+addEventListener('storage', e => {
+  if (e.key !== DOC_KEY || !e.newValue || !store.doc || e.newValue === JSON.stringify(store.doc)) return;
+  let next;
+  try { next = migrate(JSON.parse(e.newValue)).doc; } catch { return; }
+  editor?.finishText(); store.commit(next, {}); toast('Updated from another tab', 2000);
+});
 void navigator.storage?.persist?.().catch(() => false);
 addEventListener('pagehide', () => store.save());
 let saveWarned = false;
@@ -57,7 +71,7 @@ async function restoreAssets(): Promise<void> {
     if (ok) store.save(); else { store.keepSaved = true; toast('Some images could not be stored; the old document is kept', 3000); }
     editor?.invalidate();
   }
-  if (store.doc && ok) void assets.gc(new Set(store.doc.nodes.flatMap(n => n.kind === 'image' && n.asset ? [n.asset] : [])));
+  if (store.doc && ok) void assets.gc(new Set([...store.doc.nodes, ...previous?.nodes ?? []].flatMap(n => n.kind === 'image' && n.asset ? [n.asset] : [])));
 }
 const editorRoot = h('div', { className: 'screen', style: 'position:absolute;inset:0' }), dialRoot = h('div', { className: 'screen', style: 'position:absolute;inset:0' });
 app.append(editorRoot, dialRoot);
@@ -69,8 +83,8 @@ const settingsOf = (doc: KuraDoc, sizeId: string): Partial<DialSettings> => {
   return { ratio: spec.ratio, ...(spec.guide ? { guide: spec.guide } : {}), ...(spec.comp ? { comp: spec.comp } : {}), hue: p.hue, dark: p.dark, accent: p.accent };
 };
 function starter(s: DialSettings): { doc: KuraDoc; headline: string } {
-  const canvas = canvasSize(s.ratio), nodes = starterNodes(layout({ canvas, guide: s.guide, comp: s.comp, measure, headline: STARTER.headline, body: STARTER.body }), { sizeId: 'main', newId });
-  const doc = createDocument(newDocumentId(), new Date().toISOString(), { id: 'main', ratio: s.ratio, guide: s.guide, comp: s.comp }, { hue: s.hue, dark: s.dark, custom: [], ...(s.accent ? { accent: s.accent } : {}) });
+  const canvas = canvasSize(s.ratio), palette = { hue: s.hue, dark: s.dark, custom: [], ...(s.accent ? { accent: s.accent } : {}) }, nodes = starterNodes(layout({ canvas, guide: s.guide, comp: s.comp, measure, headline: STARTER.headline, body: STARTER.body }), { sizeId: 'main', newId, palette });
+  const doc = createDocument(newDocumentId(), new Date().toISOString(), { id: 'main', ratio: s.ratio, guide: s.guide, comp: s.comp }, palette);
   return { doc: { ...doc, nodes }, headline: nodes.find(n => n.slot === 'headline')!.id };
 }
 /** The document the dial would make: the current canvas re-laid on the dial's geometry (5f), or a fresh starter. */
@@ -79,7 +93,7 @@ function preview(s: DialSettings): KuraDoc {
   if (!doc) return starter(s).doc;
   const sizeId = store.ui.size, spec = doc.sizes.find(x => x.id === sizeId) ?? doc.sizes[0], palette = { ...doc.palette, hue: s.hue, dark: s.dark, accent: s.accent };
   const same = spec.ratio === s.ratio && spec.guide === s.guide && spec.comp === s.comp;
-  const out = same ? doc : relayout(doc, spec.id, { ratio: s.ratio, guide: s.guide, comp: s.comp }, measure).doc;
+  const out = same ? doc : relayout({ ...doc, palette }, spec.id, { ratio: s.ratio, guide: s.guide, comp: s.comp }, measure).doc;
   return { ...out, palette, sizes: [out.sizes.find(x => x.id === spec.id)!] };
 }
 function ensureEditor(): Editor {
@@ -87,7 +101,7 @@ function ensureEditor(): Editor {
   const ed = editor = new Editor(editorRoot, store);
   installInteraction(ed, installSketch(ed));
   installShortcuts(ed);
-  const panels = { shapes: shapesPanel(ed), colour: colourPanel(ed), fonts: fontsPanel(ed), layers: layersPanel(ed), grid: gridPanel(ed), ratio: ratioPanel(ed) };
+  const panels = { shapes: shapesPanel(ed), colour: colourPanel(ed), fonts: fontsPanel(ed), arrange: arrangePanel(ed), layers: layersPanel(ed), grid: gridPanel(ed), ratio: ratioPanel(ed) };
   const word = h('button', { type: 'button', className: 'wordmark', title: 'Back to the dial' }, 'Kura8');
   word.addEventListener('click', () => toDial());
   const hint = h('button', { type: 'button', className: 'shortcut-hint', title: 'Keyboard shortcuts' }, h('span', { className: 'muted' }, 'Shortcuts'), h('span', { className: 'key' }, '?'));
@@ -97,7 +111,7 @@ function ensureEditor(): Editor {
   document.addEventListener('pointerdown', e => {
     const t = e.target as Element, panel = store.ui.panel;
     if (!panel || store.ui.screen !== 'editor' || t.closest('.panel, .modal, .sheet, .toolbar, .corner, .corner-stack, .help, .shortcut-hint')) return;
-    if (t === ed.overlay && (panel === 'colour' || panel === 'shapes' || panel === 'layers' || panel === 'fonts')) return;
+    if (t === ed.overlay && (panel === 'colour' || panel === 'shapes' || panel === 'layers' || panel === 'fonts' || panel === 'arrange')) return;
     ed.openPanel(null);
   });
   let tool = store.ui.tool;
@@ -136,7 +150,7 @@ function go(): void {
   const same = spec.ratio === s.ratio && spec.guide === s.guide && spec.comp === s.comp;
   const palette = { ...before.palette, hue: s.hue, dark: s.dark, ...(s.accent ? { accent: s.accent } : {}) };
   if (!s.accent) delete palette.accent;
-  const out = same ? { doc: before, flags: [] } : relayout(before, spec.id, { ratio: s.ratio, guide: s.guide, comp: s.comp }, measure);
+  const out = same ? { doc: before, flags: [] } : relayout({ ...before, palette }, spec.id, { ratio: s.ratio, guide: s.guide, comp: s.comp }, measure);
   const next = { ...out.doc, palette };
   store.setUI({ screen: 'editor', size: spec.id });
   route();
@@ -148,13 +162,14 @@ function go(): void {
 }
 function fresh(): void {
   const had = !!store.doc, { doc, headline } = starter(store.dial);
+  keepPrevious(store.doc); previousId = store.doc?.id ?? null;
   store.commit(doc, { before: store.doc });
   store.setUI({ screen: 'editor', size: 'main', sel: [], flags: [] });
   route();
   const ed = ensureEditor();
   if (had) toast('New design · Undo brings the last one back', 2200);
   ed.lift();
-  ed.editText(headline);
+  ed.editText(headline); ed.ignorePointerUntil = performance.now() + 450;
 }
 let screen = '';
 store.on(() => {

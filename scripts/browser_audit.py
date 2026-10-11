@@ -270,11 +270,15 @@ def find(d, **kw):
     return [n for n in d['nodes'] if all(n.get(k) == v for k, v in kw.items())]
 
 
-@step('tools: T text, R rectangle, O ellipse, I image, S shapes, C colour, G guides, ? shortcuts')
+@step('tools: T text, R rectangle, O ellipse, I picks pictures, S shapes, C colour, G guides, ? shortcuts')
 def s_tool_keys(app):
     app.start(SQUARE); p = app.page; n0 = len(app.doc()['nodes'])
     p.keyboard.press('t'); p.wait_for_timeout(200); p.keyboard.type('Added'); p.keyboard.press('Control+Enter')
-    p.keyboard.press('Escape'); p.keyboard.press('r'); p.keyboard.press('Escape'); p.keyboard.press('o'); p.keyboard.press('Escape'); p.keyboard.press('i'); p.keyboard.press('Escape')
+    p.keyboard.press('Escape'); p.keyboard.press('r'); p.keyboard.press('Escape'); p.keyboard.press('o'); p.keyboard.press('Escape')
+    # D-061: I opens the file picker; an empty frame comes from the Shapes panel.
+    with p.expect_file_chooser(timeout=3000) as fc: p.keyboard.press('i')
+    fc.value.set_files([]); p.keyboard.press('Escape')
+    p.keyboard.press('s'); p.wait_for_timeout(250); p.locator('.shapes-panel button', has_text='+ Image frame').click(); p.keyboard.press('Escape')
     d = app.doc()
     check(len(d['nodes']) == n0 + 4, f'expected 4 new nodes, got {len(d["nodes"]) - n0}')
     check(find(d, text='Added'), 'typed text missing'); check(find(d, shape='rect') and find(d, shape='circle'), 'shapes missing')
@@ -713,7 +717,7 @@ def s_text_controls(app):
     app.start(SQUARE); p = app.page; head = find(app.doc(), slot='headline')[0]; app.select(head)
     p.keyboard.press('Control+b'); check(find(app.doc(), slot='headline')[0]['weight'] == 400, 'bold off')
     p.keyboard.press('Control+b'); check(find(app.doc(), slot='headline')[0]['weight'] == 700, 'bold on')
-    align = p.locator('.toolbar button[aria-label="Align"]')
+    align = p.locator('.toolbar button[aria-label="Text align"]')
     seen = []
     for _ in range(3): align.click(); seen.append(find(app.doc(), slot='headline')[0]['align'])
     check(seen == ['center', 'end', 'start'], f'align cycle {seen}')

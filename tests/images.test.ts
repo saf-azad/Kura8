@@ -1,5 +1,5 @@
 import { it, expect } from 'vitest';
-import { coverCrop, workingSize, nearestCell, containIn, CENTRE, panFocus, fullImageRect } from '../src/core/images';
+import { coverCrop, workingSize, nearestCell, containIn, CENTRE, panFocus, fullImageRect, spreadCells } from '../src/core/images';
 it('crops to cover around the focus point, clamped inside the image', () => {
   expect(coverCrop({ w: 2000, h: 1000 }, { w: 100, h: 100 })).toEqual({ x: 500, y: 0, w: 1000, h: 1000 });
   expect(coverCrop({ w: 2000, h: 1000 }, { w: 100, h: 100 }, { x: 0, y: .5 })).toEqual({ x: 0, y: 0, w: 1000, h: 1000 });
@@ -27,4 +27,11 @@ it('pans the picture inside its frame by moving the focus, never past the pictur
   expect(panFocus(natural, frame, { x: 0, y: .5 }, { x: -10, y: 0 })).toEqual({ x: .3, y: .5 });
   expect(fullImageRect(natural, frame, CENTRE)).toEqual({ x: -50, y: 0, w: 200, h: 100 });
   expect(fullImageRect(natural, frame, { x: 1, y: 0 })).toEqual({ x: -100, y: 0, w: 200, h: 100 });
+});
+it('spreads several new pictures over the emptiest cells, the drop cell first (D-058)', () => {
+  const canvas = { w: 900, h: 300 }, cells = [0, 300, 600].map(x => ({ x, y: 0, w: 300, h: 300 })), taken = [{ x: 0, y: 0, w: 300, h: 300 }];
+  expect(spreadCells({ x: 50, y: 50 }, cells, taken, 2, canvas, true)).toEqual([cells[0], cells[1]]);
+  expect(spreadCells({ x: 450, y: 150 }, cells, taken, 3, canvas, false)).toEqual([cells[1], cells[2], cells[0]]);
+  expect(spreadCells({ x: 450, y: 150 }, cells, [], 4, canvas, false)[3]).toEqual({ x: 320, y: 20, w: 300, h: 300 });
+  expect(spreadCells({ x: 0, y: 0 }, [], taken, 2, canvas, true)).toEqual([{ x: 225, y: 75, w: 450, h: 150 }, { x: 245, y: 95, w: 450, h: 150 }]);
 });
