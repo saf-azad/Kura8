@@ -15,7 +15,7 @@ import '@fontsource/space-mono/700.css';
 import './style.css';
 import { createDocument, type KuraDoc } from './core/document';
 import { canvasSize } from './core/ratios';
-import { layout, starterNodes, STARTER } from './core/compositions';
+import { keepReadable, layout, starterNodes, STARTER } from './core/compositions';
 import { relayout } from './core/relayout';
 import { Store, loadDocument, loadPrevious, keepPrevious, DOC_KEY, newDocumentId, newId, type DialSettings } from './app/store';
 import { migrate } from './core/document';
@@ -45,18 +45,23 @@ const loaded = loadDocument();
 const store = new Store(loaded?.doc ?? null);
 // The design New replaced stays one Undo away, also after a reload (D-057).
 const previous = loadPrevious();
-let previousId: string | null = previous?.id ?? null;
-if (previous && store.doc && previous.id !== store.doc.id) store.history = { past: [previous], future: [] }; else if (previous) { keepPrevious(null); previousId = null; }
-store.on(() => { if (previousId && store.doc?.id === previousId) { keepPrevious(null); previousId = null; } });
+// The slot always holds the other design: the one left behind whenever the current design's id changes (New, Undo or
+// Redo across New, another tab), so Undo and Redo across New survive a reload too (D-072).
+if (previous && store.doc && previous.id !== store.doc.id) store.history = { past: [previous], future: [] };
+let shown = store.doc;
+store.on(() => { if (store.doc && shown && store.doc.id !== shown.id) keepPrevious(shown); shown = store.doc; });
 // Another tab saved the design: take its version (one Undo brings this tab's back) instead of overwriting it later.
 addEventListener('storage', e => {
   if (e.key !== DOC_KEY || !e.newValue || !store.doc || e.newValue === JSON.stringify(store.doc)) return;
   let next;
   try { next = migrate(JSON.parse(e.newValue)).doc; } catch { return; }
-  editor?.finishText(); store.commit(next, {}); toast('Updated from another tab', 2000);
+  // While this tab is typing, the other tab's save waits and the typed text is laid over it when the edit ends (D-072).
+  if (editor?.textarea) { editor.foreign = next; return; }
+  store.commit(next, {}); toast('Updated from another tab', 2000);
 });
 void navigator.storage?.persist?.().catch(() => false);
-addEventListener('pagehide', () => store.save());
+// An untouched new label (T, then reload) is not kept (D-090).
+addEventListener('pagehide', () => { editor?.dropFresh(); store.save(); });
 let saveWarned = false;
 store.on(() => { if (store.saveFailed && !saveWarned) { saveWarned = true; toast('Couldn’t save in this browser; export to keep your work', 3000); } if (!store.saveFailed) saveWarned = false; });
 /** Writes a migrated version 1 document's inline images to IndexedDB; the v2 document is saved only when all of them landed. */
@@ -148,28 +153,42 @@ function go(): void {
   if (!store.doc) { fresh(); return; }
   const before = store.doc, sizeId = store.ui.size, spec = before.sizes.find(x => x.id === sizeId) ?? before.sizes[0];
   const same = spec.ratio === s.ratio && spec.guide === s.guide && spec.comp === s.comp;
-  const palette = { ...before.palette, hue: s.hue, dark: s.dark, ...(s.accent ? { accent: s.accent } : {}) };
+  const palette = { ...before.palette, hue: s.hue, dark: s.dark, ...(s.accent ? { accent: s.accent } : {}) }, at = lastPress();
   if (!s.accent) delete palette.accent;
   const out = same ? { doc: before, flags: [] } : relayout({ ...before, palette }, spec.id, { ratio: s.ratio, guide: s.guide, comp: s.comp }, measure);
-  const next = { ...out.doc, palette };
+  const next = keepReadable({ ...out.doc, palette });
   store.setUI({ screen: 'editor', size: spec.id });
   route();
+  // A double press on Go lands on the dial's empty editor, not on a block (D-083).
+  const guarded = ensureEditor(); guarded.ignoreKeysUntil = performance.now() + 650; guarded.ignorePointerUntil = at ? performance.now() + 650 : 0; guarded.ignorePointerAt = at;
   if (next !== before && JSON.stringify(next) !== JSON.stringify(before)) {
     store.commit(next, {}); store.setUI({ flags: out.flags });
     const ed = ensureEditor();
     if (spec.ratio === s.ratio && !same) { store.paused = true; ed.tween.start(before, next, spec.id, d => { ed.display = d; ed.invalidate(); }, () => { ed.display = null; store.paused = false; ed.invalidate(); }); }
   }
 }
+/**
+ * The last press on the page, when it was within the last half second: the click on Start or Go (D-086). Started from
+ * the keyboard, the Start button's own place stands in, so a click there straight after Enter is caught too (D-088).
+ */
+let pressed: { x: number; y: number; t: number } | null = null;
+document.addEventListener('pointerdown', e => { pressed = { x: e.clientX, y: e.clientY, t: performance.now() }; }, true);
+const lastPress = (): { x: number; y: number } | null => {
+  if (pressed && performance.now() - pressed.t < 500) return { x: pressed.x, y: pressed.y };
+  const r = document.querySelector('[data-start]')?.getBoundingClientRect();
+  return r && r.width ? { x: r.x + r.width / 2, y: r.y + r.height / 2 } : null;
+};
 function fresh(): void {
-  const had = !!store.doc, { doc, headline } = starter(store.dial);
-  keepPrevious(store.doc); previousId = store.doc?.id ?? null;
+  const had = !!store.doc, { doc, headline } = starter(store.dial), at = lastPress();
   store.commit(doc, { before: store.doc });
   store.setUI({ screen: 'editor', size: 'main', sel: [], flags: [] });
   route();
   const ed = ensureEditor();
   if (had) toast('New design · Undo brings the last one back', 2200);
   ed.lift();
-  ed.editText(headline); ed.ignorePointerUntil = performance.now() + 450;
+  // A slow second click on Start (up to a second and a half) still leaves the headline editor open (D-083, D-086).
+  // Only a second click where the first one was (or where Start was, after Enter) counts (D-086, D-088).
+  ed.editText(headline); ed.ignorePointerUntil = at ? performance.now() + 1500 : 0; ed.ignorePointerAt = at; ed.ignoreKeysUntil = performance.now() + 1500;
 }
 let screen = '';
 store.on(() => {

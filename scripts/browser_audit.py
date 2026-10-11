@@ -48,6 +48,9 @@ class App:
     def __init__(self, browser):
         self.ctx = browser.new_context(viewport={'width': 1440, 'height': 900}, accept_downloads=True)
         self.page = self.ctx.new_page()
+        # Playwright turns file-chooser interception on without waiting for it, so a key pressed right after
+        # expect_file_chooser() could beat it and no chooser event came; a standing listener keeps it on.
+        self.page.on('filechooser', lambda fc: None)
         # Failed loads are reported from responses (with their URLs) rather than console text; the static page used to
         # reset storage asks for /favicon.ico, which the app itself never requests.
         self.page.on('console', lambda m: errors.append(f'{m.type}: {m.text}') if m.type == 'error' and not m.text.startswith('Failed to load resource') else None)
@@ -166,24 +169,39 @@ def s_load(app):
     p.screenshot(path=str(OUT / 'dial.png'))
 
 
-@step('5a ratio ring names destinations and hovering previews the hub')
+@step('5a ratio ring names destinations, Social opens into Instagram and LinkedIn formats, hovering previews the hub')
 def s_5a(app):
     app.fresh(); p = app.page
-    for label in ['Post 1:1', 'Portrait 4:5', 'Grid 3:4', 'Story 9:16', 'Pin 2:3', 'Print A4', 'Slide 16:9', 'Link 1.91:1', 'Banner 3:1', 'Cover 4:1']:
+    for label in ['Social: Instagram and LinkedIn formats', 'Pin 2:3', 'Print A4', 'Slide 16:9', 'Banner 3:1']:
         check(p.locator(f'[data-ring="ratio"][data-tip="{label}"]').count() == 1, f'missing {label}')
+    check(p.locator('[data-ring="ratio"]').count() == 5, 'Social is not one segment')
     before = p.locator('.hub canvas').bounding_box()
+    g = p.locator('[data-stop="social"] > g').bounding_box(); p.mouse.click(g['x'] + g['width'] / 2, g['y'] + g['height'] / 2); p.wait_for_timeout(600)
+    for label in ['Instagram post 4:5', 'Instagram square 1:1', 'Instagram story 9:16', 'Instagram grid 3:4', 'LinkedIn post 1:1', 'LinkedIn link 1.91:1', 'LinkedIn banner 4:1', 'Pin 2:3', 'Print A4', 'Slide 16:9', 'Banner 3:1']:
+        check(p.locator(f'[data-ring="ratio"][data-tip="{label}"]').count() == 1, f'Social did not open to {label}')
+    check(p.locator('[data-stop="li-post"] > g > g > path').count() == 1, 'LinkedIn logo missing')
+    g = p.locator('[data-stop="ig-story"] > g').bounding_box(); p.mouse.click(g['x'] + g['width'] / 2, g['y'] + g['height'] / 2); p.wait_for_timeout(600)
+    check('Instagram story 9:16' in p.locator('.card').nth(0).inner_text(), 'Instagram story not picked')
+    check(json.loads(p.evaluate('localStorage.getItem("kura8:dial")'))['format'] == 'ig-story', 'format not remembered')
+    g = p.locator('[data-stop="ig-post"] > g').bounding_box(); p.mouse.click(g['x'] + g['width'] / 2, g['y'] + g['height'] / 2); p.wait_for_timeout(600)
     g = p.locator('[data-ring="ratio"][data-tip="Banner 3:1"] > g').bounding_box(); p.mouse.move(g['x'] + g['width'] / 2, g['y'] + g['height'] / 2); p.wait_for_timeout(700)
     after = p.locator('.hub canvas').bounding_box()
     check(after['width'] / after['height'] > 2.5, f'hub did not preview banner: {after}')
     check(abs(before['width'] / before['height'] - .8) < .05, 'hub was not portrait first')
 
 
-@step('dial: arrows focus and turn rings, Enter starts, readout follows')
+@step('dial: arrows focus and turn rings, Space opens Social, Enter starts, readout follows')
 def s_dial_keys(app):
     app.fresh(); p = app.page
     p.keyboard.press('ArrowRight'); p.wait_for_timeout(100)
-    check('Grid 3:4' in p.locator('.card').nth(0).inner_text(), 'ratio did not turn to 3:4')
-    p.keyboard.press('ArrowDown'); p.keyboard.press('ArrowRight'); p.wait_for_timeout(100)
+    check('Pin 2:3' in p.locator('.card').nth(0).inner_text(), 'ratio did not turn to Pin')
+    p.keyboard.press('ArrowLeft'); p.keyboard.press('Space'); p.wait_for_timeout(500)
+    check(p.locator('[data-ring="ratio"]').count() == 11, 'Space did not open Social')
+    for _ in range(3): p.keyboard.press('ArrowRight')
+    p.wait_for_timeout(100)
+    check('Instagram grid 3:4' in p.locator('.card').nth(0).inner_text(), 'ratio did not turn to Instagram grid 3:4')
+    p.keyboard.press('ArrowDown'); p.keyboard.press('ArrowRight'); p.wait_for_timeout(500)
+    check(p.locator('[data-ring="ratio"]').count() == 5, 'Social did not close on another ring')
     check('Split' in p.locator('.card').nth(1).inner_text(), 'layout did not turn')
     p.keyboard.press('ArrowDown'); p.keyboard.press('ArrowLeft'); p.wait_for_timeout(100)
     check('Thirds' in p.locator('.card').nth(2).inner_text(), 'guide did not turn')
@@ -233,7 +251,7 @@ def s_matrix(app):
 @step('5b dial reopens on the last setting and a hub tap goes straight to the canvas')
 def s_5b(app):
     app.fresh({'ratio': 'story', 'comp': 'band', 'guide': 'divisions', 'hue': None, 'dark': True}); p = app.page
-    check('Story 9:16' in p.locator('.card').nth(0).inner_text() and 'Band' in p.locator('.card').nth(1).inner_text(), 'dial did not reopen on stored settings')
+    check('Instagram story 9:16' in p.locator('.card').nth(0).inner_text() and 'Band' in p.locator('.card').nth(1).inner_text(), 'dial did not reopen on stored settings')
     p.locator('.hub').click(); p.wait_for_timeout(400)
     check(p.locator('.dial').count() == 0 or not p.locator('.dial').is_visible(), 'hub tap did not open the canvas')
     p.keyboard.press('Escape')
@@ -298,7 +316,8 @@ def s_select_move(app):
     app.select(head, shift=True); check('2 selected' in p.locator('.info').inner_text(), 'shift-click did not add')
     app.click_unit(990, 990); p.wait_for_timeout(80)
     app.drag_unit((5, 995), (400, 690)); check('2 selected' in p.locator('.info').inner_text(), f'marquee: {p.locator(".info").inner_text()}')
-    p.keyboard.press('Control+a'); check(f'{len(d["nodes"])} selected' in p.locator('.info').inner_text(), 'select all')
+    p.keyboard.press('Control+a'); p.wait_for_timeout(100)  # the info label updates on the next animation frame
+    check(f'{len(d["nodes"])} selected' in p.locator('.info').inner_text(), 'select all')
     p.keyboard.press('Escape'); r = app.frame(acc)
     app.drag_unit((r['x'] + r['w'] / 2, r['y'] + r['h'] / 2), (r['x'] + r['w'] / 2 + 137, r['y'] + r['h'] / 2 + 91), alt=True)
     moved = app.frame(find(app.doc(), slot='accent')[0]); check(abs(moved['x'] - r['x'] - 137) < 1.5 and abs(moved['y'] - r['y'] - 91) < 1.5, f'move off: {moved}')
@@ -384,7 +403,7 @@ def s_layers(app):
     p.locator('button[aria-label="Layers"]').click(); p.wait_for_timeout(200)
     rows = p.locator('.layer'); check(rows.count() == len(d['nodes']), 'layer count')
     check('Body text' in rows.nth(0).inner_text(), f'top layer {rows.nth(0).inner_text()}')
-    rows.nth(0).locator('button[aria-label="Hide"]').click()
+    rows.nth(0).locator('button[aria-label^="Hide"]').click()
     body = find(app.doc(), slot='body')[0]; check(body['frames']['main'].get('hidden') is True, 'hide')
     p.locator('.layer').nth(1).locator('button[aria-label="Lock"]').click(); check(find(app.doc(), slot='headline')[0].get('locked') is True, 'lock from layers')
     p.locator('.layer').nth(1).locator('button[aria-label="Send backward"]').click()
@@ -443,7 +462,7 @@ def s_5h(app):
     p.locator('.colour-panel .roles button', has_text='Ground').click(); p.wait_for_timeout(150)
     box = p.locator('.colour-panel .contrast'); check(box.is_visible() and 'fails' in box.inner_text(), 'no contrast warning')
     box.locator('button', has_text='use').click(); f = find(app.doc(), slot='headline')[0]['fill']
-    check('row' in f, f'fix fill {f}'); p.wait_for_timeout(150); check(not p.locator('.colour-panel .contrast').is_visible(), 'still failing after use')
+    check('row' in f, f'fix fill {f}'); p.wait_for_timeout(150); check('fails' not in p.locator('.colour-panel .contrast').inner_text(), 'still failing after use')
 
 
 @step('5i roles mirror in dark mode; holding the ground toggle previews the other ground')
@@ -624,7 +643,7 @@ def s_sizes(app):
 @step('5y hidden objects stay out of exports and the sheet says how many')
 def s_5y(app):
     app.start(SQUARE); p = app.page; d = app.doc(); acc = find(d, slot='accent')[0]
-    p.locator('button[aria-label="Layers"]').click(); p.locator('.layer', has_text='Rectangle').locator('button[aria-label="Hide"]').click(); p.keyboard.press('Escape')
+    p.locator('button[aria-label="Layers"]').click(); p.locator('.layer', has_text='Rectangle').locator('button[aria-label^="Hide"]').click(); p.keyboard.press('Escape')
     p.keyboard.press('Control+Shift+E'); p.wait_for_timeout(300)
     notes = p.locator('.sheet .notes').inner_text(); check('1 hidden object not included' in notes, f'notes: {notes}')
     check('1 empty image frame not included' in notes, f'empty frame note: {notes}')

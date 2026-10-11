@@ -32,6 +32,9 @@ it('reorders by the shared array order', () => {
   expect(order(reorder(d, ['a'], 'front'))).toBe('bcia'); expect(order(reorder(d, ['i'], 'back'))).toBe('iabc');
   expect(order(reorder(d, ['a'], 'forward'))).toBe('baci'); expect(order(reorder(d, ['i'], 'forward'))).toBe('abci');
   expect(order(reorder(d, ['c'], 'backward'))).toBe('acbi'); expect(order(reorder(d, ['a', 'b'], 'backward'))).toBe('abci');
+  // A locked block keeps its place (D-077); the unlocked ones beside it still move.
+  const locked = setLocked(d, ['a'], true);
+  expect(order(reorder(locked, ['a'], 'front'))).toBe('abci'); expect(order(reorder(locked, ['a', 'c'], 'front'))).toBe('abic');
 });
 it('duplicates and pastes unlocked, untagged copies offset in every size', () => {
   const d = { ...base(), sizes: [...base().sizes, { id: 's2', ratio: 'story' as const, guide: null, comp: null }] };
@@ -55,5 +58,8 @@ it('names layers, trimming and clearing blanks (D-066)', () => {
   expect(d.nodes[1].name).toBe('Hero photo'); expect(validateDocument(d)).toBe(true);
   expect(setName(d, 'b', '   ').nodes[1]).not.toHaveProperty('name');
   expect(setName(d, 'a', 'x'.repeat(100)).nodes[0].name).toHaveLength(80);
+  // An emoji at the cut is left out whole, not split into half a character (D-088).
+  const odd = setName(d, 'a', `${'x'.repeat(79)}🎉 party`).nodes[0].name!;
+  expect(odd).toBe('x'.repeat(79)); expect(validateDocument(setName(d, 'a', `${'x'.repeat(79)}🎉`))).toBe(true);
   expect(validateDocument({ ...d, nodes: [{ ...d.nodes[0], name: '' }] })).toBe(false);
 });

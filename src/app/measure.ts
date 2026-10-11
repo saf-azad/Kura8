@@ -2,6 +2,7 @@ import type { Measure } from '../core/geometry';
 import type { FontId } from '../core/document';
 import { fontStack } from '../core/script';
 import { fontById } from '../core/fonts';
+import { BREAK_AFTER } from '../core/fit';
 // The app's text measurer: canvas metrics with the face's font stack, greedy word wrap, and character breaks for
 // words (or unspaced scripts) wider than the line. Cached; cleared when web fonts arrive. A face is loaded the
 // first time text is measured in it (D-049), and `onFontLoad` hears when it lands so the canvas can redraw.
@@ -29,8 +30,16 @@ export const measure: Measure = (text, size, weight, width, font) => {
     for (const word of paragraph.split(' ')) {
       const next = line ? `${line} ${word}` : word;
       if (fits(next)) { line = next; continue; }
-      if (line) { out.push(line); line = ''; }
-      for (const char of word) { if (line && !fits(line + char)) { out.push(line); line = ''; } line += char; }
+      // A hyphenated word breaks after a hyphen before it breaks inside a part ("late-" / "afternoon", D-086); a link after
+      // a slash; a minus sign stays with its number (D-088).
+      const parts = word.split(BREAK_AFTER);
+      parts.forEach((part, i) => {
+        const joined = i === 0 ? (line ? `${line} ${part}` : part) : line + part;
+        if (fits(joined)) { line = joined; return; }
+        if (line) { out.push(line); line = ''; }
+        if (fits(part)) { line = part; return; }
+        for (const char of part) { if (line && !fits(line + char)) { out.push(line); line = ''; } line += char; }
+      });
     }
     out.push(line);
   }

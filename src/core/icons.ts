@@ -19,8 +19,11 @@ export function scalePath(d: string, k: number): string {
   }
   return out;
 }
-/** A leading relative moveto is absolute for its first pair only; make that explicit so paths can be concatenated. */
-const absolute = (d: string) => d.replace(/^m([^a-df-z]*)/i, (_, a: string) => { const [x, y, ...rest] = a.match(NUMBER) ?? []; return rest.length ? `M${x} ${y}l${rest.join(' ')}` : 'M' + a; });
+/**
+ * A leading relative moveto is absolute for its first pair only; make that explicit so paths can be concatenated. Pairs after
+ * the first are implicit linetos: relative after `m`, absolute after `M`.
+ */
+const absolute = (d: string) => d.replace(/^(m)([^a-df-z]*)/i, (_, m: string, a: string) => { const [x, y, ...rest] = a.match(NUMBER) ?? []; return rest.length ? `M${x} ${y}${m === 'm' ? 'l' : 'L'}${rest.join(' ')}` : 'M' + a; });
 /** Joins all <path d> of an icon SVG into one single-ink path; flattened = true when the source had several paths or fill/opacity variations (5t). */
 export function flattenSvg(svg: string): { d: string; flattened: boolean } {
   const ds = (svg.match(/<path\b[^>]*>/g) ?? []).map(t => /\sd\s*=\s*(["'])([^]*?)\1/.exec(t)?.[2].trim() ?? '').filter(Boolean);
@@ -59,7 +62,7 @@ export const SYNONYMS: Record<string, string[]> = {
   nature: ['leaf', 'tree', 'flower', 'plant', 'mountains'], garden: ['plant', 'flower', 'shovel', 'potted plant'],
   forest: ['tree', 'tree evergreen'], puppy: ['dog', 'paw print'], kitten: ['cat', 'paw print'], learn: ['graduation cap', 'book open', 'student'],
   work: ['briefcase', 'building office', 'desktop'], job: ['briefcase'], office: ['building office', 'briefcase'],
-  business: ['briefcase', 'chart line up', 'handshake'], growth: ['chart line up', 'plant'], computer: ['desktop', 'laptop', 'monitor'],
+  business: ['briefcase', 'chart line up', 'handshake'], growth: ['chart line up', 'trend up', 'plant'], computer: ['desktop', 'laptop', 'monitor'],
   programming: ['code', 'terminal', 'brackets curly'], web: ['globe', 'browser', 'link'], website: ['browser', 'globe'],
   talk: ['chat circle', 'chats', 'microphone'], speech: ['chat circle', 'quotes'],
   game: ['game controller', 'dice five', 'puzzle piece', 'joystick'], soccer: ['soccer ball', 'football'], award: ['trophy', 'medal', 'seal check'],
@@ -74,6 +77,11 @@ export const SYNONYMS: Record<string, string[]> = {
   bathroom: ['toilet', 'shower', 'bathtub'], road: ['road horizon', 'path', 'signpost'], direction: ['signpost', 'compass', 'navigation arrow'],
   goal: ['target', 'flag checkered', 'trophy'], pointer: ['cursor', 'cursor click', 'hand pointing'], gem: ['diamond'], luxury: ['diamond', 'crown'],
   family: ['users three', 'house', 'baby'], child: ['baby', 'student'], clean: ['broom', 'sparkle'],
+  // Loop-3 student searches (D-077).
+  tick: ['check', 'check circle', 'checks', 'check square'], study: ['book open', 'books', 'graduation cap', 'notebook', 'student'],
+  search: ['magnifying glass', 'magnifying glass plus'], find: ['magnifying glass'], language: ['translate', 'globe'],
+  arrow: ['arrow right', 'arrow left', 'arrow up', 'arrow down'], checkmark: ['check', 'check circle', 'checks'], magnifier: ['magnifying glass'],
+  studying: ['book open', 'books', 'graduation cap', 'notebook'], students: ['student', 'graduation cap', 'users three'], write: ['pencil', 'pen nib', 'note pencil'], edit: ['pencil simple', 'pencil', 'note pencil'], trend: ['trend up', 'chart line up'],
 };
 
 const fold = (s: string) => s.normalize('NFD').replace(/\p{M}+/gu, '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
@@ -94,9 +102,13 @@ const categoryGrams = memo((index: IconIndex) => {
   return index.categories.map((c, i) => [...new Set([...wordsOf(c), ...entries.filter(e => e.cat === i).flatMap(e => [...e.words, ...e.tags])])].map(grams));
 });
 const MISS = 9;
-/** 2 a name word starts with the query word, 3 a tag does, 4 a synonym names or tags the icon, 5 the word sits inside a name word ("love" in clover). */
-function level(e: Entry, w: string, terms: string[]): number {
+/**
+ * 1.5 the query word is a synonym key and the icon is one of its listed answers (curated, D-074), 2 a name word starts
+ * with the query word, 3 a tag does, 4 a synonym names or tags the icon, 5 the word sits inside a name word ("love" in clover).
+ */
+function level(e: Entry, w: string, terms: string[], answers: string[] = []): number {
   const s = stem(w);
+  if (answers.some(t => e.stems.has(t))) return 1.5;
   if (e.words.some(x => x.startsWith(s))) return 2;
   if (e.tags.some(x => x.startsWith(s))) return 3;
   if (terms.some(t => e.stems.has(t))) return 4;
@@ -110,7 +122,7 @@ function nearest(index: IconIndex, entries: Entry[], words: string[]): number {
 }
 /**
  * 5s: matches query words against names, tags and synonyms (accent- and case-insensitive, prefix matching, plural- and
- * hyphen/space-agnostic), ranked exact name, name prefix, a name word, a tag, a synonym, inside a name word. Icons matching
+ * hyphen/space-agnostic), ranked exact name, a curated synonym answer, name prefix, a name word, a tag, a synonym, inside a name word. Icons matching
  * every word come before icons matching some. Empty query → picks. No match → the nearest category's icons (its picks
  * first) with `category` set.
  */
@@ -119,10 +131,14 @@ export function searchIcons(index: IconIndex, q: string, synonyms: Record<string
   if (!words.length) return { names: index.picks.slice(0, limit) };
   const entries = entriesOf(index), groups = groupsOf(synonyms);
   const terms = words.map(w => groups.flatMap(([k, v]) => k === stem(w) ? [k, ...v] : v.includes(stem(w)) ? [k] : []));
+  const answers = words.map(w => groups.flatMap(([k, v]) => k === stem(w) ? v : []));
   const scored = entries.map(e => {
-    const hit = words.map((w, i) => level(e, w, terms[i])).filter(l => l < MISS), sum = hit.reduce((a, b) => a + b, 0);
-    if (e.flat.startsWith(flat)) return { e, miss: 0, rank: e.flat === flat ? 0 : 1, sum };
-    return { e, miss: words.length - hit.length, rank: Math.max(...hit), sum };
+    const hit = words.map((w, i) => level(e, w, terms[i], answers[i])).filter(l => l < MISS), sum = hit.reduce((a, b) => a + b, 0);
+    // An icon a one-word query's synonym names outright outranks a name that merely starts with the query ("tick" →
+    // Check before Ticket), in the listed order (D-077).
+    const at = words.length === 1 ? answers[0].indexOf(stem(e.flat)) : -1, curated = at >= 0 ? .5 + at / 100 : null;
+    if (e.flat.startsWith(flat)) return { e, miss: 0, rank: e.flat === flat ? 0 : curated ?? 1, sum };
+    return { e, miss: words.length - hit.length, rank: curated ?? Math.max(...hit), sum };
   }).filter(s => s.miss < words.length);
   if (scored.length) {
     scored.sort((a, b) => a.miss - b.miss || a.rank - b.rank || a.sum - b.sum || a.e.name.length - b.e.name.length || (a.e.name < b.e.name ? -1 : 1));

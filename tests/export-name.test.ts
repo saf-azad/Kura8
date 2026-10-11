@@ -7,8 +7,20 @@ it('names exports after the headline, else the first visible text, else kura8', 
   expect(nameStem(doc([textNode('b', frame(0, 0, 10, 10), 'Body first'), head]), 'main')).toBe('bean-there-done-that');
   expect(nameStem(doc([textNode('b', frame(0, 0, 10, 10), 'Cultural Night 2026')]), 'main')).toBe('cultural-night-2026');
   expect(nameStem(doc([textNode('b', frame(0, 0, 10, 10, { hidden: true }), 'Hidden'), textNode('c', frame(0, 0, 10, 10), '  ')]), 'main')).toBe('kura8');
-  expect(nameStem(doc([textNode('z', frame(0, 0, 10, 10), '你好世界')]), 'main')).toBe('kura8');
+  expect(nameStem(doc([textNode('z', frame(0, 0, 10, 10), '你好世界')]), 'main')).toBe('你好世界');
+  expect(nameStem(doc([textNode('k', frame(0, 0, 10, 10), '추석 축제 2026')]), 'main')).toBe('추석-축제-2026');
+  expect(nameStem(doc([textNode('h', frame(0, 0, 10, 10), 'दिवाली मेला')]), 'main')).toBe('दिवाली-मेला');
+  expect(nameStem(doc([textNode('v', frame(0, 0, 10, 10), 'Tết Trung Thu')]), 'main')).toBe('tet-trung-thu');
+  expect(nameStem(doc([textNode('v', frame(0, 0, 10, 10), 'Tết Nguyên Đán · Łódź Straße')]), 'main')).toBe('tet-nguyen-dan-lodz-strasse');
+  expect(nameStem(doc([textNode('x', frame(0, 0, 10, 10, { hidden: true }), 'Hidden here')]))).toBe('hidden-here');
+  expect(nameStem(doc([textNode('e', frame(0, 0, 10, 10), '!!!')]), 'main')).toBe('kura8');
   expect(nameStem(doc([textNode('l', frame(0, 0, 10, 10), 'The quick brown fox jumps over the lazy dog again and again')]), 'main')).toBe('the-quick-brown-fox-jumps-over-the-lazy');
   expect(nameStem(doc([textNode('w', frame(0, 0, 10, 10), 'Supercalifragilisticexpialidocious-and-even-longer-words')]), 'main')).toBe('supercalifragilisticexpialidocious-and');
   expect(nameStem(doc([textNode('w', frame(0, 0, 10, 10), 'Abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz')]), 'main')).toBe('abcdefghijklmnopqrstuvwxyzabcdefghijklmn');
+});
+it('never names a file after layout placeholder copy (D-081)', () => {
+  const placeholder = (id: string, text: string, slot: 'headline' | 'body') => textNode(id, frame(0, 0, 10, 10), text, { slot } as Partial<DocNode>);
+  expect(nameStem(doc([placeholder('b', 'Body text', 'body')]), 'main')).toBe('kura8');
+  expect(nameStem(doc([placeholder('b', 'Body text', 'body'), placeholder('h', 'Night Market', 'headline')]), 'main')).toBe('night-market');
+  expect(nameStem(doc([textNode('x', frame(0, 0, 10, 10), 'Headline')]), 'main')).toBe('headline');
 });

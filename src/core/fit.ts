@@ -15,9 +15,23 @@ const EPS = 1e-6;
 /** Whether wrapping broke a word across lines (a word wider than the line). Text in scripts written without spaces wraps anywhere and never counts. */
 export function splitsWord(text: string, lines: string[]): boolean {
   if (/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Thai}]/u.test(text)) return false;
-  const flat = (s: string) => s.replace(/\s+/g, ' ').trim();
+  // A break where `BREAK_AFTER` allows one ("late-" / "afternoon", "linktr.ee/" / "unswms") is not a broken word (D-086, D-088).
+  const flat = (s: string) => s.replace(/\s+/g, ' ').trim().replace(/(?<=[\p{L}\p{N}]{2}-|[/_]|\p{L}\.) /gu, '');
   return flat(lines.join(' ')) !== flat(text);
 }
+/**
+ * The pieces a text never breaks inside (D-088): words, split after a hyphen that follows a letter or digit and after a
+ * slash, and single characters in scripts written without spaces. A minus sign ("-12") stays with its number.
+ */
+export function pieces(text: string): string[] {
+  return text.split(/\s+/).filter(Boolean).flatMap(word => /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Thai}]/u.test(word) ? [...word] : word.split(BREAK_AFTER));
+}
+/**
+ * Where a word may break between lines: after a hyphen that follows a letter or digit, and after a slash (D-086, D-088);
+ * in a link also after an underscore and after a dot between letters ("usyd." / "marketing", D-089). A hyphen after a
+ * single letter ("O-Week", "e-mail") does not break (D-090).
+ */
+export const BREAK_AFTER = /(?<=[\p{L}\p{N}]{2}-|[/_])(?=.)|(?<=\p{L}\.)(?=\p{L})/u;
 /** Autofit (5q): from `size`, step down the type scale until the text fits `height` without breaking a word (D-055), stopping at body size; past that it overflows and the block grows. */
 export function fitText(o: { text: string; weight: 400 | 700; width: number; height: number; size: number; scale: TypeScale; measure: Measure; font?: FontId }): { size: number; lines: string[]; overflow: boolean } {
   const floor = Math.min(o.size, o.scale.body), sizes = [o.size, ...o.scale.steps.filter(s => s < o.size - EPS && s >= floor - EPS).reverse()];
@@ -27,6 +41,14 @@ export function fitText(o: { text: string; weight: 400 | 700; width: number; hei
   }
   const size = sizes[sizes.length - 1];
   return { size, lines: o.measure(o.text, size, o.weight, o.width, o.font), overflow: true };
+}
+/** The largest size up to `size` (to half a unit) at which the text fits `height` within `width` without breaking a word; 0 when none does (D-083). */
+export function roomSize(o: { text: string; size: number; width: number; height: number; weight: 400 | 700; measure: Measure; font?: FontId }): number {
+  const fits = (s: number) => { const lines = o.measure(o.text, s, o.weight, o.width, o.font); return textHeight(lines.length, s) <= o.height + EPS && !splitsWord(o.text, lines); };
+  if (fits(o.size)) return o.size;
+  let lo = 0, hi = o.size;
+  while (hi - lo > .5) { const mid = (lo + hi) / 2; if (fits(mid)) lo = mid; else hi = mid; }
+  return Math.floor(lo * 2) / 2;
 }
 export type TextBox = { size: number; lines: string[]; rect: Rect; overflow: boolean };
 /** Effective text geometry in one size: wrapped lines, font size after autofit, and the drawn box (the frame grown to fit its text). */

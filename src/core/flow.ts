@@ -1,13 +1,38 @@
-import type { Measure, Rect } from './geometry';
-import type { KuraDoc, TextNode } from './document';
+import type { Measure, Rect, Size } from './geometry';
+import type { Frame, KuraDoc, TextNode } from './document';
 import { canvasSize } from './ratios';
-import { LINE_HEIGHT, textBox, typeScale } from './fit';
+import { LINE_HEIGHT, pieces, roomSize, splitsWord, textBox, textHeight, typeScale, type TextBox } from './fit';
+import { drawnWeight } from './fonts';
+import { direction, physicalAlign } from './script';
 import { nudge } from './ops';
+import { layoutPad } from './compositions';
 // Stacked text follows (D-046): when an edit changes a text block's drawn height, unlocked text blocks that sat just
 // under it move by the same amount, and the blocks under those follow in turn. "Just under" means unrotated, sharing
-// some width, with a top no further below the old bottom than one line of the block above. Applied in every size,
+// some width, with a top no further below the old bottom than one line of the block above (or than the growth). Applied in every size,
 // since text is linked across sizes and wraps differently in each.
 const EPS = 1e-6;
+/** A text box cut to its lines. */
+const extent = (b: TextBox): TextBox => ({ ...b, rect: { ...b.rect, h: textHeight(b.lines.length, b.size) } });
+/**
+ * The space a block holds: its lines, or for autofit text its whole room, which the layout keeps clear under the letters
+ * (the poster's band sits under the room, D-076/D-077).
+ */
+const held = (n: TextNode, b: TextBox): TextBox => n.fit ? b : extent(b);
+const overlaps = (a: Rect, b: Rect) => a.x < b.x + b.w - EPS && b.x < a.x + a.w - EPS;
+const inside = (outer: Rect, r: Rect) => r.x >= outer.x - EPS && r.y >= outer.y - EPS && r.x + r.w <= outer.x + outer.w + EPS && r.y + r.h <= outer.y + outer.h + EPS;
+/**
+ * What a text block sits on in a size: the topmost unturned picture or shape under its top-left corner, else the ground
+ * (null). Text flows only among blocks on the same thing, so the poster's band text never follows the headline above the
+ * band, in any ratio (D-082); a caption that grows past its photo still sits on the photo (D-083).
+ */
+export function sitsOn(doc: KuraDoc, id: string, sizeId: string, r: Rect, whole = false): string | null {
+  const probe = whole ? r : { x: r.x + .5, y: r.y + .5, w: 0, h: 0 };
+  for (let j = doc.nodes.findIndex(n => n.id === id) - 1; j >= 0; j--) {
+    const b = doc.nodes[j], f = b.frames[sizeId];
+    if (b.kind !== 'text' && b.kind !== 'ink' && f && !f.hidden && !f.rot && inside(f.rect, probe)) return b.id;
+  }
+  return null;
+}
 export function flowText(before: KuraDoc, after: KuraDoc, id: string, measure: Measure): KuraDoc {
   const was = before.nodes.find(n => n.id === id), now = after.nodes.find(n => n.id === id);
   if (was?.kind !== 'text' || now?.kind !== 'text') return after;
@@ -15,26 +40,230 @@ export function flowText(before: KuraDoc, after: KuraDoc, id: string, measure: M
   for (const spec of after.sizes) {
     const f0 = was.frames[spec.id], f1 = now.frames[spec.id];
     if (!f0 || !f1 || f0.hidden || f1.hidden || f0.rot || f1.rot) continue;
-    const scale = typeScale(spec.guide, canvasSize(spec.ratio)), b0 = textBox(was, f0, measure, scale), b1 = textBox(now, f1, measure, scale);
+    const scale = typeScale(spec.guide, canvasSize(spec.ratio)), b0 = held(was, textBox(was, f0, measure, scale)), b1 = held(now, textBox(now, f1, measure, scale));
     const dy = b1.rect.y + b1.rect.h - (b0.rect.y + b0.rect.h);
-    if (Math.abs(dy) < EPS) continue;
-    const stack = new Map<string, { rect: Rect; line: number }>();
+    // A room gives nothing back: leaving autofit (Smaller on a poster headline) never pulls the text under it up (D-077).
+    if (Math.abs(dy) < EPS || (was.fit && dy < 0)) continue;
+    const stack = new Map<string, { rect: Rect; line: number }>(), others: { id: string; rect: Rect }[] = [], on = sitsOn(doc, id, spec.id, b0.rect);
     for (const n of doc.nodes) {
       const f = n.frames[spec.id];
-      if (n.id === id || n.kind !== 'text' || n.locked || !f || f.hidden || f.rot) continue;
-      const b = textBox(n as TextNode, f, measure, scale);
-      stack.set(n.id, { rect: b.rect, line: b.size * LINE_HEIGHT });
+      if (n.id === id || n.kind !== 'text' || !f || f.hidden || f.rot) continue;
+      const b = held(n as TextNode, textBox(n as TextNode, f, measure, scale));
+      others.push({ id: n.id, rect: b.rect });
+      if (!n.locked && sitsOn(doc, n.id, spec.id, b.rect) === on) stack.set(n.id, { rect: b.rect, line: b.size * LINE_HEIGHT });
     }
     const queue = [{ rect: b0.rect, line: b0.size * LINE_HEIGHT }], moving: string[] = [];
     while (queue.length) {
       const above = queue.shift()!, bottom = above.rect.y + above.rect.h;
       for (const [nid, below] of stack) {
-        const r = below.rect, sharesWidth = r.x < above.rect.x + above.rect.w - EPS && above.rect.x < r.x + r.w - EPS;
-        if (!sharesWidth || r.y < bottom - EPS || r.y > bottom + above.line + EPS) continue;
+        const r = below.rect;
+        // A big jump (a pasted paragraph) reaches blocks further down than one line: they follow too (D-070).
+        if (!overlaps(r, above.rect) || r.y < bottom - EPS || r.y > bottom + Math.max(above.line, dy) + EPS) continue;
+        // Rising, a block also sitting under another block that stays (a footer under two columns) stays with it (D-077).
+        if (dy < 0 && others.some(o => o.id !== nid && !moving.includes(o.id) && overlaps(o.rect, r) && o.rect.y + o.rect.h <= r.y + EPS && o.rect.y + o.rect.h > bottom + dy + EPS)) continue;
         stack.delete(nid); moving.push(nid); queue.push(below);
       }
     }
-    if (moving.length) doc = nudge(doc, spec.id, moving, 0, dy);
+    // Text is never pushed past the canvas bottom: a stack that would leave the canvas stops at its edge (D-086).
+    const canvas = canvasSize(spec.ratio), lowest = Math.max(...moving.map(m => { const n = doc.nodes.find(x => x.id === m) as TextNode; return held(n, textBox(n, n.frames[spec.id], measure, scale)).rect; }).map(r => r.y + r.h));
+    const step = dy > 0 && moving.length ? Math.max(0, Math.min(dy, canvas.h - lowest)) : dy;
+    if (moving.length && Math.abs(step) > EPS) doc = nudge(doc, spec.id, moving, 0, step);
+  }
+  return doc;
+}
+/**
+ * Autofit off for a text block (a hand-set size, 5q): each size keeps the size autofit gave it, so no other linked size
+ * jumps to the larger set size (D-085). `except` is the size whose new size the caller sets.
+ */
+export function unfit(doc: KuraDoc, id: string, measure: Measure, except?: string): KuraDoc {
+  const n = doc.nodes.find(x => x.id === id);
+  if (n?.kind !== 'text' || !n.fit) return doc;
+  const frames = { ...n.frames };
+  for (const s of doc.sizes) {
+    const f = frames[s.id]; if (!f || s.id === except) continue;
+    const b = textBox(n, f, measure, typeScale(s.guide, canvasSize(s.ratio)));
+    frames[s.id] = { ...f, fontSize: b.size, rect: { ...f.rect, h: textHeight(b.lines.length, b.size) } };
+  }
+  const t = { ...n, frames } as TextNode; delete t.fit;
+  return { ...doc, nodes: doc.nodes.map(x => x.id === id ? t : x) };
+}
+/**
+ * Layout text whose copy changed keeps fitting its room in every size (D-088, D-090): where the new copy, at the size it
+ * had when the edit began, would run past the picture or shape below it or the canvas bottom, less the layout margin and
+ * the room the text stacked under it on the same backing needs, it takes the largest size that fits with whole words,
+ * never below that size's body type for a headline or three fifths of it for other text. The edited size counts too: a hand-set size holds while the copy
+ * fits (5q). Autofit text fits itself.
+ */
+export function keepInRoom(before: KuraDoc, after: KuraDoc, id: string, measure: Measure): KuraDoc {
+  const was = before.nodes.find(n => n.id === id), now = after.nodes.find(n => n.id === id);
+  if (was?.kind !== 'text' || now?.kind !== 'text' || !now.slot || now.fit) return after;
+  let frames = now.frames;
+  for (const spec of after.sizes) {
+    const f0 = was.frames[spec.id], f1 = now.frames[spec.id];
+    if (!f0 || !f1 || f1.hidden || f1.rot) continue;
+    const canvas = canvasSize(spec.ratio), scale = typeScale(spec.guide, canvas), start = textBox(was, f0, measure, scale), b0 = start.rect, pad = layoutPad(canvas);
+    const across = (r: Rect) => r.x < b0.x + b0.w && b0.x < r.x + r.w && r.y >= b0.y + b0.h - EPS;
+    let limit = canvas.h - pad;
+    for (const o of before.nodes) {
+      const f = o.frames[spec.id];
+      if (o.id === id || o.kind === 'text' || o.kind === 'ink' || !f || f.hidden || f.rot) continue;
+      if (across(f.rect)) limit = Math.min(limit, f.rect.y - pad);
+    }
+    // Text stacked under it, above that limit and on the same backing, keeps its room (a split layout's body above the accent).
+    const on = sitsOn(before, id, spec.id, f0.rect);
+    let below = b0.y + b0.h;
+    for (const o of before.nodes) {
+      const f = o.frames[spec.id];
+      if (o.id === id || o.kind !== 'text' || !f || f.hidden || f.rot || sitsOn(before, o.id, spec.id, f.rect) !== on) continue;
+      const r = textBox(o, f, measure, scale).rect;
+      if (across(r) && r.y + r.h <= limit + pad + EPS) below = Math.max(below, r.y + r.h);
+    }
+    limit = Math.max(limit - (below - b0.y - b0.h), b0.y + b0.h);
+    const weight = drawnWeight(now.font, now.weight), at = { ...f1, fontSize: start.size };
+    const size = textBox(now, at, measure, scale).rect.h <= limit - f1.rect.y + EPS ? start.size
+      : Math.max(Math.min(now.slot === 'headline' ? scale.body : scale.body * .6, start.size), roomSize({ text: now.text, size: start.size, width: f1.rect.w, height: limit - f1.rect.y, weight, measure, font: now.font }));
+    if (Math.abs(size - (f1.fontSize ?? scale.body)) > EPS) frames = { ...frames, [spec.id]: { ...f1, fontSize: size } };
+  }
+  return frames === now.frames ? after : { ...after, nodes: after.nodes.map(n => n.id === id ? { ...now, frames } : n) };
+}
+/** The narrowest width that keeps a text on one line (a word wider than the line counts as wrapping). */
+export function oneLineWidth(text: string, size: number, weight: 400 | 700, measure: Measure, font?: TextNode['font'], max = 8000): number {
+  // One character never wraps, so its width is half the narrowest line that keeps it doubled (D-086).
+  const t = text.trim();
+  if ([...t].length === 1) return oneLineWidth(t + t, size, weight, measure, font, max) / 2;
+  let lo = 0, hi = max;
+  if (measure(text, size, weight, hi, font).length > 1) return hi;
+  while (hi - lo > .25) { const mid = (lo + hi) / 2; if (measure(text, size, weight, mid, font).length === 1 && !splitsWord(text, measure(text, size, weight, mid, font))) hi = mid; else lo = mid; }
+  return hi;
+}
+/**
+ * How wide a text block may grow: a free label (or a turned block) the canvas width, since it slides back on; layout text
+ * from its aligned edge to the canvas edge it grows towards, less the margin it keeps from the nearer edge (D-081).
+ */
+export function roomFor(n: TextNode, f: Frame, canvas: Size): number {
+  const r = f.rect, side = physicalAlign(n.align, direction(n.text)), cx = r.x + r.w / 2, m = Math.max(0, Math.min(r.x, canvas.w - r.x - r.w));
+  if (f.rot || !n.slot) return canvas.w;
+  return side === 'left' ? canvas.w - r.x - m : side === 'right' ? r.x + r.w - m : 2 * (Math.min(cx, canvas.w - cx) - m);
+}
+/** The largest size up to `size` at which no word of the text breaks across lines `width` wide (to half a unit). */
+export function wholeWordSize(text: string, size: number, width: number, weight: 400 | 700, measure: Measure, font?: TextNode['font']): number {
+  const whole = (s: number) => !splitsWord(text, measure(text, s, weight, width, font));
+  if (whole(size)) return size;
+  let lo = 0, hi = size;
+  while (hi - lo > .5) { const mid = (lo + hi) / 2; if (whole(mid)) lo = mid; else hi = mid; }
+  return Math.floor(lo * 2) / 2;
+}
+/**
+ * One-line text keeps its shape (D-070, D-077, D-081): when a size, face, weight or text change alters a block that was a
+ * single line, a free label (no layout slot) whose box hugged its words (within 15 %) follows them like an auto-width
+ * label, growing away from its aligned edge and sliding back to stay on the canvas; beyond the canvas width it wraps.
+ * Layout text keeps its slot: it widens only when a word would otherwise break, and only towards the canvas edge on its
+ * growing side, so it never crosses back over a picture column. Rotated labels keep their aligned edge's point. A
+ * hugging label given several paragraphs (a pasted paragraph) widens to its widest one (D-082). Autofit text, and
+ * multi-paragraph text that did not hug, keep their width. Applied in every size.
+ */
+export function hugText(before: KuraDoc, after: KuraDoc, id: string, measure: Measure): KuraDoc {
+  const was = before.nodes.find(n => n.id === id), now = after.nodes.find(n => n.id === id);
+  if (was?.kind !== 'text' || now?.kind !== 'text' || now.fit || !now.text.trim()) return after;
+  const paragraphs = now.text.includes('\n');
+  let doc = after;
+  for (const spec of after.sizes) {
+    const f0 = was.frames[spec.id], f1 = now.frames[spec.id];
+    if (!f0 || !f1) continue;
+    // One line per paragraph counts as one line: a pasted list that hugs its widest item grows like a label (D-090).
+    const canvas = canvasSize(spec.ratio), scale = typeScale(spec.guide, canvas), b0 = textBox(was, f0, measure, scale), oneLine = b0.lines.length === was.text.split('\n').length;
+    const w0 = drawnWeight(was.font, was.weight), w1 = drawnWeight(now.font, now.weight), free = !now.slot, r = f1.rect, pad = layoutPad(canvas);
+    const side = physicalAlign(now.align, direction(now.text)), whole = { x: 0, y: 0, ...canvas };
+    // A free label keeps the inset it has from the canvas edge, or from the block it sits on (a badge, a photo caption),
+    // up to a twentieth of that width, on both sides, so it never grows flush against an edge or out of its block (D-083).
+    // Both are judged from the box as the edit began, so a label sliding along while it grows keeps its bounds; it sits on
+    // a block only when the block holds all of it, and only while the block is wide enough for its longest word (D-085).
+    const g = f0.rect, inset = (b: Rect) => Math.max(0, Math.min(g.x - b.x, b.x + b.w - g.x - g.w, b.w / 20));
+    const on = free && !f0.rot ? sitsOn(before, id, spec.id, g, true) : null, block = on ? before.nodes.find(n => n.id === on)!.frames[spec.id]?.rect ?? null : null;
+    // Chinese breaks between characters and a link after its slashes, so neither counts as one long word (D-088).
+    const longestAt = (size: number) => Math.max(0, ...pieces(now.text).sort((p, q) => q.length - p.length).slice(0, 3).map(word => oneLineWidth(word, size, w1, measure, now.font))) * 1.02;
+    let s1 = f1.fontSize ?? scale.body;
+    const keep = Math.min(Math.max(0, canvas.h - g.y - g.h), pad);
+    // Retyped with a word its block cannot hold, or copy that wrapped there would not fit on the canvas below the block's
+    // top, a label on a block takes the size that fits it there, down to three fifths of body type; past that it leaves the
+    // block for the canvas as before (D-089).
+    if (block && now.text !== was.text) {
+      const lo = block.x + inset(block), hi = block.x + block.w - inset(block), gx0 = g.x + g.w / 2;
+      const fit = Math.max(1, side === 'left' ? hi - Math.max(lo, g.x) : side === 'right' ? Math.min(hi, g.x + g.w) - lo : 2 * Math.min(gx0 - lo, hi - gx0));
+      let size = s1; const lw = longestAt(size);
+      if (lw > fit) size = Math.floor(size * fit / lw * 2) / 2;
+      size = roomSize({ text: now.text, size, width: fit, height: canvas.h - keep - block.y, weight: w1, measure, font: now.font });
+      if (size < s1 && size >= scale.body * .6) s1 = size;
+    }
+    const natural0 = Math.max(...was.text.split('\n').map(p => p.trim() ? oneLineWidth(p, b0.size, w0, measure, was.font) : 0)), natural1 = Math.max(...now.text.split('\n').map(p => p.trim() ? oneLineWidth(p, s1, w1, measure, now.font) : 0)) * 1.02;
+    const hugging = free && oneLine && f0.rect.w <= natural0 * 1.15 + 1, lines = measure(now.text, s1, w1, r.w, now.font);
+    // A free label that already wraps only widens when its new copy would split a word (D-087); otherwise its width stays.
+    const keepWidth = !oneLine && !splitsWord(now.text, lines) || !hugging && (paragraphs || lines.length < 2 || !splitsWord(now.text, lines));
+    if (!free && (!oneLine || keepWidth)) continue;
+    const longest = free ? longestAt(s1) : 0;
+    // At the canvas bottom it grows upwards, keeping the margin it had there (D-088), but never above its block's top or the
+    // nearest block or text right above it (D-089).
+    const floorY = canvas.h;
+    let top = block ? block.y : Math.min(g.y, pad);
+    if (free && !f0.rot) for (const o of before.nodes) {
+      const of = o.frames[spec.id];
+      if (o.id === id || o.id === on || o.kind === 'ink' || !of || of.hidden || of.rot) continue;
+      const ob = o.kind === 'text' ? textBox(o, of, measure, scale).rect : of.rect;
+      if (ob.y + ob.h <= g.y + EPS && ob.x < g.x + g.w && g.x < ob.x + ob.w) top = Math.max(top, Math.min(g.y, ob.y + ob.h + pad / 2));
+    }
+    const tall = (width: number) => textHeight(measure(now.text, s1, w1, Math.max(1, width), now.font).length, s1);
+    // It grows from its aligned edge and wraps there when that side has at least three tenths of its bounds and the copy
+    // fits on the canvas, growing upwards at the bottom (always from half); a label near the far edge slides back instead
+    // to keep one line, or wraps at three fifths of its bounds, never narrower than its longest word (D-084, D-087, D-089).
+    const gx = g.x + g.w / 2, down = (width: number) => tall(width) <= floorY - keep - top;
+    const roomIn = (lo: number, hi: number) => {
+      const span = hi - lo, aligned = Math.max(0, side === 'left' ? hi - Math.max(lo, g.x) : side === 'right' ? Math.min(hi, g.x + g.w) - lo : 2 * Math.min(gx - lo, hi - gx));
+      const wrap = natural1 <= aligned || aligned >= span / 2 || aligned >= span * .3 && down(aligned);
+      return Math.max(Math.min(longest, span), wrap ? aligned : natural1 <= span ? span : span * .6);
+    };
+    /** Whether the copy, in these bounds, fits on the canvas. */
+    const holds = (lo: number, hi: number) => down(Math.min(natural1, roomIn(lo, hi)));
+    let w = r.w, x = r.x, lo = 0, hi = canvas.w;
+    if (!keepWidth) {
+      // A block too narrow for its longest word, or one its copy would not fit in while the canvas would hold it, gives
+      // way to the canvas (D-086, D-087).
+      let b: Rect = block ?? whole;
+      const mw = inset(whole);
+      if (b !== whole && (longest > b.w - 2 * inset(b) || !holds(b.x + inset(b), b.x + b.w - inset(b)) && holds(mw, canvas.w - mw))) b = whole;
+      const m = inset(b);
+      lo = b.x + m; hi = b.x + b.w - m;
+      // Blocks beside it on its first line (a photo column, the accent block, other text) bound it too, unless that leaves
+      // no room for its longest word, or would not fit where its wider bounds would (D-086, D-087).
+      if (free && !f0.rot) {
+        const gap = pad / 2;
+        let l = lo, h = hi;
+        for (const o of before.nodes) {
+          const of = o.frames[spec.id];
+          if (o.id === id || o.id === on || o.kind === 'ink' || !of || of.hidden || of.rot) continue;
+          const ob = o.kind === 'text' ? textBox(o, of, measure, typeScale(spec.guide, canvas)).rect : of.rect;
+          if (ob.y >= g.y + g.h - EPS || ob.y + ob.h <= g.y + EPS) continue;
+          if (ob.x + ob.w <= g.x + EPS) l = Math.max(l, ob.x + ob.w + gap);
+          else if (ob.x >= g.x + g.w - EPS) h = Math.min(h, ob.x - gap);
+        }
+        if (h - l >= longest && (holds(l, h) || !holds(lo, hi))) { lo = l; hi = h; }
+      }
+      const room = free ? (f1.rot ? canvas.w : roomIn(lo, hi)) : roomFor(now, f1, canvas);
+      const floor = hugging ? Math.min(natural1, f0.rect.w) : r.w, cap = Math.max(room, floor);
+      w = Math.max(floor, Math.min(natural1, cap));
+    }
+    // Keep the aligned edge's point fixed on the page: the centre moves along the box's own x axis. A free label is placed
+    // from its box as the edit began, so typing key by key ends where a paste does (D-085).
+    const base = free ? { ...g, y: r.y, h: r.h } : r, cx = base.x + base.w / 2;
+    const a = (width: number) => side === 'left' ? -width / 2 : side === 'right' ? width / 2 : 0, t = f1.rot * Math.PI / 180, d = a(base.w) - a(w);
+    const c = { x: cx + d * Math.cos(t), y: base.y + base.h / 2 + d * Math.sin(t) };
+    // A free label near an edge (an Arabic label against the left edge) slides back rather than wrapping.
+    if (!keepWidth) x = free && !f1.rot ? Math.max(Math.min(c.x - w / 2, hi - w), Math.min(lo, g.x)) : c.x - w / 2;
+    // A free label at the bottom of the canvas or of its block grows upwards, keeping the margin it had there (D-088).
+    let y = keepWidth ? r.y : c.y - r.h / 2;
+    if (free && !f1.rot) y = Math.max(top, Math.min(g.y, floorY - keep - tall(w)));
+    const size = s1 !== (f1.fontSize ?? scale.body);
+    if (!size && Math.abs(w - r.w) < 1e-6 && Math.abs(x - r.x) < 1e-6 && Math.abs(y - r.y) < 1e-6) continue;
+    doc = { ...doc, nodes: doc.nodes.map(n => n.id === id ? { ...n, frames: { ...n.frames, [spec.id]: { ...f1, ...(size ? { fontSize: s1 } : {}), rect: { ...r, x, y, w } } } } : n) };
   }
   return doc;
 }

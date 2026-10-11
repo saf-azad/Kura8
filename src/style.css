@@ -51,6 +51,8 @@ input.readout{width:58px;text-align:center;font:inherit;font-size:13px;backgroun
 /* panels */
 .panel{position:absolute;padding:15px;border:var(--stroke) solid var(--ink);border-radius:var(--r-md);background:var(--paper);display:flex;flex-direction:column;gap:12px;z-index:8;transform-origin:50% 0;transition:opacity var(--fast),transform var(--base) var(--ease)}
 .panel[hidden]{display:flex!important;opacity:0;pointer-events:none;transform:scale(.98)}
+.toolbar .panel{max-height:var(--panel-max,none);overflow-y:auto}
+.corner .panel,.corner-stack .panel{max-height:calc(100vh - 150px);overflow-y:auto}
 .panel h3{font-size:11px;font-weight:400;opacity:.6;margin:0;padding-left:2px}
 .toolbar{position:absolute;left:50%;top:20px;transform:translateX(-50%);transform-origin:50% 0;z-index:7;display:flex;align-items:center;gap:5px;padding:5px 10px;border:var(--stroke) solid var(--ink);border-radius:39px;background:var(--paper);white-space:nowrap}
 .toolbar .swatch-button{display:flex;align-items:center;gap:5px;height:40px;padding:0 5px;border-radius:var(--r-sm);transition:background var(--fast)}
@@ -58,6 +60,9 @@ input.readout{width:58px;text-align:center;font:inherit;font-size:13px;backgroun
 .toolbar .swatch-button[aria-expanded=true] .chip,.toolbar .swatch-button[aria-expanded=true] .readout{border-color:var(--white)}
 .chip{width:22px;height:22px;border-radius:var(--r-pill);border:var(--stroke) solid var(--ink);flex:none}
 .toolbar .readout.hex{width:84px;justify-content:start;display:flex;padding:0 10px}
+/* Narrow windows: the colour chip alone, so the toolbar keeps a usable size (the Shortcuts hint sits bottom right). */
+@media(max-width:1300px){.toolbar .readout.hex{display:none}}
+.toolbar.wrap{flex-wrap:wrap;justify-content:center;row-gap:4px;border-radius:26px}
 .toolbar .group{display:flex;align-items:center;gap:5px;transition:opacity var(--fast)}
 .toolbar .small{width:26px}
 .toolbar-anchor{position:absolute;left:0;top:calc(100% + 12px)}
@@ -68,7 +73,7 @@ input.readout{width:58px;text-align:center;font:inherit;font-size:13px;backgroun
 .ratio-glyph{border:var(--stroke) solid currentColor;flex:none;transition:width var(--sheet),height var(--sheet)}
 /* canvas */
 /* Side and bottom room keeps the corner controls, help and info off the canvas at every ratio. */
-.stage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:100px 100px 80px}
+.stage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:var(--stage-top,100px) 100px 80px}
 .canvas-stack{position:relative;flex:none;outline:var(--stroke) solid var(--ink);transition:transform 520ms var(--ease)}
 .canvas-stack canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .canvas-stack canvas.overlay{touch-action:none;outline:none;inset:-64px;width:calc(100% + 128px);height:calc(100% + 128px);z-index:2}
@@ -76,22 +81,25 @@ input.readout{width:58px;text-align:center;font:inherit;font-size:13px;backgroun
 .image-bar{position:absolute;z-index:5;transform:translate(-50%,8px);background:var(--paper)}
 .image-bar button{height:28px;padding:0 12px}
 .image-bar.inside{transform:translate(-50%,calc(-100% - 10px))}
+.image-bar.many>:not([data-act="circle"]){display:none}
 .image-bar .cut{display:inline-flex;gap:5px;padding-left:5px;border-left:var(--stroke) solid var(--slate)}
 .info{position:absolute;left:90px;bottom:44px;font-size:12px;display:flex;gap:10px;pointer-events:none;transition:opacity var(--fast)}
 .info span:first-child{max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .shortcut-hint{position:absolute;right:40px;bottom:36px;display:flex;align-items:center;gap:8px;font-size:12px}
-.toast{position:fixed;left:50%;bottom:36px;transform:translateX(-50%);height:36px;padding:0 18px;border-radius:var(--r-pill);background:var(--ink);color:var(--white);display:flex;align-items:center;font-size:13px;pointer-events:none;opacity:0;transition:opacity var(--fast);z-index:30;white-space:nowrap}
+.toast{position:fixed;left:50%;bottom:36px;transform:translateX(-50%);height:36px;padding:0 18px;border-radius:var(--r-pill);background:var(--ink);color:var(--white);display:flex;align-items:center;font-size:13px;pointer-events:none;opacity:0;transition:opacity var(--fast);z-index:46;white-space:nowrap}
 .toast.on{opacity:1}
 .tip{position:fixed;transform:translateX(-50%);padding:5px 10px;border-radius:var(--r-sm);background:var(--ink);color:var(--white);font-size:12px;white-space:nowrap;pointer-events:none;z-index:50;opacity:0;transition:opacity var(--fast)}
 .tip.on{opacity:1}
-.help{position:fixed;left:40px;bottom:36px;display:flex;align-items:flex-end;gap:10px;z-index:40}
+/* The help strip's empty area passes clicks through to the panels it overlaps (D-083). */
+.help{position:fixed;left:40px;bottom:36px;display:flex;align-items:flex-end;gap:10px;z-index:40;pointer-events:none}
+.help>button{pointer-events:auto}
 .help>button{width:36px;height:36px;border:var(--stroke) solid var(--ink);border-radius:var(--r-pill);font-size:16px;transition:background var(--fast)}
 .help>button:hover{background:var(--slate-a15)}.help>button[aria-pressed=true]{background:var(--ink);color:var(--white)}
 .help-box{width:320px;padding:12px 15px;border:var(--stroke) solid var(--ink);border-radius:var(--r-md);background:var(--paper);display:flex;flex-direction:column;gap:4px;pointer-events:none;transition:opacity var(--fast),transform var(--base) var(--ease)}
 .help-box[hidden]{display:flex!important;opacity:0;transform:translateY(8px)}
 .help-box b{font-size:13px;font-weight:400}.help-box span{font-size:12px;opacity:.6;line-height:1.4}
 /* shape library */
-.shapes-panel{width:392px;overflow:auto}
+.shapes-panel{width:392px;overflow:auto}.shapes-panel>.search{position:sticky;top:-15px;z-index:1;box-shadow:0 -15px 0 var(--paper)}.shape-grid button{overflow:hidden}
 .shape-grid{display:grid;grid-template-columns:repeat(8,40px);gap:5px}
 .shape-grid button{width:40px;height:40px;border-radius:var(--r-sm);display:grid;place-items:center;transition:background var(--fast)}
 .shape-grid button:hover{background:var(--slate-a35)}.shape-grid button:active{transform:scale(.94)}
@@ -100,7 +108,7 @@ input.readout{width:58px;text-align:center;font:inherit;font-size:13px;backgroun
 /* colour panel */
 .colour-panel{width:300px;gap:15px}
 .arrange-panel{width:206px;gap:8px}.arrange-grid{display:grid;grid-template-columns:repeat(3,40px);gap:6px 23px}.arrange-grid .btn:hover{background:var(--slate-a15)}
-.fonts-panel{width:260px;gap:8px}.fonts-panel .icon-note{white-space:normal}
+.fonts-panel{width:310px;gap:8px}.fonts-panel .icon-note{white-space:normal}
 .font-choice{display:flex;align-items:center;gap:12px;height:40px;padding:0 10px;border-radius:var(--r-sm);font-size:17px;text-align:left}
 .font-choice:hover{background:var(--slate-a15)}.font-choice[aria-pressed=true]{background:var(--ink);color:var(--white)}
 .font-choice .sample{width:30px;font-size:20px}
@@ -122,12 +130,13 @@ input.readout{width:58px;text-align:center;font:inherit;font-size:13px;backgroun
 .hue-bar i{top:50%;width:8px;height:20px;margin:-10px 0 0 -4px;border-radius:var(--r-pill);border:var(--stroke) solid var(--ink);background:var(--white)}
 .contrast{display:grid;grid-template-columns:auto 1fr auto;gap:4px 10px;align-items:center;font-size:12px}
 .contrast button{font-size:12px;border-bottom:1px solid var(--ink)}
-.grounds{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px}
+.grounds{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px 10px;font-size:12px}
+.grounds>.muted{flex:1 1 100%}
 .grounds .pair{display:flex;gap:6px}
 .grounds .pair button{width:22px;height:22px;border-radius:var(--r-pill);border:var(--stroke) solid var(--ink)}
 .grounds .pair button[aria-pressed=true]{outline:var(--stroke) solid var(--ink);outline-offset:2px}
 /* layers, grid, ratio */
-.layers-panel{width:280px;padding:10px;gap:2px;overflow:auto}
+.layers-panel{width:340px;padding:10px;gap:2px;overflow:auto}
 .layer{height:40px;flex:none;border-radius:var(--r-sm);display:flex;align-items:center;gap:8px;padding:0 4px 0 8px;transition:background var(--fast);cursor:pointer}
 .layer:hover{background:var(--slate-a15)}.layer.on{background:var(--ink);color:var(--white)}
 .layer .chip{width:16px;height:16px;border-radius:4px;border-color:currentColor}
@@ -153,7 +162,7 @@ input[type=range]{width:100%;accent-color:#000;margin:0}
 .keys{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:40px}
 .keys>div{display:flex;flex-direction:column;gap:10px}
 .keys .row span:last-child{display:flex;gap:4px}
-.sheet{position:fixed;left:50%;bottom:0;width:min(660px,100vw);margin-left:max(-330px,-50vw);padding:15px 40px 40px;border:var(--stroke) solid var(--ink);border-bottom:0;border-radius:49px 49px 0 0;background:var(--paper);display:flex;flex-direction:column;gap:25px;z-index:20;transition:transform var(--sheet) var(--ease)}
+.sheet{position:fixed;left:50%;bottom:0;width:min(660px,100vw);margin-left:max(-330px,-50vw);padding:15px 40px 40px;border:var(--stroke) solid var(--ink);border-bottom:0;border-radius:49px 49px 0 0;background:var(--paper);display:flex;flex-direction:column;gap:25px;z-index:45;max-height:100vh;overflow-y:auto;transition:transform var(--sheet) var(--ease)}
 .sheet[hidden]{display:flex!important;transform:translateY(110%)}
 .sheet .grabber{align-self:center;width:40px;height:5px;border-radius:2.5px;background:var(--ink);opacity:.6}
 .sheet .body{display:grid;grid-template-columns:220px minmax(0,1fr);gap:40px;align-items:center}

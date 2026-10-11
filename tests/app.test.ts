@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { resizeLocal } from '../src/app/canvas/resize';
 import { bezier, ease, lerpFrame, lerpDoc } from '../src/app/canvas/tween';
-import { modCommand, nudgeStep, isMac, primaryModifier, shortcutLabel } from '../src/app/tools/shortcuts';
+import { letterOf, modCommand, nudgeStep, isMac, primaryModifier, shortcutLabel } from '../src/app/tools/shortcuts';
 import { doc, frame, rectNode } from './helpers';
 const box = { x: 100, y: 200, w: 300, h: 200 }, min = { w: 20, h: 20 };
 describe('resize in the node frame', () => {
@@ -38,6 +38,9 @@ describe('keyboard map', () => {
     expect([k('z', { shiftKey: true }), k('L', { shiftKey: true }), k('E', { shiftKey: true })]).toEqual(['redo', 'lock', 'export']);
     expect([k(']', { code: 'BracketRight' }), k('}', { code: 'BracketRight', shiftKey: true }), k('[', { code: 'BracketLeft' }), k('{', { code: 'BracketLeft', shiftKey: true })]).toEqual(['forward', 'front', 'backward', 'back']);
     expect([k('l'), k('e'), k('r'), k('v'), k('d', { altKey: true }), k('t', { shiftKey: true })]).toEqual([null, null, null, null, null, null]);
+    // Arabic and Russian layouts type other letters on the same keys: the key's place decides (D-077); Dvorak keeps its letters.
+    expect([k('ئ', { code: 'KeyZ' }), k('ي', { code: 'KeyD' }), k('я', { code: 'KeyZ', shiftKey: true }), k('z', { code: 'Semicolon' })]).toEqual(['undo', 'duplicate', 'redo', 'undo']);
+    expect(letterOf({ key: 'Process', code: 'KeyT' })).toBe('t'); expect(letterOf({ key: '?', code: 'Slash' })).toBe('?');
   });
   it('nudges one unit, or one grid cell with Shift when the grid is on (5l)', () => {
     expect([nudgeStep(false, { on: true, size: 40 }), nudgeStep(true, { on: true, size: 40 }), nudgeStep(true, { on: false, size: 40 })]).toEqual([1, 40, 10]);

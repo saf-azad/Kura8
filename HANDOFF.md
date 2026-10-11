@@ -4,7 +4,7 @@ Rolling state for the Kura8 build (Phase 1; the Phase 0 study is frozen at tag `
 
 ## Status
 
-Phase 1 build complete, extended by Safwat's student-test loop (D-045) and social formats (D-069). The dial turns four rings (ten ratios: Post 1:1, Portrait 4:5, Grid 3:4, Story 9:16, Pin 2:3, Print A4, Slide 16:9, Link 1.91:1, Banner 3:1, Cover 4:1; six layouts; three guides; colour) and opens a pre-arranged, fully editable canvas. On top of the M1–M15 editor (snapping v2, undo, layers, colour roles, images with background removal, shapes and icons, sketch, linked sizes, PNG/JPG/SVG/PDF export), loop 1 added what 55 simulated students needed: text under a growing text block follows it; poster and stack headlines autofit their room without splitting words; seven OFL typefaces; typed size and angle; text controls on every selected text; per-paragraph direction; pasted text and clipboard text; pictures arrive uncropped, spread over empty cells under the text, with Reposition, Fit and Replace on an on-image bar; SVG import; opacity; backdrop-aware contrast; Arrange (align and space evenly); layer names; Alt-click select-underneath; drift-free ratio changes; New recoverable after reload; two tabs that no longer overwrite each other; export named after the headline, No ground for every PNG and All sizes as one .zip. `npm test` passes 228 tests with `src/core` at 100 % line coverage; `npx tsc --noEmit` and `npm run build` pass; `python3 scripts/browser_audit.py` passes 43/43 steps against `vite preview` (all 10 ratios × 6 layouts × 3 guides, every card 5a–5z, exact export sizes) with no app console errors and no off-origin requests. Loop 2 (three cohorts) was still running at merge; its findings are the next step. Not built, by design or pending Safwat: handwriting (D-030), zoom/pan, groups, more than one document, vector PDF, HEIC decoding. Vercel deploys production from `main`. The `study-v1` tag is still local only.
+Phase 1 build complete, extended by Safwat's student-test loop (D-045) and social formats (D-069). The dial turns four rings (ratio, six layouts, three guides, colour) and opens a pre-arranged, fully editable canvas. The ratio ring shows Social, Pin 2:3, Print A4, Slide 16:9 and Banner 3:1; Social opens into Instagram post 4:5, square 1:1, story 9:16 and grid 3:4 and LinkedIn post 1:1, link 1.91:1 and banner 4:1, each with its platform's logo (D-092). On top of the M1–M15 editor (snapping v2, undo, layers, colour roles, images with background removal, shapes and icons, sketch, linked sizes, PNG/JPG/SVG/PDF export), loops 1–2 (D-046–D-076) added text flow, autofit without split words, seven OFL typefaces, typed size and angle, per-paragraph direction, pasted text, uncropped multi-picture import with Reposition/Fit/Replace, SVG import, opacity, backdrop-aware contrast, Arrange, layer names, drift-free ratio changes, recoverable New, cross-tab safety, Unicode export names and All sizes zips. Loop 3 (cohorts H, I, J; about 90 sessions) found and this branch fixed (D-077–D-080): 79 Phosphor icons that drew spikes, band text that jumped off the poster band after typing, a footer pulled into a column, labels that grew back over a picture column or broke when turned, pastes and icons that piled up or landed on the headline, the Image tool missing the layout frame, a tab merge that lost typed text, Start double-clicks on wide ratios, unreadable band text after colour changes, silent zip downgrades, Vietnamese in SVG and faces, shortcuts on non-Latin layouts, a toolbar that shrank under browser zoom; plus Fill canvas, Same width/height, Fill ground and Set as accent. Loop 4 (cohorts K, L, M; about 125 sessions) found and this branch fixed (D-081, D-082) a loop-3 regression where retyped layout text grew across a picture column, the poster band in wide ratios, loose pictures losing shape in linked sizes, panels running off zoomed windows and a cramped toolbar on small laptops; it added circle pictures, tiled multi-picture frames and readable text on dark grounds. Loop 5 (cohorts N, O, P; about 120 sessions) found and this branch fixed (D-083, D-084) SVG circle pictures clipped in the wrong units, text running off a Post made from a Header or Banner, circles turning into ovals in linked sizes and through Same size, Fit and edge handles, captions on a photo that stopped flowing, labels growing out of their block or flush to the edge, Larger growing a poster headline over the band, invisible text after a dark ground fill, a contrast fix that served only the worst block, a hex field that dropped bad input silently, a hidden help strip that swallowed clicks at high zoom, and a Text tool that dropped a bold headline-size box on the canvas centre and pushed captions away; it added Circle for several pictures and Hindi in SVG. Loop 6 (cohorts Q, R, S; about 140 sessions) found and this branch fixed (D-085, D-086) autofit headlines that jumped in every linked size after a hand-set size, Larger that stopped at the room only once, labels that slid by typing speed or grew over photos, blocks and the headline, zero-width one-character labels, lines and small labels that resized instead of moving, a Shapes panel under the help button, centring that dragged a large shape, overlapping picture batches and hyphenated words split mid-letter; T then a click now places a label. Loop 7 (cohorts T, U, V; about 100 sessions) found and this branch fixed (D-087, D-088) a T label that jumped back on the first key after a click or vanished when a toolbar control came before typing, labels that slid over the headline, wrapped off the canvas bottom, crossed a neighbour or split words in linked sizes, Chinese copy and links that dropped a label's bounds, a minus sign orphaned at a line end, a headline that ran through the band in other sizes after a hand-set size and a retype, Larger burying the text it pushed, unreadably small type in a Header made from a Post, a headline grown over the body in a Link made from a Banner, pasted price lists in invisible 600-wide boxes, logos under the headline that a press could not reach, picture batches over the title and out of order, Select all and Align centres throwing text off the canvas, and thin lines that could not be caught. Typing and pasting now leave the text under a label in the same place. Loop 8 (cohorts W, X, Y; about 70 sessions) found and this branch fixed (D-089–D-091) labels on photos and blocks that broke out when retyped (they now shrink to fit their block), labels that ran off the canvas bottom on a second edit (all free labels now grow upwards, never over what is above), links that left their block, side-by-side Header labels that collided in a Post, a Banner's body pushed off a Link, pasted price lists that wrapped item by item when made larger, logos cropped by Same height or overlapped by Space evenly, a QR code under a poster headline's empty room that a press could not reach, a split layout's body on the accent block, a contrast fix that failed on half its backdrop, a label invisible after leaving a band, a typed size in one linked size that left another size's retyped headline running through the band, Fit in one size shrinking the others, toolbar clicks that ended typing, ghost "Text" labels brought back by Undo, Redo or a reload, and shapes added over the copy. Loop 9 (cohorts Z, AA, AB) ran against the D-091 build and its findings are listed under Next steps unfixed: Safwat ended the loop there (D-093). `npm test` passes 308 tests with `src/core` at 100 % line coverage; `npx tsc --noEmit` and `npm run build` pass; `python3 scripts/browser_audit.py` passes on the D-092 build (42/43 in the full run, and step 5b, whose expectation changed with the Social names, passes on its own) with no app console errors and no off-origin requests (the audit and the student harness keep a standing file-chooser listener, since Playwright could miss a pick fired at once). Not built, by design or pending Safwat: handwriting (D-030), zoom/pan, groups, more than one document, vector PDF, HEIC decoding, per-word styling. Vercel deploys production from `main`. The `study-v1` tag is still local only.
 
 ## Decision log
 
@@ -87,6 +87,185 @@ Append-only. New entries supersede named old entries; do not edit history. Forma
 - **D-067** 2026-10-10 fable — Export All sizes writes every linked size into one store-only .zip (`core/zip.ts`, fixed timestamps), each at the chosen format and scale where it applies (300 dpi falls back to 1× for screen ratios). A4 drops 2×, which nearly duplicated 300 dpi. Why: students export post, story and banner together.
 - **D-068** 2026-10-10 fable — Interface details from the tests: export files are named after the headline (`nameStem`, ASCII words, at most 40 characters, `-transparent` for No ground); Copy writes the copied text to the system clipboard and text copied elsewhere pastes as a text block (one short line hugs its words at headline size, longer copy wraps at body size); text that runs off the canvas after an edit gets the 5v flag and an Export note; dragging from a locked block draws a marquee that skips locked blocks; sliders, switches and buttons are not typing targets, so Escape and shortcuts still work after them; the stage keeps 100 px sides and 80 px bottom free of the corner controls; the rotate knob hangs below a box whose knob would sit more than 20 px above the canvas; a new shape matching the block it lands on takes ink; Shift-drag on a selected block constrains instead of deselecting; icons keep aspect on corners; focus never scrolls the app. Why: each was hit by at least one test student.
 - **D-069** 2026-10-11 safwat — "Add the social media ratio formats in too then chuck it in": four more ratios, `tall` 3:4 (Grid, 1080 × 1440, Instagram's grid), `pin` 2:3 (Pin, 1000 × 1500), `link` 1.91:1 (Link, 1200 × 628, link posts and Facebook event covers) and `cover` 4:1 (Cover, 1584 × 396, LinkedIn banner), on the dial ring (now ten segments, upright formats then wide ones), the change-ratio and linked-size wheels and export; then merge to `main`. A new linked size is seeded from the existing size with the closest proportions, so chained sizes do not shrink; the toolbar centres in the space the size pills leave. Why: explicit session request; cohort B asked for Facebook's 1.91:1.
+- **D-070** 2026-10-11 fable — One-line text keeps its shape (`hugText`, `oneLineWidth`): after a size, face or weight change, a single-line block whose box hugged its words (within 15 %) hugs them again, and a wider one that would now wrap widens instead, growing from its aligned edge and staying on the canvas; autofit, rotated and multi-paragraph text keep their width. Text flow also follows a one-step jump bigger than a line (a pasted paragraph). Why: loop 2 enlarged "+142%" to 150 and it wrapped mid-word; a pasted title skipped the flow in a linked size.
+- **D-071** 2026-10-11 fable — Export names keep other scripts (Chinese, Korean, Arabic, Devanagari) and drop only Latin accents; the All sizes zip is named after the headline even where it is hidden, and same-ratio sizes get -2, -3 inside the zip (`uniqueNames`). Why: non-Latin headlines exported as `kura8-…`; two 1:1 sizes lost one file on unzip.
+- **D-072** 2026-10-11 fable — The previous-design slot always holds the design left behind whenever the current design's id changes (New, Undo or Redo across New, another tab), superseding D-057's clearing rule. Another tab's save that arrives while typing waits; when the edit ends the typed text is laid over it. Arrange aligns to locked blocks in the selection (key object); faded order buttons no longer record a step; Delete or Undo during Reposition finish it first and a running pan stops. Why: loop 2 lost designs after New → Undo → Redo → reload and had typing thrown out by a second tab.
+- **D-073** 2026-10-11 fable — Image frames get all eight handles: corners keep a filled picture's proportions, edges reshape the frame (the picture re-covers it), an empty frame resizes freely. Supersedes "Images always lock aspect" in the snapping contract. Toolbar: the Keyboard shortcuts button is dropped (the bottom-right Shortcuts hint remains), the hex readout hides below 1300 px, and with more than two sizes the inactive size pills show only their shape. Why: a mood-board grid of equal tiles was impossible; the toolbar fell under the size pills.
+- **D-074** 2026-10-11 fable — Pasted copy arrives at body size and regular weight in the emptiest guide cell; occupancy counts text by the extent of its lines, not its box. Batch imports name what they skipped (not an image, HEIC, SVG with embedded HTML) in the closing toast. SVG import ignores comments, reads quoted `>`, and without a viewBox trims to what was drawn. A synonym key's listed answers rank above tag matches (location → Map pin). The Typeface panel says when the text's script is drawn by the system font. Arrange gains stacking order. Readouts keep focus after Enter and read a Unicode minus. Why: loop 2 findings.
+- **D-075** 2026-10-11 fable — SVG text sits on the alphabetic baseline at the canvas's own metric offset (`TextShift`, measured as the difference between 'middle' and 'alphabetic' ascents), and lines of differing direction are separate `<text>` elements. Measured offset to the PNG: 0 px. Why: SVG text sat 4–14 px lower than the PNG and mixed Arabic/Hebrew/English lines were scrambled.
+- **D-076** 2026-10-11 fable — Cohort E (verification) follow-ups. Text flow measures text by its lines, not its box, so an autofit room never pulls the text under it (Smaller on a poster headline had lifted the body off its band onto the same-coloured ground). The canvas ignores presses and cannot take focus for 450 ms after Start (double-click on Start). Ratio origins persist per document in `kura8:origins` and a node that was only moved maps from its origin moved by the same share of the canvas. Band text reaches 4.5 : 1 for every hue: ink or ground, else black or white (`{ hex }`), which relayout treats as automatic. The contrast hint samples the letters' extent; icons resize from corners only; picking pictures with nothing selected fills the layout's empty frame first; All sizes resets each time the sheet opens. Why: loop 2 cohort E evidence.
+- **D-077** 2026-10-11 fable — Loop 3 text rules. Text flow treats an autofit room as space the block holds: typing in a poster headline or leaving autofit (Smaller) never pulls the band text up, and a block rising under a shrinking column stays when another block it also sits under stays (a footer under two columns). One-line text (`hugText`): a hugging label follows retyped text like an auto-width box; its aligned edge stays put, rotated or not, and it never grows past the canvas edge it grows towards (it wraps instead of sliding back over a picture column); a wider box widens only when a word would otherwise break. Larger stops at the largest size that keeps every word whole (`wholeWordSize`). Ratio origins ignore the derived height of non-autofit text, so retyping a headline in a wide ratio no longer shrinks it on the way back. Off-canvas flags and the Export note judge text by its letters (`letterBounds`), and a drag that ends with text off the canvas flags it at once. Why: loop 3 cohorts H, I, J.
+- **D-078** 2026-10-11 fable — Loop 3 placement. Pasted copy and new icons go, in every size, to the spot the blocks there cover least (`freeSpot`: guide-cell corners and rows, then the canvas), so pastes never pile up or land on another size's headline; icons arrive at 16 % of the short side. The Image tool fills the selected empty frame, else the layout's empty frames in order, whatever is selected, before adding new pictures. The image bar gains Fill canvas (frame becomes the canvas, unturned, sent to the back). Icons keep their proportions through ratio changes and linked sizes. Arrange gains Same width and Same height (to the locked block, else the first picked; pictures and icons scale in proportion). Handle drags start after 3 px. SVG import treats a lowercase or zero-area viewBox as absent and rejects a file that draws nothing by name. Why: loop 3 cohorts H, I, J.
+- **D-079** 2026-10-11 fable — Loop 3 chrome. A tab that typed while another tab saved keeps its text even if the other tab deleted the block (it comes back), and a New in the other tab leaves this design one Undo away with a toast saying so; emptied text is removed in the merge. The Start guard covers the whole page and a second Enter. Palette changes in the editor and Go re-pick the readable colour for automatic text on an accent block that would fall under 4.5 : 1 (`keepReadable`). Colour panel: Fill ground (with nothing selected) and Set as accent for a typed hex; the contrast hint checks nine points over every selected text block. Arrange spaces evenly around locked blocks (they split the stretch) and stacking order skips locked blocks. Shortcuts read the key's Latin position on Arabic, Cyrillic and IME layouts (`letterOf`). Readouts accept a decimal comma, show the applied value and pass Mod+Z to the design. Bold fades only when no selected face has a bold, and Mod+B while typing in a one-weight face says so. The toolbar wraps onto two or three rows instead of shrinking below 0.8, moving the canvas down, so browser zoom enlarges the controls. Two sizes of one ratio get numbered pills. Undo and Redo name a step that swaps whole designs. Why: loop 3 cohorts H, I, J (Bridget at 150 % zoom, Yusuf and Minji on Arabic and Korean layouts).
+- **D-080** 2026-10-11 fable — Loop 3 export and icons. Phosphor paths with an absolute moveto followed by extra pairs were baked as relative linetos and drew spikes (79 icons, pen nib, translate, storefront); fixed in `prepare-icons.mjs` and `icons.ts`, bake format 2. A one-word query's named synonym answers outrank name prefixes, in the listed order (tick → Check, search → Magnifying glass); synonyms for study, growth, write, edit, language, trend. All sizes steps a size past the pixel limit down to the largest that fits (`zipScale`: Story 3× → 2×, Print 3× → 300 dpi) and lists those sizes in the sheet; No ground resets at every opening. SVG export embeds the Vietnamese subsets of Space Grotesk, Playfair, Lora and Space Mono when the text needs them; the Typeface panel marks faces without a script the text uses (`lacks`: no Vietnamese in Poppins, Bebas, Caveat). File names use the dial label (`-post`, `-grid`, `-print`), one stem per zip, and spell out đ, ł, ø, ß. The 4:1 ratio is labelled Header (id stays `cover`) so it is not confused with the Cover layout. Why: loop 3 cohorts H, I, J.
+- **D-081** 2026-10-11 fable — Loop 4 (cohorts K and L). Supersedes part of D-077: layout (slot) text never follows retyping and keeps its slot's margin (`roomFor`); only free labels hug, and a free label at the canvas edge slides back on. Typed sizes stop at whole words like Larger. Going from a size to one at least as big both ways (Header to Post) grows text by the two sizes' body type. Loose pictures (no slot) keep their proportions through ratio changes and linked sizes, like icons; Same width/height match pictures exactly (they re-cover). Several pictures for one empty frame tile it (`tiles`). Pictures can show in a circle: `ImageNode.mask: 'circle'` (contract change: type, validation, scene `circle`, SVG `clipPath`, canvas clip), toggled by Circle on the image bar, which squares the frame; a picture dropped on a circle shape replaces it as a circle picture. `keepReadable` also covers automatic text on bare ground after a ground fill, and new text. Pastes and icons weigh covering text ten times covering pictures (`freeSpot` `text`). The contrast line shows a pass too; the hex field selects on focus and offers Set as accent while typing. A drag that starts on the selection moves it even where another block covers it (a click still selects the top block). Hide reads "in this size" with several sizes; the active size survives a reload. Fill canvas acts in every size. When the toolbar cannot fit beside the wordmark and corner it moves under them at full width and wraps to at most two rows (explicit width; a positioned bar's own width stops at the window edge). Start ignores a second click, Enter or Space for 650 ms. Placeholder copy never names a file. Readouts read Arabic-Indic and full-width digits. Why: loop 4 cohorts K (24 of 30 loop-3 items fixed, 3 partly) and L (12 fresh jobs).
+- **D-082** 2026-10-11 fable — Loop 4 cohort M (adversarial). Text flows only among blocks on the same backing (`sitsOn`: the topmost unturned picture or shape that holds the block, else the ground), so poster band text holds in every ratio, Slide and Link included. Whether a block hugs its words is judged when the edit starts, not per keystroke, so typing in a column never widens it; a hugging label given a pasted paragraph widens to its widest paragraph. Toolbar panels scroll within the window (`--panel-max`); corner panels cap at the window height. A locked block that overlaps the row (a background) stays out of Space evenly. The contrast fix recolours only the failing text (`fillOnly`). Set as accent disarms paint; the hex field takes #fff and refuses non-colours. An emptied block no longer wins over the other tab's rewrite. SVG embeds Cyrillic for Lora, Playfair and Caveat. Same size keeps a turned block centred, and says when text cannot take a height. Black or white counts as automatic only on layout text. Readouts read 1e3 and 1.234,5 and show angles to a tenth; ؟ opens shortcuts. Export heights are the 1× height times the scale (Link 3× is 1884). Re-ratio keeps text on its aligned edge's share, so stacks stay aligned. Why: loop 4 cohort M (43 sessions).
+- **D-083** 2026-10-11 fable — Loop 5 (cohorts N and P). SVG export clips a circle picture in canvas units (a `<g clip-path>` around the nested picture `<svg>`). Text that grows going from a wide size to a taller one (Header or Banner to Post) stops at its right margin. The hidden help strip lets clicks through to what lies under it; the export sheet scrolls within the window above the help button, with toasts above it. Circle pictures stay round: Circle squares the frame in every size, re-ratio keeps their proportions, they get corner handles only with the aspect locked, Same width/height keep them round, and Fit is hidden. A circle frame's tiles are round, a turned frame's tiles turn about the frame's centre, and Fill canvas drops the circle. A pick or drop of several files is one undo step. A drop on a background picture (the whole canvas, at the back) adds a picture; Replace still swaps it. Text flows with the block under its top-left corner (`sitsOn`), so a caption that grows past its photo still pushes the one under it. A free label keeps its inset from the canvas edge, or from the block it sits on, up to a twentieth of that width; copy too long for one line wraps on its aligned side instead of sliding. Larger and typed sizes on an autofit headline stop at the largest size its room holds (`roomSize`), then autofit turns off as 5q and D-034 require; a block whose word already breaks keeps its size and says so (`sizeCap`). `keepReadable` counts text over other text as bare ground. The contrast fix picks a shade for each failing block (`fillEach`). The hex field forgives spaces and a full-width or doubled '#', no longer cuts input short, and says when a value is not a colour (Enter, leaving the field, Fill ground). Arrange says "Already aligned" or "Already evenly spaced" instead of recording an empty step; Same height never takes a height from line-sized text. Start ignores a second click for 1 s; Go ignores presses for 650 ms. Readouts read the digits of any script. Why: loop 5 cohorts N (the 29 loop-4 items: 18 fixed, 11 partly) and P (32 adversarial sessions).
+- **D-084** 2026-10-11 fable — Loop 5 cohort O. Supersedes the Text tool's bold headline-size box: T adds a label one step above body size (`steps[2]`), regular weight, hugging its word, in the spot the blocks in each size cover least (`freeSpot`), so it never lands on a face, a number or the headline; while it is first typed it pushes no other text, which was never stacked under it. Supersedes part of D-083: a free label's bounds (its inset, and the block that holds all of it) are judged from its box as the edit began, so a label that grows past a photo's edge never re-reads itself as sitting on the photo. It grows from its aligned edge and wraps there when that side has at least half its bounds; a label near the far edge slides back to keep one line, or wraps at three fifths of its bounds. With several unlocked pictures selected the picture bar offers Circle for all of them. SVG export embeds Poppins' Devanagari subset when the text has Hindi. Toolbar panels stop above the help button; the Typeface panel is wide enough for its script notes. Mod+B in the size or angle field applies the value and bolds. Same width/height still match pictures exactly (D-081) and say when a picture that showed whole now crops. Why: loop 5 cohort O (12 fresh jobs, 24 sessions).
+- **D-085** 2026-10-11 fable — Loop 6 cohort S (adversarial).
+  - **Autofit off in one size.** A hand-set size (Larger, Smaller, a typed size, a corner drag, Autofit off) turns autofit off for the block, as 5q requires. Every other linked size now keeps the size autofit gave it (`unfit`), so a Story or Header no longer jumps to the set size.
+  - **Larger and typed sizes on non-autofit text.** They stop where a word would break, at the width the block would really grow to (simulated through `hugText`), or where its bottom would pass the unturned picture or shape below it or the canvas bottom, less the layout margin (`bottomLimit`). Larger therefore stops at a poster band on every press, not only the first. Autofit on takes its room from the same limit.
+  - **Labels.** A free label is placed from its box as the edit began, so typing key by key ends where a paste does. A label on a block that is too narrow for its longest word takes the canvas bounds. Copy never wraps narrower than its longest word.
+  - **Text tool.** The label is at most 6 % of the size's height, so in a Header or Banner it is no larger than the headline. Its first typing is one undo step with the add.
+  - **Start.** Enter or Space after Start is ignored for 1.5 s, or until another key.
+  - **Contrast.** The "use" button leaves locked text as it is and says so.
+  - **Circle and drops.** Circle with locked or hidden pictures in the selection applies to the rest. A photo dropped on an oval circle shape gives a round picture.
+  - **Hex field.** It ignores zero-width characters.
+  - Why: loop 6 cohort S (64 sessions).
+- **D-086** 2026-10-11 fable — Loop 6 cohorts Q and R.
+  - **Text-tool labels and neighbours.** A free label is also bounded by the blocks beside it on its first line (a photo column, the accent block, other text), unless that leaves no room for its longest word or would wrap it off the canvas bottom. A block too narrow for that word, or one the wrapped copy would run off the canvas bottom from, gives way to the canvas.
+  - **Placing new labels.**
+    - A just-added label that its first typing grew over other blocks moves, in each size, to the spot its new size covers least ("Moved where it has room"). A pasted paragraph no longer lands on the headline.
+    - T, then a click on the canvas, puts the label where the person clicked and keeps typing; such a label stays where it was put.
+    - T, then Escape, removes the untouched label.
+  - **Sizes.**
+    - In other linked sizes a new label scales as Change ratio would scale text, so it never outsizes the text there.
+    - The "block below" limit on Larger and typed sizes applies to layout text only; a free label is bounded by the canvas (supersedes part of D-085).
+  - **Text measuring.**
+    - One character measures as wide as its glyph (`oneLineWidth`), not zero.
+    - The measurer breaks a hyphenated word after a hyphen first, and `splitsWord` does not count that as a broken word.
+    - Text flow never pushes text past the canvas bottom.
+  - **Handles.**
+    - A thin box has no edge handles across its thickness.
+    - A press well inside a small box (under 48 px) moves it.
+    - Lines, rules and short labels move by their body.
+  - **Arranging and pictures.**
+    - Centring several blocks keeps the largest still ("Centred on the largest block"); locked blocks still win.
+    - A batch of pictures larger than the guide cells splits the cells into tiles, so new pictures never overlap; small files drawn much larger than their pixels are said to look soft.
+    - Pictures are named after their files in Layers.
+    - Several photos dropped on a circle shape share it as round tiles.
+  - **Panels.**
+    - The Shapes panel takes its height from the toolbar, so it stops above the help button.
+    - Its search field stays at the top while results scroll into view.
+  - **Feedback and margins.**
+    - Background removal says it runs on this computer and can take up to a minute.
+    - Left-aligned text at a Header's thin left margin takes the new size's layout margin on Change ratio and linked sizes.
+    - Start ignores a second click near the first one for 1.5 s; a click elsewhere, or after a key-started Start or Go, answers at once.
+  - Why: loop 6 cohorts Q (46 sessions, 19 of 25 loop-5 items fixed, 6 partly) and R (12 fresh jobs, 31 sessions).
+- **D-087** 2026-10-11 fable — Loop 7 cohorts T and U.
+  - **T then a click.** A label's growth is judged from where the click put it (`hugBase`), so the first key no longer sends it back to where T added it. A click on the untouched "Text" keeps it selected, so typing replaces it.
+  - **Free labels, supersedes part of D-084.**
+    - A label wraps at its aligned side when that side has three tenths of its bounds and the wrapped copy stays on the canvas (always from half), so long copy no longer slides over the headline or out of a list.
+    - A block beside it, or the block it sits on, gives way to the canvas only when the wider bounds would hold the copy above the canvas bottom.
+    - A wrapped label widens when its new copy would split a word.
+  - **New labels.**
+    - A just-added label settles on a band or pill that holds all of it rather than across its edge (`freeSpot` `backs`).
+    - It lifts onto the canvas when its copy runs off the bottom.
+    - Placed spots keep the layout margin from the canvas edges.
+    - A paragraph pasted into it arrives at body size, as pasted copy does (D-074).
+  - **Readable labels.** `keepReadable` re-picks automatic text on any solid, unturned shape that holds it (a pill, an ink block), not only the accent band. It runs after a move and after a new label settles.
+  - **Sizes.**
+    - Larger and typed sizes on several blocks that share a size keep them sharing it ("Largest size that fits them all").
+    - A free label on a block grows only as far as the block holds it.
+    - The note names what stops it: a word, the space, the block, or for a free label the canvas bottom ("move it up for more").
+  - **Linked sizes and Change ratio, supersedes part of D-081.**
+    - A one-line free label stays on one line within the new size's margins.
+    - Free text away from the edges may grow to the new size's layout margin.
+    - Shrinking, text stops at three fifths of the new size's body type (a Post label in a Header is 9, not 4.5).
+    - Text that stood under other text on the same backing moves down to keep clear when the one above grew (Banner to Link).
+  - **Pasted text** hugs its widest line (a price list is as wide as its prices), up to 60 % of the width.
+  - **Arrange and Export.**
+    - Unturned text aligns by its letters.
+    - Align says when it sends a block past the canvas edge.
+    - Export counts pictures, shapes and strokes wholly outside the canvas ("not included").
+  - **Pictures.**
+    - Batches keep off guide cells that hold copy when the other cells can take them, up to four tiles to a cell. They arrive in reading order, so the files keep theirs.
+    - One picture dropped at a point goes on top where it was put, so a logo dropped over the headline is what a press there takes. Picks and batches still go under the text (supersedes part of D-047).
+  - **Handles.** A press anywhere inside a small box moves it; its handles are caught from outside.
+  - Why: loop 7 cohorts T (47 sessions; 18 of 21 loop-6 items fixed, 3 partly) and U (12 fresh jobs, 20 sessions).
+- **D-088** 2026-10-11 fable — Loop 7 cohort V (adversarial).
+  - **Text tool.**
+    - T, then a toolbar control (Bold, Larger, a typeface, a colour) or a click beside the canvas before typing: the control acts on the new label and typing carries on in it. Before, the label went and the letters ran as shortcuts.
+    - A field that takes typing (the size, the hex) keeps the label and ends the edit.
+    - A new label left untouched or emptied goes with no Undo step (`Store.retract`), so Undo no longer brings back a ghost "Text". Typing "Text" counts as typing.
+  - **Linked sizes.** Layout text retyped (or given another face or weight) in one size keeps fitting the others (`keepInRoom`): in each other size it steps down to the largest whole-word size above the picture or shape below it, or the canvas bottom less the margin, never below body. The edited size stays the person's to judge. This keeps 5q's autofit-off rule (D-034, D-085) without a per-size flag.
+  - **Larger and typed sizes** stop before the text they push down would land on other text or a block, or stop at the canvas bottom under it.
+  - **Labels.**
+    - A free label at the canvas bottom grows upwards, keeping its margin there.
+    - Chinese counts each character, and a link each part after a slash, as the pieces that never break (`pieces`), so neither drops a label's photo or block bounds.
+    - The measurer breaks a link after a slash and keeps a minus sign with its number (`BREAK_AFTER`).
+  - **Arrange.** Centring on the largest block falls back to the selection's joint bounds when it would send a block past the canvas edge (Select all).
+  - **Start.** Started from the keyboard, a click where Start was is ignored as a click's second press is.
+  - **Pictures.**
+    - A single picked picture keeps off cells that hold copy too.
+    - A small file filling a frame is said to look soft.
+  - **Selecting.** A thin line or rule takes a press within 10 screen pixels of its middle.
+  - **Layer names** are cut between characters, never inside an emoji.
+  - Why: loop 7 cohort V (34 sessions).
+- **D-089** 2026-10-11 fable — Loop 8 cohort W (verification).
+  - **Labels on blocks.** A label on a block retyped with a word the block cannot hold, or copy that would not fit wrapped there, takes the size that fits it (`roomSize`, down to three fifths of body). Past that it leaves for the canvas as before. This supersedes D-085's move to the canvas and D-088's widening, which ran it over the headline.
+  - **Growing upwards.** Every free label at the canvas bottom grows upwards, wrapped or not and on any later edit. It never rises above its block's top or the nearest block or text right above it.
+  - **Wrapping.** A label wraps on its side when the copy fits on the canvas once lifted, rather than sliding over the headline (supersedes part of D-087). A block or neighbour beside it gives way only when the wider bounds fit and these do not; this supersedes D-086's two tests, which now keep the label in its block and grow it upwards.
+  - **Links** also break after an underscore and after a dot between letters (`BREAK_AFTER`).
+  - **Linked sizes and Change ratio.**
+    - Side-by-side labels that grow by the body-type ratio (Header to Post) stop before what stood beside them on their row, keeping their aligned edge.
+    - Labels that shared a size and a row keep sharing it. This supersedes the overlap D-087's one-line rule caused.
+    - Where restacking would push text off the canvas (a Banner cover made into a Link), the text above rises instead, as far as the layout margin.
+  - **Text tool.**
+    - After a toolbar control (Align right, Bold) the new label is judged from where the control left it, and typing carries on at its end, typed or not.
+    - A press beside the canvas leaves it being typed.
+    - A click near an edge places it inside the layout margin.
+    - Opening Export (button or Mod+Shift+E) keeps it.
+  - **Readable colour.**
+    - Nudging with the arrow keys re-picks the readable colour as a drag does.
+    - Text over an empty picture frame counts as on the ground, since the export leaves the frame out.
+  - **Larger and typed sizes**
+    - also stop before pushed text reaches the canvas bottom margin;
+    - several blocks that shared a size end at one size even when one is pushed down by the others.
+  - **Placement.** Pasted copy and new labels count straddling a band or pill at three times the area they cover. Pasted copy now knows the bands, so it sits on one or beside it.
+  - **Arrange.** Centring that falls back to the selection says so.
+  - **Names.** Layer names from file names are cut between characters (`cleanName`).
+  - Why: loop 8 cohort W (31 sessions; 14 of 23 loop-7 items fixed, 9 partly).
+- **D-090** 2026-10-11 fable — Loop 8 cohort X (12 fresh jobs).
+  - **Pasted lists.** Text with one line per paragraph counts as one line, so a pasted list that hugs its widest item widens as it grows: prices stay on their item's line.
+  - **Breaking words.** A hyphen after a single letter ("O-Week", "e-mail") does not break.
+  - **Split layout.** The headline and body rise together, as far as the margin, so two lines of body clear the accent block in every ratio and guide.
+  - **Same width and height.** Whole pictures (logos, Fit) keep their proportions, so they never crop. This supersedes D-081 for pictures that show whole; cropped pictures still match exactly.
+  - **Space evenly.** Blocks wider together than the stretch between the outer two spread across the canvas within its margins. Too wide even for that (or with locked blocks), they stay and the toast says so; this replaces negative gaps that overlapped them.
+  - **Pressing text.** Text takes a press on its letters. On the empty part of its box (an autofit room) a block under it takes the press, so a QR code inside a poster headline's room can be picked and dragged.
+  - **Larger and typed sizes**
+    - judge the text they push by its letters, not its wrap box;
+    - say which limit stopped them: a word, the canvas bottom, the block, or "keeps clear of the blocks around it".
+  - **Contrast.** The "use" fix picks a shade that passes on everything behind the text (`passingShade` with several backdrops), so a label across a band and the ground reads on both. Where none does, it says so.
+  - **Export.** Mod+Shift+E opens it while typing, keeping a new label.
+  - Why: loop 8 cohort X (12 personas, 19 sessions).
+- **D-091** 2026-10-11 fable — Loop 8 cohort Y (adversarial).
+  - **Layout text keeps fitting in every size (`keepInRoom`).** This now includes the size being edited, so a size set by hand in another size no longer leaves a retyped headline running through the band (supersedes part of D-088).
+    - It leaves room for the text stacked under it on the same backing, so a split layout's body stays above the accent.
+    - It never goes below body type for a headline, or three fifths of body type for other text.
+    - A hand-set size holds while the copy fits (5q).
+  - **Autofit on, in every size.** The box takes today's height, capped at that size's room, so pressing Fit in one size no longer shrinks the text in the others. The "block below" test judges text by its letters.
+  - **Black or white free labels.** A free label's black or white is re-picked when it has become nearly invisible where it sits (under 3 : 1), such as a label dragged off a band onto a dark ground (supersedes part of D-082).
+  - **Toolbar while typing.** A toolbar control or a click beside the canvas keeps any text edit going. The typing so far becomes its own Undo step, and the next letters type rather than run as shortcuts.
+  - **The Text tool's untouched label leaves no ghost.**
+    - Undo, the toolbar Undo or Mod+Z in it takes back only the label.
+    - Adding a shape, icon, frame or picture instead removes it.
+    - Leaving the page removes it.
+    - Steps that only changed it (Bold before typing) go with it.
+    - The Redo steps its adding cleared come back (`Store.retract`).
+  - **Larger and typed sizes on a turned block** stop where its turned box would leave the canvas.
+  - **New shapes** (Shapes panel, R, O) land in the spot the blocks cover least in each size, never over the copy.
+  - **Typing.** Trailing empty lines are dropped when an edit ends (a pasted CRLF line).
+  - **T then a click.** A click just under the last line keeps the label there rather than the margin pushing it onto that line.
+  - Why: loop 8 cohort Y (21 scripts).
+- **D-092** 2026-10-11 safwat — "For LinkedIn and IG put in a designated segment of the circle, like social formats; when clicked it expands out with the logos of IG or LinkedIn and says LinkedIn post, IG post, IG story."
+  - **The ratio ring has five segments:** Social, Pin 2:3, Print A4, Slide 16:9 and Banner 3:1.
+  - **Social opens.** A click on it, or Space, fans seven formats out of its segment in 280 ms, pushing the other ratios round, so the ring has eleven stops. The formats are:
+    - Instagram post 4:5, square 1:1, story 9:16 and grid 3:4;
+    - LinkedIn post 1:1, link 1.91:1 and banner 4:1.
+  - **Each format shows** its platform's logo beside the canvas shape, the ratio, and the word Post, Square, Story, Grid, Link or Banner. Read with the logo, the word gives the destination ("IG post", "LinkedIn banner"). Full names ("Instagram story 9:16") show in the readout card and the tooltip.
+  - **Closing.** Social folds away when a ratio outside it is picked, when another ring is used, when the page around the dial is pressed, or on Escape or Space. Closed, it shows both logos and the ratio of the format last picked; picking Social again gives that format.
+  - **Data and contracts.**
+    - A format names a ratio on the dial only. `DialSettings.format` remembers it; the document stores the ratio as before.
+    - The editor's size tabs, Change ratio panel and export names keep the ratio labels.
+    - Core adds `formats`, `formatById` and `formatFor` (`ratios.ts`), and `ratioStops`, `stopOf`, `settingFor`, `ratioSpans` and `arcPath` (`dial.ts`). `RINGS` gives the ratio ring 5 stops.
+  - **Logos.** Phosphor's regular Instagram and LinkedIn logos (MIT) are inlined in the dial and drawn in ink. They follow the paper rule that the only colour in the chrome is user colour, and they are used only to name the destination.
+  - **Audit.** Steps 5a and the dial-keys step now cover opening Social, picking a format, the remembered format, Space and closing on another ring.
+  - Why: explicit session request.
+- **D-093** 2026-10-11 safwat — "No more loops after that, just save as is."
+  - The student-test loop (D-045) ends with loop 9. Its cohorts ran against the D-091 build.
+  - Their findings are recorded under Next steps, not fixed. The branch is saved with D-092 on top.
+  - Why: explicit session request.
 
 ## Next steps
 
@@ -120,9 +299,78 @@ Student-test loop (D-045), session-sized:
 
 - [x] Loop 1: harness (Playwright persona sessions with screenshots, exports and the saved document) and four cohorts, 55 personas: social campaigns, print and events, portfolio and personal brand, power users. Fixed or added everything in D-046–D-068.
 - [x] Social formats Grid 3:4, Pin 2:3, Link 1.91:1, Cover 4:1 (D-069); merge to `main`.
-- [ ] Loop 2: three cohorts against the loop-2 build (verification of the 25 loop-1 fixes, 12 fresh portfolio jobs, adversarial tests of the new features). Triage their reports and fix what they find; re-loop.
+- [x] Loop 2: cohorts F (12 fresh portfolio jobs) and G (adversarial, 43 sessions) reported; fixes D-070–D-075.
+- [x] Loop 2 cohort E: 25 loop-1 fixes verified (18 fixed, 7 partly fixed and since completed), fixes D-076.
+- [x] Loop 3: cohorts H (25 loop-2 fixes re-checked, 59 scripts), I (12 fresh jobs) and J (16 adversarial sessions); fixes D-077–D-080.
+- [x] Loop 4: cohorts K (verification, about 70 sessions), L (12 fresh jobs) and M (43 adversarial sessions); fixes D-081, D-082.
+- [x] Loop 5: cohorts N (verification, 65 sessions), O (12 fresh jobs) and P (32 adversarial sessions); fixes D-083, D-084.
+- [x] Loop 6: cohorts Q (verification, 46 sessions), R (12 fresh jobs, 31 sessions) and S (64 adversarial sessions); fixes D-085, D-086.
+- [x] Loop 7: cohorts T (verification, 47 sessions), U (12 fresh jobs, 20 sessions) and V (34 adversarial sessions); fixes D-087, D-088.
+- [x] Loop 8: cohorts W (verification, 31 sessions), X (12 fresh jobs, 19 sessions) and Y (adversarial, 21 scripts); fixes D-089, D-090, D-091.
+- [x] Loop 9: cohorts Z (verification, 41 sessions), AA (18 fresh jobs, 30 sessions) and AB (adversarial, 52 sessions) against the D-091 build. Cohort Z found 12 of the 23 loop-8 items fixed, 8 partly fixed and 3 fixed with side effects. The findings below are recorded, not fixed (D-093).
+- [ ] Loop 9 findings (cohort Z, 41 sessions on the D-091 build). Not fixed, by Safwat's decision to stop looping (D-093):
+  - **Stacked contact labels overlap.** On a Post cover, T-click three labels at (60, 690), (60, 760) and (60, 830). Retype the first as "Instagram: instagram.com/usyd.marketing.society" and the second as a linktr.ee link. The first wraps into a five-line column and the second lands on it and on the body.
+  - **A free label under text at the canvas bottom runs off the canvas** and the export cuts it. This happens in cover and landscape split layouts, where text sits right above it. It now grows downwards past the bottom instead of over that text (D-089). The fix should let it widen or shrink there.
+  - **Labels on a pill or rectangle shape spill out.** They shrink only to 37.5 units, or not at all. Photos and poster or story bands work.
+  - **Same width/height and Space evenly push logos off the canvas** with no toast; for example, a wordmark ends at x = 1036–1060. In an A4 sponsor row, Same height makes the logos overlap.
+  - **An untouched T label stays as "Text"** after an icon added from Search icons, after a Layers click, or after Export. It survives Undo and reload.
+  - **Smaller issues:**
+    - A T-click near the right edge of a photo shrinks the label instead of moving it left.
+    - Header labels arrive in a linked Post at 15 units.
+    - A T-click on existing text stacks the new label on it.
+    - A turned label stopped at the top edge gets the "canvas bottom" toast.
+    - A pasted agenda touches the body above it.
+    - Layer names cut joined emoji (👨‍👩‍👧 becomes 👨).
+    - Choosing a typeface while typing a headline shares one Undo step with the typing after it.
+- [ ] Loop 9 findings (cohort AA, 18 fresh jobs in 30 sessions; no console errors or off-origin requests). Not fixed (D-093):
+  - **Hindi in Poppins is clipped at the canvas edge.** A Story poster headline typed as "दिवाली मेला 2026" and then switched to Poppins keeps line breaks measured in the fallback face. The export clips "मेला" with no flag or Export note. Picking Poppins before typing wraps correctly. The likely cause is measurement cached before the face's Devanagari subset loaded; re-measure when a face finishes loading.
+  - **One picture dropped on empty space covers the copy.** It snaps to the nearest guide cell; for example, a QR dropped under an A4 poster's body lands 382 × 382 over the date and venue. It should land at the drop point or avoid copy as batch picks do.
+  - **Hard-to-grab handles:**
+    - After Same height, a logo's bottom-right handle mostly moves the logo; the resize zone sits below the drawn handle and the picture bar covers it.
+    - A line's left end handle moves the line when pressed at its centre.
+  - **A pasted list at the right margin rewraps item by item when made larger.** In an A4 stack, a list at x = 657 keeps its width. Tabs become single spaces, so prices do not line up.
+  - **Stats row.** T-clicked labels in a row slide onto each other. Space evenly then puts one on a dark photo in dark ink.
+  - **Linked sizes from a Slide.**
+    - A Story made from a Slide keeps 17-unit body type and a strip-shaped photo.
+    - Copy added in a linked Post also shows tiny in the Header.
+  - **Keyboard-only use.**
+    - Tab does not reach blocks; Layers does.
+    - C opens Colour without moving focus into it.
+    - The Export sheet does not trap focus.
+  - **Layers keeps a picture's old name after Replace.**
+- [ ] Loop 9 findings (cohort AB, 52 adversarial sessions; no console errors or off-origin requests). Not fixed (D-093):
+  - **Ghost "Text" labels.** An untouched T label is kept as "Text", and exported, after any of these. `dropFresh` should cover them all:
+    - switching the size pill or adding a linked size;
+    - a Layers row click;
+    - opening Export (then Escape or download);
+    - another tab saving.
+  - **Retyped layout text in short, wide linked sizes.** With Post, Story, Slide, Header, Print and Banner (Thirds) and long copy typed in Post:
+    - Cover: the headline runs off Header and Banner over the body, and a long body runs off Slide.
+    - Stack: the headline runs into the picture band in Header and Banner.
+    - Split: the Slide body lands on the accent block.
+    - Poster, band and frame stay clean. `keepInRoom` needs to cover these layouts' rooms in wide sizes.
+  - **A label on an added pill or rectangle does not shrink** when retyped (only the layout accent does). It spills below the shape, becomes a tall URL column, or jumps across a photo column. A label on a turned pill stays at 0°.
+  - **T then a click on existing text** puts the new label on top of it; Canva users expect the click to edit that text.
+  - **A label typed in the gap under the headline covers the body.** Labels arrive at 42, and the gap is about 35.
+  - **A bottom label beside the accent block, retyped long,** becomes a 224-wide column that ends 36 units below the canvas.
+  - **Undo while typing.**
+    - The toolbar Undo while retyping a headline shows stale text, and further typing loses the Undo.
+    - The toolbar Undo while typing a new label deletes the label.
+    - Mod+Z after Bold or Larger while typing deletes a letter instead of undoing the control.
+  - **Letters run as shortcuts** after these controls end an edit:
+    - Enter in the hex field, or Tab out of the size field;
+    - Export then Escape;
+    - Layers rename or click, Lock or Duplicate;
+    - adding a size, shape or icon.
+    For example, "rot" then adds a rectangle, a circle and a label.
+  - **Two tabs.** After "Updated from another tab", Undo reverts the other tab's edit.
+  - **Smaller issues:**
+    - Dragging a pending T label selects its text instead of moving it.
+    - 2,000 pasted characters in a T label run off the canvas.
+- [ ] Linked sizes from a wide ratio turn photo frames into tall strips (the layout's own slot shape) and keep banner-size type in a story; consider type growth on taller sizes and contained cut-outs.
+- [ ] Split layout: a long body can run into the bottom-right accent block; text flow ignores shapes.
+- [ ] Missing for students: italic, text highlight or shadow over photos, tab stops, a right-click menu.
 - [ ] Starter type hierarchy is weak on short canvases: banner and cover headlines start at 25 units over 20-unit body text, landscape cover with Quarters at 28 over 28 (`layout`'s `H × .075` headline cap). Tune within the type scale.
-- [ ] Text tool: students expected a smaller, regular-weight text box near free space rather than a bold headline-size box at the canvas centre.
 - [ ] Sketch tips live only in the opt-in help bar; scribble-to-delete surprised a student (the toast now names what went and offers Undo).
 - [ ] Two-tab adoption replaces an in-progress text edit in the other tab; consider a quieter merge.
 
@@ -157,7 +405,9 @@ Student-test loop (D-045), session-sized:
   - **Zoom.** On a 1024 × 490 window an A4 canvas is 224 px wide and story body text renders near 12 px; fine editing is hard on small laptops.
   - **Groups.** Students duplicated label + number pairs and kept realigning them; Arrange helps, but there is no Mod+G.
   - **Vector PDF / bleed** for print shops.
-- Labels for the four new ratios (D-069) are defaults: Grid 3:4, Pin 2:3, Link 1.91:1, Cover 4:1. Keep, or prefer other words?
+- Labels for the four new ratios (D-069) are defaults: Grid 3:4, Pin 2:3, Link 1.91:1, Header 4:1 (renamed from Cover, D-080). Keep, or prefer other words?
+- **Carousels.** Students build three-slide carousels as three linked Post sizes, but content is shared across sizes by design (5w); hiding blocks per size is the only way to vary slides. Pages (separate content per page) would need a document change. Build pages, or keep linked sizes as the only multi-frame tool?
+- Header 4:1 type starts at 15–19 units (about 24–30 px in the 1584 px export) because the type scale follows the short side. Raise it for very wide ratios?
 - Study (applies to `study-v1`): participants per condition, raters, scale and margin for the thesis holding.
 - Whether study needs undo. It remains out of scope. Run a pilot of two or three people without it and decide from behaviour.
 - Approve the concrete fictional exhibition content pack before recruiting participants; it is identical in both modes.
@@ -166,6 +416,10 @@ Student-test loop (D-045), session-sized:
 
 - Study build only: should a bad cut-out be recoverable there? (Phase 1 keeps the original and shows Before/After, 5o.)
 - Neutral ground: the 7-step scale makes the neutral light ground #EBEBEB instead of the prototype's white (D-038). Keep, or special-case white?
+- **Autofit after a manual size.** 5q (D-034) turns autofit off when a size is set by hand, so a poster headline made Larger and then retyped long keeps its size and breaks words. Keep 5q, or keep autofit on with the set size as its ceiling?
+- **Carousels.** Students build three-slide carousels as linked Post sizes; content is shared across sizes (5w), so retyping slide 2 changes slide 1, and every new picture needs "Hide in this size" in the others (14 clicks for 3 slides, loop 7 U-03). Keep linked sizes as the only multi-canvas tool (multi-page is out of Phase 1), or add an unlinked duplicate size?
+- **Social formats (D-092).** Should the editor's size tabs, Change ratio panel and export file names also use the platform names ("Instagram story") instead of the ratio labels (Story)? Should Social gain Pinterest, X, TikTok or Facebook formats, with Pin and Banner moving into it?
+- **Shape frames.** Students dropped photos on hearts, stars, rounded squares and triangles expecting them to fill like the circle does (D-081); only circles take a picture. Add picture masks for library shapes (a contract change to `ImageNode.mask`)?
 
 ## Deferred
 
@@ -175,6 +429,34 @@ Student-test loop (D-045), session-sized:
 - Autosave failures now show a toast; quota behaviour with many large images is untested beyond the audit.
 - HEIC decoding (iPhone photos) needs a decoder; libheif is LGPL, so Kura8 only explains how to save as JPEG (D-059).
 - Vector PDF, bleed and crop marks for print shops (PDF stays one raster page).
+- Per-word styling (bold one word), tracking and leading controls (loop 3).
+- Widening a cut-out re-covers the frame and can crop the subject; contained cut-outs would need a per-node fit mode.
+- The dial wheel shrinks with browser zoom (it fits the window); the toolbar now wraps instead.
+- The cover layout on Link and Header leaves room for one line under the picture; two-line copy runs off and is flagged.
+- An SVG with an extreme viewBox (10 × 4000) imports as a sliver of the right proportions.
+- Text readability over busy photos (shadow, outline or highlight), stroke width for frames and borders, hanging indents for bullets and tab stops (loop 4).
+- A typed accent hex follows the dark mirror like the dial's accent; brand colours may want to stay exact in Dark.
+- Text dragged wholly off the canvas has no on-canvas cue (only the Export note).
+- Multi-line SVG text was measured 4–5 px lower than the PNG at 1080 px in one loop-4 run; single lines match.
+- Change ratio from a tall size to a very wide one (Story to Header) shrinks text with the canvas (body to about 4 units); Go with the new ratio re-lays layout text instead (loop 5).
+- Larger on a free label can grow it past the canvas bottom; the off-canvas flag marks it (loop 5).
+- Readouts read "0x20" as 32 and "1/2" as 12 (loop 5).
+- Tiles in a small layout frame stay small; with no groups, scaling a tiled set means Undo, enlarging the frame and picking again (loop 5).
+- The layout's accent block stays above tiles in the image frame and can cover the first face (loop 5).
+- The contrast check asks 4.5 : 1 of display text too; WCAG's 3 : 1 large-text rule is not applied (loop 5).
+- A free label given black or white by `keepReadable` on a mid-grey ground keeps it on a later dark ground: automatic black or white on free labels is indistinguishable from a chosen one (D-082) without a flag on the node (loop 6).
+- The contrast "use" button checks the active size only; a label on a dark block in one size can sit on bare ground in another (loop 6).
+- With Help on at 175–200 % zoom the help box can cover the bottom of panels and keeps the last hovered control's text (loop 6).
+- A label turned 90° near the canvas bottom grows off the canvas (flagged) (loop 6).
+- Text over a dark photo keeps automatic ink and the contrast line is hidden there (D-053); T labels now often land on photos (loop 6).
+- Every export in a countdown series takes its name from the headline, so "3", "2", "1" all save as the same name (loop 6).
+- The Link split layout's two-line subtitle can reach the accent block; the Link cover layout's two-line headline plus two-line body runs off the bottom (flagged) (loop 6).
+- Remove background shows a scan line and a toast, with no progress percentage (loop 6).
+- A click on the canvas 1.6 s after Start (past the 1.5 s guard) ends the headline edit as any click does, and typing then runs as shortcuts (loop 7).
+- A link label between two photos whose longest unbroken part is wider than the gap crosses one photo (loop 7).
+- Header band to Post leaves the accent rule at the Header's thin margin while the text takes the Post's (loop 7).
+- A label on a turned block (12°) is bounded by the canvas, not the block; dragging a Line's end can snap its thickness (loop 7).
+- Batches of more than four pictures per clear guide cell still tile over cells that hold copy (loop 7).
 
 ## Browser audit
 
@@ -182,7 +464,7 @@ Run `npm run build`, start `npm run preview -- --port 4173`, then `python3 scrip
 
 ## Student-test loop
 
-`scripts/usertest/kura.py` drives the built app as a student would (dial, toolbar by accessible names, canvas in unit space, file picker, drops, pasted text, export downloads) and records screenshots, the saved document, toasts, console errors and off-origin requests under ignored `private/usertest/runs/`. `scripts/usertest/PRIMER.md` is the brief each simulated cohort reads. Serve a frozen copy of `dist/` on its own port so rebuilding does not disturb a run. Loop 1 (2026-10-10) ran four cohorts, 55 personas, across 1024–2560 px windows, Mac and Windows shortcuts and dpr 1–2; every session had no app console errors and no off-origin requests. Findings and fixes are D-046–D-068.
+`scripts/usertest/kura.py` drives the built app as a student would (dial, toolbar by accessible names, canvas in unit space, file picker, drops, pasted text, export downloads) and records screenshots, the saved document, toasts, console errors and off-origin requests under ignored `private/usertest/runs/`. `scripts/usertest/PRIMER.md` is the brief each simulated cohort reads. Serve a frozen copy of `dist/` on its own port so rebuilding does not disturb a run. Loop 1 (2026-10-10) ran four cohorts, 55 personas, across 1024–2560 px windows, Mac and Windows shortcuts and dpr 1–2; every session had no app console errors and no off-origin requests. Findings and fixes are D-046–D-068. Loops 2–8 fixed D-070–D-091. Safwat ended the loop after loop 9, whose findings are open under Next steps (D-093).
 
 The sections below record Phase 0 work; their audits run from a checkout of `study-v1`.
 

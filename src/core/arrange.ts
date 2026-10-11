@@ -9,8 +9,9 @@ export const unionOf = (rects: Rect[]): Rect => {
   const x = Math.min(...rects.map(r => r.x)), y = Math.min(...rects.map(r => r.y));
   return { x, y, w: Math.max(...rects.map(r => r.x + r.w)) - x, h: Math.max(...rects.map(r => r.y + r.h)) - y };
 };
-export function align(boxes: { id: string; rect: Rect }[], mode: AlignMode, canvas: Rect): Record<string, Move> {
-  const t = boxes.length === 1 ? canvas : unionOf(boxes.map(b => b.rect)), out: Record<string, Move> = {};
+/** `key`: blocks that stay put and set the target (locked blocks in the selection), as a key object does in Illustrator. */
+export function align(boxes: { id: string; rect: Rect }[], mode: AlignMode, canvas: Rect, key: Rect[] = []): Record<string, Move> {
+  const t = key.length ? unionOf(key) : boxes.length === 1 ? canvas : unionOf(boxes.map(b => b.rect)), out: Record<string, Move> = {};
   for (const { id, rect: r } of boxes) {
     const dx = mode === 'left' ? t.x - r.x : mode === 'right' ? t.x + t.w - r.x - r.w : mode === 'hcenter' ? t.x + t.w / 2 - r.x - r.w / 2 : 0;
     const dy = mode === 'top' ? t.y - r.y : mode === 'bottom' ? t.y + t.h - r.y - r.h : mode === 'vcenter' ? t.y + t.h / 2 - r.y - r.h / 2 : 0;
@@ -18,14 +19,37 @@ export function align(boxes: { id: string; rect: Rect }[], mode: AlignMode, canv
   }
   return out;
 }
-export function distribute(boxes: { id: string; rect: Rect }[], mode: DistributeMode): Record<string, Move> {
+export function distribute(boxes: { id: string; rect: Rect }[], mode: DistributeMode, pinned: string[] = []): Record<string, Move> {
   const out: Record<string, Move> = {};
   if (boxes.length < 3) return out;
   const pos = (r: Rect) => mode === 'x' ? r.x : r.y, len = (r: Rect) => mode === 'x' ? r.w : r.h;
+  // A pinned block that overlaps another along the axis (a locked full-bleed background) is not a stop in the row: it
+  // stays where it is and the others space as if it were not selected (D-082).
+  const meets = (a: Rect, b: Rect) => pos(a) < pos(b) + len(b) - 1e-6 && pos(b) < pos(a) + len(a) - 1e-6;
+  const lying = new Set(boxes.filter(b => pinned.includes(b.id) && boxes.some(o => o !== b && meets(o.rect, b.rect))).map(b => b.id));
+  if (lying.size) { const rest = distribute(boxes.filter(b => !lying.has(b.id)), mode, pinned); for (const id of lying) rest[id] = { dx: 0, dy: 0 }; return rest; }
   const sorted = [...boxes].sort((a, b) => pos(a.rect) + len(a.rect) / 2 - (pos(b.rect) + len(b.rect) / 2));
-  const first = sorted[0].rect, last = sorted[sorted.length - 1].rect;
-  const gap = (pos(last) + len(last) - pos(first) - sorted.reduce((s, b) => s + len(b.rect), 0)) / (sorted.length - 1);
-  let at = pos(first);
-  for (const { id, rect } of sorted) { const d = at - pos(rect); out[id] = mode === 'x' ? { dx: d, dy: 0 } : { dx: 0, dy: d }; at += len(rect) + gap; }
+  // The ends and pinned (locked) blocks stay; the blocks between each pair of them share that stretch evenly (D-077).
+  const pins = sorted.map((b, i) => i === 0 || i === sorted.length - 1 || pinned.includes(b.id) ? i : -1).filter(i => i >= 0);
+  for (let k = 0; k + 1 < pins.length; k++) {
+    const part = sorted.slice(pins[k], pins[k + 1] + 1), first = part[0].rect, last = part[part.length - 1].rect;
+    const gap = (pos(last) + len(last) - pos(first) - part.reduce((s, b) => s + len(b.rect), 0)) / (part.length - 1);
+    let at = pos(first);
+    for (const { id, rect } of part) { const d = at - pos(rect); out[id] = mode === 'x' ? { dx: d, dy: 0 } : { dx: 0, dy: d }; at += len(rect) + gap; }
+  }
+  return out;
+}
+/**
+ * Same width or height (D-077): every box takes the key's width (or height) with its top-left corner kept (a turned box
+ * its centre); a box that
+ * keeps its proportions (a filled picture, an icon) scales both sides. Works on unrotated frames.
+ */
+export function matchSize(boxes: { id: string; rect: Rect; keepAspect: boolean; rot?: number }[], key: Rect, mode: 'w' | 'h'): Record<string, Rect> {
+  const out: Record<string, Rect> = {};
+  for (const { id, rect: r, keepAspect, rot } of boxes) {
+    const k = mode === 'w' ? key.w / r.w : key.h / r.h, next = mode === 'w' ? { ...r, w: key.w, h: keepAspect ? r.h * k : r.h } : { ...r, h: key.h, w: keepAspect ? r.w * k : r.w };
+    // A turned block keeps its centre, so it does not jump (D-082).
+    out[id] = rot ? { ...next, x: r.x + (r.w - next.w) / 2, y: r.y + (r.h - next.h) / 2 } : next;
+  }
   return out;
 }

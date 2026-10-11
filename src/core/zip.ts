@@ -6,6 +6,11 @@ export function crc32(bytes: Uint8Array): number {
   for (const b of bytes) c = TABLE[(c ^ b) & 255] ^ (c >>> 8);
   return (c ^ 0xffffffff) >>> 0;
 }
+/** Names made unique by a -2, -3 … before the extension, so two sizes of one ratio both survive unzipping. */
+export function uniqueNames(names: string[]): string[] {
+  const seen = new Map<string, number>();
+  return names.map(n => { const k = (seen.get(n) ?? 0) + 1; seen.set(n, k); return k === 1 ? n : n.replace(/(\.[^.]*)?$/, m => `-${k}${m}`); });
+}
 export function zip(files: { name: string; data: Uint8Array }[]): Uint8Array {
   const enc = new TextEncoder(), parts: Uint8Array[] = [], central: Uint8Array[] = [];
   let offset = 0;

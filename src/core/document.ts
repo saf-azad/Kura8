@@ -19,7 +19,8 @@ export type FontId = 'grotesk' | 'poppins' | 'playfair' | 'lora' | 'bebas' | 'ca
 export type TextNode = Base & { kind: 'text'; text: string; weight: 400 | 700; align: Align; fill: ColourRef; fit?: boolean; font?: FontId };
 export type Icon = { set: string; name: string; d: string; licence: string };
 export type ShapeNode = Base & { kind: 'shape'; shape: string; fill: ColourRef; icon?: Icon };
-export type ImageNode = Base & { kind: 'image'; asset: string | null; cutout?: boolean; focus?: Point };
+/** `mask: 'circle'` shows the picture in the ellipse its frame bounds (a profile photo, D-081); absent means the full frame. */
+export type ImageNode = Base & { kind: 'image'; asset: string | null; cutout?: boolean; focus?: Point; mask?: 'circle' };
 export type InkForm = 'line' | 'arrow' | 'rect' | 'ellipse' | 'tri';
 export type InkNode = Base & { kind: 'ink'; paths: [number, number][][]; stroke: number; fill: ColourRef; form?: InkForm };
 export type DocNode = TextNode | ShapeNode | ImageNode | InkNode;
@@ -74,7 +75,7 @@ function node(x: unknown, sizeIds: string[]): x is DocNode {
       if (x.shape === ICON_SHAPE) return object(x.icon) && ['set', 'name', 'd', 'licence'].every(k => typeof (x.icon as Record<string, unknown>)[k] === 'string' && (x.icon as Record<string, string>)[k] !== '');
       return isShape(x.shape) && x.icon === undefined;
     }
-    case 'image': return (x.asset === null || typeof x.asset === 'string' && x.asset !== '') && optionalBool(x.cutout)
+    case 'image': return (x.asset === null || typeof x.asset === 'string' && x.asset !== '') && optionalBool(x.cutout) && (x.mask === undefined || x.mask === 'circle')
       && (x.focus === undefined || object(x.focus) && finite(x.focus.x) && finite(x.focus.y) && x.focus.x >= 0 && x.focus.x <= 1 && x.focus.y >= 0 && x.focus.y <= 1);
     case 'ink': return Array.isArray(x.paths) && x.paths.length > 0 && x.paths.every(p => Array.isArray(p) && p.length > 0 && p.every(point)) && positive(x.stroke) && validColour(x.fill)
       && (x.form === undefined || oneOf(['line', 'arrow', 'rect', 'ellipse', 'tri'], x.form));

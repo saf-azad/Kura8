@@ -1,7 +1,8 @@
 import type { Measure, Rect, Size } from './geometry';
-import type { ColourRef, CompId, DocNode, Palette, Slot } from './document';
+import type { ColourRef, CompId, DocNode, KuraDoc, Palette, Slot } from './document';
 import { contrast, resolve } from './palette';
 import { contains } from './geometry';
+import { ICON_SHAPE } from './shapes';
 import type { GuideId } from './guides/types';
 import { fractionsOf } from './guides';
 import { textHeight, typeScale } from './fit';
@@ -12,10 +13,12 @@ export type TextSlot = { rect: Rect; fontSize: number; fit?: boolean };
 export type Layout = { image: Rect | null; accent: Rect; headline: TextSlot; body: TextSlot };
 export type LayoutInput = { canvas: Size; guide: GuideId; comp: CompId; measure: Measure; headline: string; body: string };
 export const STARTER = { headline: 'Headline', body: 'Body text' };
+/** A layout's margin: 4.5 % of the canvas's shorter side. */
+export const layoutPad = (canvas: Size): number => Math.min(canvas.w, canvas.h) * .045;
 const R = (x: number, y: number, w: number, h: number): Rect => ({ x, y, w, h });
 export function layout(o: LayoutInput): Layout {
   const W = o.canvas.w, H = o.canvas.h, F = fractionsOf(o.guide), a = F[0], b = F[F.length - 1], scale = typeScale(o.guide, o.canvas);
-  const pad = Math.min(W, H) * .045, ax = a * W, bx = b * W, ay = a * H, by = b * H;
+  const pad = layoutPad(o.canvas), ax = a * W, bx = b * W, ay = a * H, by = b * H;
   let fs = Math.min(scale.headline, H * .075), image: Rect | null = null, accent: Rect, cap = 0;
   let head: { x: number; y: number; w: number }, body: { x: number; y: number; w: number } | null = null;
   switch (o.comp) {
@@ -31,8 +34,12 @@ export function layout(o: LayoutInput): Layout {
   let lines = o.measure(o.headline, fs, 700, head.w).length;
   // Short canvases: step the headline down until headline and body clear the bottom margin, never below body size.
   let bodySize = scale.body, bodyLines = 1;
+  const headY = head.y;
   const place = () => {
-    const headH = textHeight(lines, fs), at = body ?? { x: head.x, y: head.y + headH + pad, w: head.w };
+    const headH = textHeight(lines, fs);
+    // Split: the headline and body rise together, as far as the margin, so two lines of body clear the accent block (D-090).
+    head.y = o.comp === 'split' ? Math.max(pad, Math.min(headY, by - pad / 2 - textHeight(2, bodySize) - pad - headH)) : headY;
+    const at = body ?? { x: head.x, y: head.y + headH + pad, w: head.w };
     bodyLines = o.measure(o.body, bodySize, 400, at.w).length;
     return { headH, at };
   };
@@ -42,12 +49,48 @@ export function layout(o: LayoutInput): Layout {
   }
   return { image, accent, headline: { rect: R(head.x, head.y, head.w, placed.headH), fontSize: fs }, body: { rect: R(placed.at.x, placed.at.y, placed.at.w, textHeight(bodyLines, bodySize)), fontSize: bodySize } };
 }
+/** Ink or ground, whichever reads better on `bg`; when a mid-tone defeats both, black or white (D-056, D-076). */
+function readableOn(bg: string, palette: Palette): ColourRef {
+  const score = (c: ColourRef) => contrast(resolve(c, palette), bg);
+  const pick = (refs: ColourRef[]) => refs.reduce((a, b) => score(b) > score(a) ? b : a), best = pick([{ role: 'ink' }, { role: 'ground' }]);
+  return score(best) >= 4.5 ? best : pick([{ hex: '#000000' }, { hex: '#ffffff' }]);
+}
+const readableOnAccent = (palette: Palette): ColourRef => readableOn(resolve({ role: 'accent' }, palette), palette);
 /** Text that sits on the accent block (the poster band) takes ink or ground, whichever reads better on the accent (D-056). */
 export function textRoleOn(slots: Layout, text: Rect, palette: Palette): ColourRef {
   const inside = contains(slots.accent, { x: text.x, y: text.y }) && contains(slots.accent, { x: text.x + text.w, y: text.y + text.h });
-  if (!inside) return { role: 'ink' };
-  const accent = resolve({ role: 'accent' }, palette);
-  return contrast(resolve({ role: 'ground' }, palette), accent) > contrast(resolve({ role: 'ink' }, palette), accent) ? { role: 'ground' } : { role: 'ink' };
+  return inside ? readableOnAccent(palette) : { role: 'ink' };
+}
+/** An automatic text colour: ink, ground, or the black or white chosen for a band; anything else was the person's choice. */
+export const autoFill = (fill: ColourRef): boolean => 'role' in fill && fill.role !== 'accent' || 'hex' in fill && /^#(000000|ffffff)$/i.test(fill.hex);
+/**
+ * After a palette or ground change (a hue, Dark ground, a filled ground) or a move, text in an automatic colour that no
+ * longer reaches 4.5 : 1 on what lies behind it takes the readable colour again (D-077, D-081): on a solid shape that
+ * holds it in an unturned size (a band, a pill), that shape's colour (D-087); on nothing but the ground and other text in
+ * every size, the ground (D-083). Text that still reads, text over pictures or partly over blocks, and chosen colours stay.
+ */
+export function keepReadable(doc: KuraDoc): KuraDoc {
+  const ground = resolve(doc.ground ?? { role: 'ground' }, doc.palette);
+  const inside = (outer: Rect, inner: Rect) => contains(outer, { x: inner.x, y: inner.y }) && contains(outer, { x: inner.x + inner.w, y: inner.y + inner.h });
+  const meets = (a: Rect, b: Rect) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+  const nodes = doc.nodes.map((n, i) => {
+    // Black or white counts as automatic only on layout text (the band's fallback); on a free label it was chosen (D-082),
+    // unless it has become nearly invisible where it now sits (under 3 : 1, a label dragged off a band, D-090).
+    if (n.kind !== 'text' || !autoFill(n.fill)) return n;
+    const chosen = 'hex' in n.fill && !n.slot;
+    const below = doc.nodes.slice(0, i), sizes = doc.sizes.filter(({ id }) => n.frames[id] && !n.frames[id].hidden);
+    let onBand: string | null = null;
+    for (const { id } of sizes) {
+      const t = n.frames[id];
+      const back = t.rot ? undefined : [...below].reverse().find(b => { const f = b.frames[id]; return b.kind === 'shape' && b.shape !== ICON_SHAPE && (b.opacity ?? 1) >= 1 && f && !f.hidden && !f.rot && inside(f.rect, t.rect); });
+      if (back?.kind === 'shape') { onBand = resolve(back.fill, doc.palette); break; }
+    }
+    // An empty picture frame is a placeholder the export leaves out: text over it sits on the ground (D-089).
+    const bare = !onBand && sizes.length > 0 && sizes.every(({ id }) => below.every(b => { const f = b.frames[id]; return !f || f.hidden || b.kind === 'ink' || b.kind === 'text' || b.kind === 'image' && !b.asset || !meets(f.rect, n.frames[id].rect); }));
+    const bg = onBand ?? (bare ? ground : null);
+    return bg && contrast(resolve(n.fill, doc.palette), bg) < (chosen ? 3 : 4.5) ? { ...n, fill: readableOn(bg, doc.palette) } : n;
+  });
+  return nodes.some((n, i) => n !== doc.nodes[i]) ? { ...doc, nodes } : doc;
 }
 /** Slot-tagged starter nodes for a layout: empty image frame, accent block, headline and body text. */
 export function starterNodes(slots: Layout, o: { sizeId: string; newId: () => string; headline?: string; body?: string; palette?: Palette }): DocNode[] {

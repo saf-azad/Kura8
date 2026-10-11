@@ -1,10 +1,12 @@
-import type { DocNode, Frame, KuraDoc, TextNode } from '../../core/document';
-import { center, containsRotated, rotatedBounds, unionRect, norm, type Point, type Rect } from '../../core/geometry';
+import type { DocNode, Frame, KuraDoc } from '../../core/document';
+import { center, containsRotated, rotatedBounds, rotatePoint, unionRect, norm, type Point, type Rect } from '../../core/geometry';
 import { CENTRE } from '../../core/images';
 import { resizeLocal } from './resize';
 import { snap, snapAngle, snapLines, type Handle, type SnapLine } from '../../core/snap';
 import { setFrames } from '../../core/ops';
 import { textBox } from '../../core/fit';
+import { unfit as unfitText } from '../../core/flow';
+import { keepReadable } from '../../core/compositions';
 import { measure } from '../measure';
 import { handlePoints, HANDLE_PX } from './overlay';
 import { emptyLive, type Editor } from '../editor';
@@ -16,8 +18,8 @@ import type { SketchTools } from '../sketch';
 // removal) ends the drag rather than being overwritten from `before`.
 type Drag =
   | { kind: 'move'; ids: string[]; start: Point; before: KuraDoc; last?: KuraDoc; frames: Record<string, Frame>; box: Rect; rot: number; moved: boolean; held?: { x?: string; y?: string }; release?: string; cycle?: string }
-  | { kind: 'resize'; id: string; handle: Handle; before: KuraDoc; last?: KuraDoc; frame: Frame; box: Rect; size: number; moved: boolean }
-  | { kind: 'rotate'; id: string; c: Point; a0: number; r0: number; before: KuraDoc; last?: KuraDoc; held: number | null; moved: boolean }
+  | { kind: 'resize'; id: string; handle: Handle; before: KuraDoc; last?: KuraDoc; frame: Frame; box: Rect; size: number; moved: boolean; start: Point }
+  | { kind: 'rotate'; id: string; c: Point; a0: number; r0: number; before: KuraDoc; last?: KuraDoc; held: number | null; moved: boolean; start: Point }
   | { kind: 'marquee'; start: Point; base: string[]; skipLocked?: boolean }
   | { kind: 'pan'; id: string; start: Point; focus: Point; moved: boolean };
 const MIN = 20;
@@ -36,12 +38,19 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
       ...ed.anchors().flatMap(a => a.kind === 'line' ? [{ id: a.id, axis: a.axis, at: a.at, tier: 0 as const }] : []), ...extra];
   };
   const handleAt = (p: Point): { id: string; handle: Handle | 'rotate' } | null => {
-    for (const box of ed.boxes()) for (const { handle, at } of handlePoints(box, ed.scale)) if (Math.hypot(at.x - p.x, at.y - p.y) <= (HANDLE_PX / 2 + 4) * px()) return { id: box.id, handle };
+    for (const box of ed.boxes()) {
+      // A press inside a small box (a short label, a thin rule) moves it, up to its edge; its handles are caught from
+      // outside (D-086, D-087).
+      const r = box.rect, q = rotatePoint(p, center(r), -box.rot);
+      const inner = Math.min(r.w, r.h) * ed.scale < 48 && q.x > r.x && q.x < r.x + r.w && q.y > r.y && q.y < r.y + r.h;
+      for (const { handle, at } of handlePoints(box, ed.scale)) if (!(inner && handle !== 'rotate') && Math.hypot(at.x - p.x, at.y - p.y) <= (HANDLE_PX / 2 + 4) * px()) return { id: box.id, handle };
+    }
     return null;
   };
   el.addEventListener('pointerdown', e => {
-    if (e.button !== 0 || drag || performance.now() < ed.ignorePointerUntil) return;
+    if (e.button !== 0 || drag) return;
     const p = ed.toUnits(e), ui = ed.store.ui;
+    if (ed.placeFresh(p)) { e.preventDefault(); return; }
     el.focus({ preventScroll: true });
     if (ed.textarea) ed.finishText();
     if (ui.tool && sketch.down(e, p)) { el.setPointerCapture(e.pointerId); return; }
@@ -58,11 +67,15 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
     const knob = handleAt(p);
     if (knob) {
       const node = ed.doc.nodes.find(n => n.id === knob.id)!, f = ed.frame(node);
-      if (knob.handle === 'rotate') { const c = center(ed.box(node)); drag = { kind: 'rotate', id: node.id, c, a0: Math.atan2(p.y - c.y, p.x - c.x) * 180 / Math.PI, r0: f.rot, before: ed.doc, held: null, moved: false }; }
-      else drag = { kind: 'resize', id: node.id, handle: knob.handle, before: ed.doc, frame: f, box: ed.box(node), size: node.kind === 'text' ? textBox(node, f, measure, ed.typeScale()).size : 0, moved: false };
+      if (knob.handle === 'rotate') { const c = center(ed.box(node)); drag = { kind: 'rotate', id: node.id, c, a0: Math.atan2(p.y - c.y, p.x - c.x) * 180 / Math.PI, r0: f.rot, before: ed.doc, held: null, moved: false, start: p }; }
+      else drag = { kind: 'resize', id: node.id, handle: knob.handle, before: ed.doc, frame: f, box: ed.box(node), size: node.kind === 'text' ? textBox(node, f, measure, ed.typeScale()).size : 0, moved: false, start: p };
       el.setPointerCapture(e.pointerId); e.preventDefault(); return;
     }
-    const hit = ed.hitTest(p);
+    // A drag that starts on the selection moves the selection even where another block covers it; a click there without
+    // a drag still selects the block on top (D-081).
+    const top = ed.hitTest(p), under = !e.shiftKey && !e.altKey && top && !ui.sel.includes(top.id)
+      ? [...ed.doc.nodes].reverse().find(n => ui.sel.includes(n.id) && !n.locked && !ed.frame(n).hidden && containsRotated(ed.box(n), ed.frame(n).rot, p)) : undefined;
+    const hit = under ?? top;
     const keepPanel = ui.panel === 'shapes' || ui.panel === 'layers' || ui.panel === 'colour' || ui.panel === 'fonts' || ui.panel === 'arrange' ? ui.panel : null;
     if (!hit) {
       const base = e.shiftKey ? ui.sel : [];
@@ -89,7 +102,7 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
     const single = movers.length === 1 ? movers[0] : null;
     const box = single ? ed.box(single) : unionRect(movers.map(n => rotatedBounds(ed.box(n), ed.frame(n).rot)));
     // Alt drags without snapping (5j); an Alt-click without a drag selects the block underneath instead (D-065).
-    const cycle = e.altKey && !e.shiftKey ? ed.hitBelow(p)?.id : undefined;
+    const cycle = e.altKey && !e.shiftKey ? ed.hitBelow(p)?.id : under ? top!.id : undefined;
     drag = { kind: 'move', ids: movers.map(n => n.id), start: p, before: ed.doc, frames, box, rot: single ? ed.frame(single).rot : 0, moved: false, release, cycle };
     el.setPointerCapture(e.pointerId); e.preventDefault();
   });
@@ -98,6 +111,7 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
     if (ui.tool && !drag) { sketch.move(e, p); return; }
     if (!drag) { hover(p); return; }
     const snapping = !e.altKey;
+    if (drag.kind === 'pan' && ed.store.ui.reposition !== drag.id) { drag = null; return; }
     if (drag.kind === 'pan') { drag.moved = true; ed.panPicture(drag.id, drag.focus, { x: p.x - drag.start.x, y: p.y - drag.start.y }); return; }
     if (drag.kind !== 'marquee' && drag.last && ed.doc !== drag.last) { drag = null; ed.live = emptyLive(); ed.invalidate(); return; }
     if (drag.kind === 'marquee') {
@@ -124,10 +138,14 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
       for (const id of drag.ids) { const f = drag.frames[id]; next[id] = { ...f, rect: { ...f.rect, x: f.rect.x + dx, y: f.rect.y + dy } }; }
       drag.last = setFrames(drag.before, ed.sizeId, next); ed.store.set(drag.last); return;
     }
+    // A press on a handle that trembles a pixel or two is not a drag: nothing snaps until it moves 3 px (D-077).
+    if ((drag.kind === 'resize' || drag.kind === 'rotate') && !drag.moved && Math.hypot(p.x - drag.start.x, p.y - drag.start.y) * ed.scale < 3) return;
     if (drag.kind === 'resize') {
       drag.moved = true;
       const id = drag.id, node = drag.before.nodes.find(n => n.id === id)!, f = drag.frame, corner = drag.handle.length === 2;
-      const lockAspect = node.kind === 'image' || (node.kind === 'text' || node.kind === 'shape' && !!node.icon) && corner || e.shiftKey && corner;
+      // A filled picture keeps its proportions on the corners; its edges reshape the frame, which the picture re-covers,
+      // and an empty frame resizes freely, so equal tiles are possible (D-073). A circle stays round (D-083).
+      const lockAspect = corner && (node.kind === 'image' ? !!node.asset || node.mask === 'circle' : node.kind === 'text' || node.kind === 'shape' && !!node.icon) || e.shiftKey && corner;
       const min = { w: Math.min(MIN, drag.box.w), h: Math.min(MIN, drag.box.h) };
       const raw = resizeLocal(drag.box, f.rot, drag.handle, p, { lockAspect, min });
       let rect = raw.rect;
@@ -144,8 +162,8 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
         if (!node.fit || corner) frame = { ...frame, rect: { ...frame.rect, h: textBox({ ...node, fit: undefined }, frame, measure, scale).rect.h } };
         else if (drag.handle === 'e' || drag.handle === 'w') frame = { ...frame, rect: { ...frame.rect, h: f.rect.h } };
       }
-      let doc = setFrames(drag.before, ed.sizeId, { [node.id]: frame });
-      if (unfit) doc = { ...doc, nodes: doc.nodes.map(n => { if (n.id !== node.id) return n; const t = { ...n } as TextNode; delete t.fit; return t; }) };
+      // Autofit off keeps every other linked size at the size autofit gave it (D-085).
+      const doc = setFrames(unfit ? unfitText(drag.before, node.id, measure, ed.sizeId) : drag.before, ed.sizeId, { [node.id]: frame });
       drag.last = doc; ed.store.set(doc); return;
     }
     drag.moved = true;
@@ -167,7 +185,9 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
     if (!d) return;
     if (d.kind === 'marquee' || d.kind === 'pan') { ed.invalidate(); return; }
     if (d.last && ed.doc !== d.last) { ed.invalidate(); return; }
-    if (d.moved && ed.doc !== d.before) ed.store.commit(ed.doc, { before: d.before });
+    // Text moved, resized or turned past the canvas edge is flagged at once, not only in Export (D-077).
+    // Automatic text moved onto or off a band or pill takes the colour that reads there (D-087).
+    if (d.moved && ed.doc !== d.before) { ed.store.commit(d.kind === 'move' ? keepReadable(ed.doc) : ed.doc, { before: d.before }); ed.flagText(ed.store.ui.sel); }
     else if (d.kind === 'move' && d.cycle) ed.select([d.cycle]);
     else if (d.kind === 'move' && d.release) ed.select(ed.store.ui.sel.filter(x => x !== d.release));
     else if (d.kind === 'move' && !e.shiftKey && ed.store.ui.sel.length > 1) { const hit = ed.hitTest(ed.toUnits(e)); if (hit) ed.select([hit.id]); }
@@ -177,7 +197,6 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
   el.addEventListener('pointercancel', finish);
   el.addEventListener('pointerleave', () => { if (ed.store.ui.tool) sketch.leave(); });
   el.addEventListener('dblclick', e => {
-    if (performance.now() < ed.ignorePointerUntil) return;
     if (ed.store.ui.tool || ed.store.ui.armed) return;
     const n: DocNode | undefined = ed.hitTest(ed.toUnits(e));
     if (ed.store.ui.reposition) { ed.finishReposition(); return; }

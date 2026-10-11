@@ -79,14 +79,18 @@ export function contrast(a: string, b: string): number {
   const [x, y] = [luminance(a), luminance(b)].sort((m, n) => n - m);
   return (x + .05) / (y + .05);
 }
-/** The step on the same row nearest to `ref` that reaches `min` contrast against `bg` (5h), or null when it already passes or none does. Literal hex uses the row built from it. */
-export function passingShade(ref: ColourRef, bg: string, p: Palette, min = 4.5): { ref: ColourRef; hex: string; ratio: number } | null {
-  const hex = resolve(ref, p);
-  if (contrast(hex, bg) >= min) return null;
+/**
+ * The step on the same row nearest to `ref` that reaches `min` contrast against `bg` (5h), or null when it already passes
+ * or none does. Literal hex uses the row built from it. Given several backdrops (text across a band and the ground), the
+ * step must pass on all of them, and the ratio is the lowest (D-090).
+ */
+export function passingShade(ref: ColourRef, bg: string | string[], p: Palette, min = 4.5): { ref: ColourRef; hex: string; ratio: number } | null {
+  const hex = resolve(ref, p), bgs = Array.isArray(bg) ? bg : [bg], worst = (c: string) => Math.min(...bgs.map(b => contrast(c, b)));
+  if (worst(hex) >= min) return null;
   const at = placeOf(ref, p), row = at ? rows(p)[at.row] ?? rows(p).base : rowFromHex(hex), from = at ? at.step : nearestStep(hslOf(hex).l);
   const order = LIGHTNESS.map((_, i) => i).filter(i => i !== from).sort((a, b) => Math.abs(a - from) - Math.abs(b - from) || a - b);
   for (const i of order) {
-    const ratio = contrast(row[i], bg);
+    const ratio = worst(row[i]);
     if (ratio < min) continue;
     const step = (p.dark && at ? 6 - i : i) as Step;
     return { ref: at ? { row: at.row, step } : { hex: row[i] }, hex: row[i], ratio };

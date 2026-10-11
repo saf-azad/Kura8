@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { typeScale, fitText, textBox, crossing, textHeight, LINE_HEIGHT } from '../src/core/fit';
+import { typeScale, fitText, textBox, crossing, textHeight, roomSize, LINE_HEIGHT, pieces, splitsWord } from '../src/core/fit';
 import { PHI } from '../src/core/guides/golden';
-import { fakeMeasure, frame } from './helpers';
+import { fakeMeasure, charMeasure, frame } from './helpers';
 import type { TextNode } from '../src/core/document';
 const text = (t: string, fit?: boolean): TextNode => ({ id: 't', kind: 'text', text: t, weight: 700, align: 'start', fill: { role: 'ink' }, frames: {}, ...(fit ? { fit } : {}) });
 describe('type scale', () => {
@@ -41,4 +41,29 @@ describe('autofit (5q)', () => {
     expect(crossing({ x: 0, y: 100, w: 10, h: 200 }, 600, lines)).toEqual({ id: 'line-y-1', at: 333 });
     expect(crossing({ x: 0, y: 100, w: 10, h: 200 }, 200, lines)).toBeNull();
   });
+});
+it('finds the largest size that fits a room without breaking a word (D-083)', () => {
+  const o = { text: 'Spring showcase', size: 200, width: 600, height: 300, weight: 700 as const, measure: charMeasure };
+  // 0.6 em per character: "showcase" (8 characters) stays whole up to 125; two lines of 1.15 em fit 300 up to 130.4.
+  expect(roomSize(o)).toBe(125);
+  expect(roomSize({ ...o, size: 40 })).toBe(40);
+  expect(roomSize({ ...o, height: 0 })).toBe(0);
+});
+it('does not count a break after a hyphen as a broken word (D-086)', async () => {
+  const { splitsWord } = await import('../src/core/fit');
+  expect(splitsWord('late-afternoon light', ['late-', 'afternoon light'])).toBe(false);
+  expect(splitsWord('late-afternoon light', ['late-aftern', 'oon light'])).toBe(true);
+  expect(splitsWord('a - b', ['a -', 'b'])).toBe(false);
+});
+it('finds the pieces a text never breaks inside: hyphens after a letter, slashes, characters of Chinese (D-088)', () => {
+  expect(pieces('state-of-the-art linktr.ee/unswms')).toEqual(['state-', 'of-', 'the-', 'art', 'linktr.', 'ee/', 'unswms']);
+  expect(pieces('down to -12 degrees, -20% off')).toEqual(['down', 'to', '-12', 'degrees,', '-20%', 'off']);
+  expect(pieces('夜市 Night')).toEqual(['夜', '市', 'Night']);
+  expect(splitsWord('linktr.ee/unswms', ['linktr.ee/', 'unswms'])).toBe(false);
+  expect(splitsWord('of -12 degrees', ['of -', '12 degrees'])).toBe(true);
+  // A link also breaks after an underscore and a dot between letters, never inside a number (D-089).
+  expect(pieces('instagram.com/usyd.marketing_society v2.5')).toEqual(['instagram.', 'com/', 'usyd.', 'marketing_', 'society', 'v2.5']);
+  expect(splitsWord('usyd.marketing_society', ['usyd.', 'marketing_', 'society'])).toBe(false);
+  // A hyphen after a single letter does not break (D-090).
+  expect(pieces('O-Week e-mail late-night')).toEqual(['O-Week', 'e-mail', 'late-', 'night']);
 });

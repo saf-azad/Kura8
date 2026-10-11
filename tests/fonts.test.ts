@@ -1,5 +1,5 @@
 import { it, expect } from 'vitest';
-import { FONTS, fontById, drawnWeight } from '../src/core/fonts';
+import { FONTS, fontById, drawnWeight, lacks } from '../src/core/fonts';
 import { fontStack } from '../src/core/script';
 import { textBox, typeScale } from '../src/core/fit';
 import { buildScene } from '../src/core/scene';
@@ -33,4 +33,11 @@ it('measures and draws text in its face and drawn weight', () => {
   expect(calls[calls.length - 1][4]).toBe('bebas');
   const op = buildScene(doc([node]), 'main', fakeMeasure).ops[0];
   expect(op).toMatchObject({ kind: 'text', weight: 400, font: '"Bebas Neue", Impact, sans-serif' });
+});
+it('names the script a face has no letters for (D-077)', () => {
+  expect(lacks('bebas', 'Tết Trung Thu')).toBe('Vietnamese'); expect(lacks('poppins', 'Phở Việt')).toBe('Vietnamese');
+  expect(lacks('lora', 'Phở Việt')).toBeNull(); expect(lacks(undefined, 'Phở Việt')).toBeNull();
+  expect(lacks('bebas', 'Đà Lạt')).toBe('Vietnamese'); expect(lacks('bebas', 'Đà')).toBeNull();
+  expect(lacks('grotesk', 'Привет')).toBe('Cyrillic'); expect(lacks('caveat', 'Привет')).toBeNull();
+  expect(lacks('lora', 'दिवाली')).toBe('Devanagari'); expect(lacks('poppins', 'दिवाली')).toBeNull(); expect(lacks('mono', 'Hello')).toBeNull();
 });

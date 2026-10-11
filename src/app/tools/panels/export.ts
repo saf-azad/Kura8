@@ -1,8 +1,8 @@
-import { exportSize, ratioById, ratioNumbers, withinPixelLimit, type ExportScale } from '../../../core/ratios';
+import { exportSize, ratioById, ratioNumbers, withinPixelLimit, zipScale, type ExportScale } from '../../../core/ratios';
 import type { Editor } from '../../editor';
 import { h, iconButton, ICON, toast } from '../../ui';
 import { download, fileName, preview, render, summary, type ExportChoice, type Format } from '../../export';
-import { zip } from '../../../core/zip';
+import { zip, uniqueNames } from '../../../core/zip';
 import { nameStem } from '../../../core/export';
 // The export sheet (M14): PNG, JPG, SVG or PDF; 1×–3× or 300 dpi with print sizes defaulting to 300 dpi (5x);
 // sizes over the canvas pixel limit are disabled; notes say what is left out (5y); PNG offers No ground (5z), also
@@ -38,10 +38,13 @@ export function exportSheet(ed: Editor): HTMLElement {
       if (all && doc.sizes.length > 1) {
         const files: { name: string; data: Uint8Array }[] = [];
         for (const s of doc.sizes) {
-          const own = 'dpi' in c.scale && !ratioById(s.ratio).mm || !withinPixelLimit(exportSize(s.ratio, c.scale)) ? { ...c, scale: { scale: 1 } as ExportScale } : c;
-          files.push({ name: fileName(doc, s.id, own), data: new Uint8Array(await (await render(doc, s.id, own)).arrayBuffer()) });
+          const own = { ...c, scale: zipScale(s.ratio, c.scale) };
+          // Every file in the zip shares one stem, even a size whose headline is hidden.
+          files.push({ name: fileName(doc, s.id, own, nameStem(doc)), data: new Uint8Array(await (await render(doc, s.id, own)).arrayBuffer()) });
         }
-        download(new Blob([zip(files).buffer as ArrayBuffer], { type: 'application/zip' }), `${nameStem(doc, ed.sizeId)}-all-sizes.zip`);
+        // Two sizes of one ratio get -2, -3 … so none is lost when unzipping.
+        uniqueNames(files.map(f => f.name)).forEach((name, i) => { files[i].name = name; });
+        download(new Blob([zip(files).buffer as ArrayBuffer], { type: 'application/zip' }), `${nameStem(doc)}-all-sizes.zip`);
       } else download(await render(doc, ed.sizeId, c), fileName(doc, ed.sizeId, c));
       label.textContent = 'Saved'; toast('Saved');
       setTimeout(() => { if (!working) label.textContent = 'Download'; }, 2400);
@@ -54,7 +57,8 @@ export function exportSheet(ed: Editor): HTMLElement {
     sheet.hidden = !open; sheet.inert = !open;
     if (!open) { wasOpen = false; return; }
     const ratio = ed.spec().ratio, r = ratioById(ratio);
-    if (!wasOpen) { wasOpen = true; scale = r.mm ? { dpi: 300 } : { scale: 1 }; setTimeout(() => button.focus({ preventScroll: true }), 0); }
+    // All sizes and No ground start off at every opening, so neither carries over to an export unnoticed (D-067, D-077).
+    if (!wasOpen) { wasOpen = true; all = false; transparent = false; scale = r.mm ? { dpi: 300 } : { scale: 1 }; setTimeout(() => button.focus({ preventScroll: true }), 0); }
     // Print sizes skip 2×, which is all but the same as 300 dpi.
     const options: [ExportScale, string][] = [...(r.mm ? [[{ dpi: 300 }, '300 dpi'] as [ExportScale, string]] : []), [{ scale: 1 }, '1×'], ...(r.mm ? [] : [[{ scale: 2 }, '2×'] as [ExportScale, string]]), [{ scale: 3 }, '3×']];
     if (!scale || !withinPixelLimit(exportSize(ratio, scale))) scale = options.find(([o]) => withinPixelLimit(exportSize(ratio, o)))![0];
@@ -82,9 +86,15 @@ export function exportSheet(ed: Editor): HTMLElement {
     const lines: string[] = [];
     if (s.hidden) lines.push(`${s.hidden} hidden object${s.hidden > 1 ? 's' : ''} not included`);
     if (s.offText) lines.push(`${s.offText} text block${s.offText > 1 ? 's run' : ' runs'} past the canvas edge`);
+    if (s.outside) lines.push(`${s.outside} block${s.outside > 1 ? 's lie' : ' lies'} outside the canvas, not included`);
     if (s.empty) lines.push(`${s.empty} empty image frame${s.empty > 1 ? 's' : ''} not included`);
     if (vector && s.icons) lines.push('Icon licences are written into the file');
     if (vector && s.otherScripts) lines.push('Text in other scripts uses the viewer’s system fonts');
+    if (all && !vector && ed.doc.sizes.length > 1) {
+      const name = (o: ExportScale) => 'dpi' in o ? '300 dpi' : `${o.scale}×`;
+      const smaller = ed.doc.sizes.filter(x => JSON.stringify(zipScale(x.ratio, scale!)) !== JSON.stringify(scale)).map(x => `${ratioById(x.ratio).label} at ${name(zipScale(x.ratio, scale!))}`);
+      if (smaller.length) lines.push(`In the zip: ${[...new Set(smaller)].join(', ')}`);
+    }
     notes.replaceChildren(...lines.map(t => h('div', {}, t)));
   } });
   return sheet;

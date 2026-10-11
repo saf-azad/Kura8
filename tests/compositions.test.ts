@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { layout, starterNodes, compositionFit, slotRect, textRoleOn, STARTER } from '../src/core/compositions';
-import { compIds, guideIds, ratioIds, validateDocument } from '../src/core/document';
+import { layout, layoutPad, starterNodes, compositionFit, slotRect, textRoleOn, keepReadable, STARTER } from '../src/core/compositions';
+import { compIds, guideIds, ratioIds, validateDocument, type DocNode, type KuraDoc, type Palette, type TextNode } from '../src/core/document';
 import { canvasSize } from '../src/core/ratios';
 import { fractionsOf } from '../src/core/guides';
-import { fitText, splitsWord, typeScale } from '../src/core/fit';
+import { fitText, splitsWord, textHeight, typeScale } from '../src/core/fit';
+import { contrast, resolve } from '../src/core/palette';
 import { fakeMeasure, doc, ids } from './helpers';
 const inside = (r: { x: number; y: number; w: number; h: number }, c: { w: number; h: number }) => r.x >= -1e-6 && r.y >= -1e-6 && r.x + r.w <= c.w + 1e-6 && r.y + r.h <= c.h + 1e-6 && r.w > 0 && r.h > 0;
 describe('layouts', () => {
@@ -80,4 +81,87 @@ describe('readable text on the accent band (D-056)', () => {
     expect(nodes.find(n => n.slot === 'body')).toMatchObject({ fill: { role: 'ground' } });
     expect(starterNodes(poster(), { sizeId: 'main', newId: ids() }).find(n => n.slot === 'body')).toMatchObject({ fill: { role: 'ink' } });
   });
+});
+describe('readable band text for every hue (D-076)', () => {
+  it('reaches 4.5 : 1 on the accent band, using an accent shade when neither ink nor ground does', () => {
+    const slots = layout({ canvas: canvasSize('portrait'), guide: 'golden', comp: 'poster', measure: fakeMeasure, headline: 'H', body: 'B' });
+    const fails: string[] = [];
+    for (const hue of [...Array.from({ length: 12 }, (_, i) => i * 30), null]) for (const dark of [false, true]) {
+      const p = { hue, dark, custom: [] }, ref = textRoleOn(slots, slots.body.rect, p);
+      if (contrast(resolve(ref, p), resolve({ role: 'accent' }, p)) < 4.5) fails.push(`${hue}/${dark}`);
+    }
+    expect(fails).toEqual([]);
+    expect(textRoleOn(slots, slots.body.rect, { hue: 120, dark: false, custom: [] })).toEqual({ hex: '#000000' });
+    expect(textRoleOn(slots, slots.body.rect, { hue: 150, dark: false, custom: [] })).toEqual({ hex: '#ffffff' });
+  });
+});
+describe('band text stays readable when the palette changes in the editor (D-077)', () => {
+  const slots = layout({ canvas: canvasSize('square'), guide: 'golden', comp: 'poster', measure: fakeMeasure, headline: 'H', body: 'B' });
+  const start = (p: Palette): KuraDoc => ({ version: 2, id: 'd', createdAt: '', palette: p, ground: null, sizes: [{ id: 'main', ratio: 'square', guide: 'golden', comp: 'poster' }], nodes: starterNodes(slots, { sizeId: 'main', newId: ids(), palette: p }) });
+  const reads = (d: KuraDoc) => { const b = d.nodes.find(n => n.slot === 'body')!; return contrast(resolve((b as TextNode).fill, d.palette), resolve({ role: 'accent' }, d.palette)); };
+  it('recolours automatic band text that would fail and leaves the rest', () => {
+    for (const [from, to] of [[{ hue: 0, dark: false }, { hue: 0, dark: true }], [{ hue: 0, dark: false }, { hue: 60, dark: false }], [{ hue: 90, dark: false }, { hue: 300, dark: false }]] as const) {
+      const d = start({ ...from, custom: [] }), next = { ...d, palette: { ...d.palette, ...to } };
+      expect(reads(keepReadable(next))).toBeGreaterThanOrEqual(4.5);
+    }
+    const d = start({ hue: 0, dark: false, custom: [] });
+    expect(keepReadable(d)).toBe(d);
+    const chosen = { ...d, palette: { ...d.palette, dark: true }, nodes: d.nodes.map(n => n.slot === 'body' ? { ...n, fill: { row: 'base', step: 3 } } as DocNode : n) };
+    expect(keepReadable(chosen)).toBe(chosen);
+    // The headline sits on the ground, not the band: it keeps ink.
+    const dark = keepReadable({ ...d, palette: { ...d.palette, dark: true } });
+    expect(dark.nodes.find(n => n.slot === 'headline')).toMatchObject({ fill: { role: 'ink' } });
+  });
+});
+describe('text on a filled ground stays readable (D-081)', () => {
+  it('re-picks automatic text on bare ground after a dark fill, and leaves text on blocks and chosen colours', () => {
+    const p: Palette = { hue: 210, dark: false, custom: [] }, t = (id: string, x: number, extra = {}) => ({ id, kind: 'text', text: 'Hi', weight: 400, align: 'start', fill: { role: 'ink' }, frames: { main: { rect: { x, y: 600, w: 100, h: 30 }, rot: 0 } }, ...extra }) as DocNode;
+    const photo = { id: 'p', kind: 'image', asset: 'a', frames: { main: { rect: { x: 500, y: 500, w: 400, h: 400 }, rot: 0 } } } as DocNode;
+    const d: KuraDoc = { version: 2, id: 'd', createdAt: '', palette: p, ground: { hex: '#1b1f3b' }, sizes: [{ id: 'main', ratio: 'square', guide: null, comp: null }], nodes: [photo, t('bare', 50), t('over', 600), t('chosen', 250, { fill: { hex: '#202020' } })] };
+    const out = keepReadable(d), fill = (id: string) => (out.nodes.find(n => n.id === id) as TextNode).fill;
+    expect(contrast(resolve(fill('bare'), p), '#1b1f3b')).toBeGreaterThanOrEqual(4.5);
+    expect(fill('over')).toEqual({ role: 'ink' }); expect(fill('chosen')).toEqual({ hex: '#202020' });
+    expect(keepReadable({ ...d, ground: null })).toEqual({ ...d, ground: null });
+  });
+});
+it('keeps black or white chosen for a free label on the band (D-082)', () => {
+  const p: Palette = { hue: 60, dark: false, custom: [] }, band = { id: 'band', kind: 'shape', shape: 'rect', fill: { role: 'accent' }, frames: { main: { rect: { x: 0, y: 500, w: 1000, h: 300 }, rot: 0 } } } as DocNode;
+  const label = { id: 'l', kind: 'text', text: 'Hi', weight: 400, align: 'start', fill: { hex: '#ffffff' }, frames: { main: { rect: { x: 50, y: 600, w: 100, h: 30 }, rot: 0 } } } as DocNode;
+  const d: KuraDoc = { version: 2, id: 'd', createdAt: '', palette: { ...p, dark: true }, ground: null, sizes: [{ id: 'main', ratio: 'square', guide: null, comp: null }], nodes: [band, label] };
+  expect(keepReadable(d)).toBe(d);
+});
+it('re-picks text that lies over other text on a filled ground, as a label pasted into a headline room (D-083)', () => {
+  const p: Palette = { hue: 210, dark: false, custom: [] }, t = (id: string, y: number) => ({ id, kind: 'text', text: 'Hi', weight: 400, align: 'start', fill: { role: 'ink' }, frames: { main: { rect: { x: 50, y, w: 600, h: 300 }, rot: 0 } } }) as DocNode;
+  const d: KuraDoc = { version: 2, id: 'd', createdAt: '', palette: p, ground: { hex: '#0a0a0a' }, sizes: [{ id: 'main', ratio: 'square', guide: null, comp: null }], nodes: [t('room', 50), t('label', 100)] };
+  const out = keepReadable(d);
+  expect(contrast(resolve((out.nodes[1] as TextNode).fill, p), '#0a0a0a')).toBeGreaterThanOrEqual(4.5);
+});
+it('re-picks an automatic label on a pill or an ink block for that block’s colour, and leaves a turned or see-through one (D-087)', () => {
+  const p: Palette = { hue: 90, dark: false, custom: [] }, shape = (id: string, s: string, fill: object, extra = {}) => ({ id, kind: 'shape', shape: s, fill, frames: { main: { rect: { x: 0, y: 500, w: 600, h: 200 }, rot: 0 } }, ...extra }) as DocNode;
+  const label = { id: 'l', kind: 'text', text: 'Apply by Fri', weight: 400, align: 'start', fill: { role: 'ink' }, frames: { main: { rect: { x: 50, y: 550, w: 300, h: 30 }, rot: 0 } } } as DocNode;
+  const on = (back: DocNode) => { const d: KuraDoc = { version: 2, id: 'd', createdAt: '', palette: p, ground: null, sizes: [{ id: 'main', ratio: 'square', guide: null, comp: null }], nodes: [back, label] }; return keepReadable(d).nodes[1] as TextNode; };
+  expect(contrast(resolve(on(shape('pill', 'pill', { role: 'ink' })).fill, p), resolve({ role: 'ink' }, p))).toBeGreaterThanOrEqual(4.5);
+  expect(contrast(resolve(on(shape('pill', 'pill', { row: 'accent', step: 5 })).fill, p), resolve({ row: 'accent', step: 5 }, p))).toBeGreaterThanOrEqual(4.5);
+  expect(on(shape('pill', 'pill', { role: 'ink' }, { opacity: .5 })).fill).toEqual({ role: 'ink' });
+  expect(on(shape('pill', 'icon', { role: 'ink' })).fill).toEqual({ role: 'ink' });
+});
+it('treats text over an empty picture frame as text on the ground, since the export leaves the frame out (D-089)', () => {
+  const p: Palette = { hue: 210, dark: false, custom: [] }, frameNode = { id: 'f', kind: 'image', asset: null, frames: { main: { rect: { x: 0, y: 0, w: 1000, h: 1000 }, rot: 0 } } } as DocNode;
+  const label = { id: 'l', kind: 'text', text: 'Register now', weight: 400, align: 'start', fill: { role: 'ground' }, frames: { main: { rect: { x: 450, y: 440, w: 271, h: 48 }, rot: 0 } } } as DocNode;
+  const d: KuraDoc = { version: 2, id: 'd', createdAt: '', palette: p, ground: null, sizes: [{ id: 'main', ratio: 'square', guide: null, comp: null }], nodes: [frameNode, label] };
+  expect(contrast(resolve((keepReadable(d).nodes[1] as TextNode).fill, p), resolve({ role: 'ground' }, p))).toBeGreaterThanOrEqual(4.5);
+});
+it('keeps two lines of body clear of the accent block in split layouts (D-090)', () => {
+  for (const ratio of ['square', 'portrait', 'tall', 'pin', 'a4', 'landscape', 'link'] as const) for (const guide of ['thirds', 'golden', 'divisions'] as const) {
+    const c = canvasSize(ratio), slots = layout({ canvas: c, guide, comp: 'split', measure: fakeMeasure, headline: 'Headline', body: 'Body text' }), ts = typeScale(guide, c);
+    expect(slots.body.rect.y + textHeight(2, ts.body)).toBeLessThanOrEqual(slots.accent.y + 1e-6);
+    expect(slots.headline.rect.y).toBeGreaterThanOrEqual(layoutPad(c) - 1e-6);
+  }
+});
+it('re-picks a free label’s black or white only when it has become nearly invisible where it sits (D-090)', () => {
+  const p: Palette = { hue: 120, dark: true, custom: [] }, at = (fill: object) => ({ id: 'l', kind: 'text', text: 'Dragged off', weight: 400, align: 'start', fill, frames: { main: { rect: { x: 50, y: 600, w: 200, h: 30 }, rot: 0 } } }) as DocNode;
+  const d = (fill: object): KuraDoc => ({ version: 2, id: 'd', createdAt: '', palette: p, ground: null, sizes: [{ id: 'main', ratio: 'square', guide: null, comp: null }], nodes: [at(fill)] });
+  const ground = resolve({ role: 'ground' }, p), out = keepReadable(d({ hex: '#000000' })).nodes[0] as TextNode;
+  expect(contrast(resolve(out.fill, p), ground)).toBeGreaterThanOrEqual(4.5);
+  expect(keepReadable(d({ hex: '#ffffff' })).nodes[0]).toMatchObject({ fill: { hex: '#ffffff' } });
 });

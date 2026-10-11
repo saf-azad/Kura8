@@ -65,6 +65,16 @@ it('gives each paragraph its own direction in a mixed block (D-064)', () => {
   const op = buildScene(d, 'main', fakeMeasure).ops[0];
   expect(op.kind === 'text' && op.bidi).toEqual([{ dir: 'ltr', align: 'left' }, { dir: 'rtl', align: 'right' }, { dir: 'ltr', align: 'left' }]);
   const out = svg(buildScene(d, 'main', fakeMeasure), { pixels: { w: 1080, h: 1080 }, ground: true, licences: [], image: () => undefined });
-  expect(out).toContain('x="900" y="34.5" direction="rtl" text-anchor="start"');
+  expect(out).toContain('x="900" y="34.5" text-anchor="start" dominant-baseline="central" direction="rtl"');
+  expect(out.match(/<text /g)).toHaveLength(3);
+  const shifted = svg(buildScene(d, 'main', fakeMeasure), { pixels: { w: 1080, h: 1080 }, ground: true, licences: [], image: () => undefined, textShift: o => o.size * .3 });
+  expect(shifted).toContain('y="40.5"'); expect(shifted).not.toContain('dominant-baseline');
   expect(buildScene(doc([textNode('u', frame(0, 0, 900, 40), 'One\nTwo')]), 'main', fakeMeasure).ops[0]).not.toHaveProperty('bidi');
+});
+it('carries a circle mask into the scene and clips SVG pictures to the ellipse (D-081)', () => {
+  const d = doc([{ id: 'c', kind: 'image', asset: 'k', mask: 'circle', frames: { main: frame(100, 100, 200, 100) } } as DocNode]);
+  const s = buildScene(d, 'main', fakeMeasure);
+  expect(s.ops[0]).toMatchObject({ kind: 'image', circle: true });
+  const out = svg(s, { pixels: { w: 1000, h: 1000 }, ground: true, licences: [], image: () => ({ href: 'data:image/png;base64,AA', natural: { w: 400, h: 400 } }) });
+  expect(out).toContain('<clipPath id="m-c"><ellipse cx="100" cy="50" rx="100" ry="50"/></clipPath>'); expect(out).toContain('<g clip-path="url(#m-c)"><svg width="200" height="100"');
 });

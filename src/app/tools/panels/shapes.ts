@@ -31,14 +31,16 @@ export function shapesPanel(ed: Editor): HTMLElement {
       b.addEventListener('click', async () => { const p = await iconPath(name); if (p) ed.addIcon(name, p.d, p.flattened); else toast('That icon is missing'); });
       return b;
     }));
+    // Results show as they are typed, under the search field that stays at the top of a scrolling panel (D-086).
+    if (q) panel.scrollTop = Math.max(0, iconTitle.offsetTop - search.offsetHeight - 24);
   }
   search.addEventListener('input', () => { query = search.value; void show(); });
   search.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); if (search.value) { search.value = ''; query = ''; void show(); } else ed.openPanel(null); } });
   let shown = false;
   ed.chrome.push({ update() {
     const open = ed.store.ui.panel === 'shapes';
+    // Its height comes from the toolbar (--panel-max), which keeps it above the help button (D-084, D-086).
     panel.hidden = !open; panel.inert = !open;
-    panel.style.maxHeight = `${window.innerHeight - 120}px`;
     if (open && !shown) void show();
     shown = open;
   } });

@@ -1,5 +1,5 @@
 import { it, expect } from 'vitest';
-import { crc32, zip } from '../src/core/zip';
+import { crc32, zip, uniqueNames } from '../src/core/zip';
 it('computes the standard CRC-32', () => {
   expect(crc32(new TextEncoder().encode('hello'))).toBe(0x3610a686); expect(crc32(new Uint8Array())).toBe(0);
 });
@@ -21,4 +21,8 @@ it('writes a store-only zip that lists every file (D-067)', () => {
   }
   expect(names).toEqual(['post-square.png', 'café-story.png']);
   expect(zip(files)).toEqual(out);
+});
+it('makes names unique before the extension', () => {
+  expect(uniqueNames(['a-square.png', 'a-story.png', 'a-square.png', 'a-square.png', 'notes'])).toEqual(['a-square.png', 'a-story.png', 'a-square-2.png', 'a-square-3.png', 'notes']);
+  expect(uniqueNames(['x', 'x'])).toEqual(['x', 'x-2']);
 });

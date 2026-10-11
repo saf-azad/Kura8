@@ -35,7 +35,7 @@ export function layersPanel(ed: Editor): HTMLElement {
         h('span', { className: 'name', style: hidden ? 'opacity:.45' : '' }, layerName(n)),
         mini('Bring forward', ICON.up, i < doc.nodes.length - 1, () => ed.reorder('forward', [n.id])),
         mini('Send backward', ICON.down, i > 0, () => ed.reorder('backward', [n.id])),
-        mini(hidden ? 'Show' : 'Hide', ICON.eye, !hidden, () => ed.setHidden(n.id, !hidden)),
+        mini(ed.doc.sizes.length > 1 ? (hidden ? 'Show in this size' : 'Hide in this size') : hidden ? 'Show' : 'Hide', ICON.eye, !hidden, () => ed.setHidden(n.id, !hidden)),
         mini(n.locked ? 'Unlock' : 'Lock', ICON.padlock, !!n.locked, () => ed.setLock(n.id, !n.locked)));
       const pick = (shift: boolean) => ed.select(shift ? (sel.has(n.id) ? [...sel].filter(x => x !== n.id) : [...sel, n.id]) : [n.id]);
       row.addEventListener('click', e => pick(e.shiftKey));

@@ -30,8 +30,14 @@ export function setFill(doc: KuraDoc, ids: string[], fill: ColourRef): KuraDoc {
   return updateNodes(doc, ids, n => n.kind === 'image' ? n : { ...n, fill });
 }
 /** Names a node in Layers (D-066); blank clears it. Works on locked nodes too, like lock itself. */
+/** A layer name: spaces folded, trimmed, at most 80 UTF-16 units, cut between characters so an emoji is never split (D-066, D-088). */
+export function cleanName(name: string): string {
+  let clean = '';
+  for (const ch of name.replace(/\s+/g, ' ').trim()) { if (clean.length + ch.length > 80) break; clean += ch; }
+  return clean.trim();
+}
 export function setName(doc: KuraDoc, id: string, name: string): KuraDoc {
-  const clean = name.replace(/\s+/g, ' ').trim().slice(0, 80);
+  const clean = cleanName(name);
   return { ...doc, nodes: doc.nodes.map(n => { if (n.id !== id) return n; const next = { ...n }; if (clean) next.name = clean; else delete next.name; return next; }) };
 }
 /** Opacity for any unlocked node (D-052); 1 or more clears it. */
@@ -52,8 +58,9 @@ export function setHidden(doc: KuraDoc, sizeId: string, ids: string[], hidden: b
 }
 export type Order = 'front' | 'back' | 'forward' | 'backward';
 /** Z-order is the shared array order: front/back move the selection to the ends, forward/backward swap one step past an unselected neighbour. */
+/** Stacking order for the unlocked blocks among `ids`; a locked block keeps its place (D-077). */
 export function reorder(doc: KuraDoc, ids: string[], mode: Order): KuraDoc {
-  const pick = has(ids);
+  const locked = new Set(doc.nodes.filter(n => n.locked).map(n => n.id)), pick = has(ids.filter(id => !locked.has(id)));
   let a = [...doc.nodes];
   if (mode === 'front') a = [...a.filter(n => !pick(n)), ...a.filter(pick)];
   else if (mode === 'back') a = [...a.filter(pick), ...a.filter(n => !pick(n))];

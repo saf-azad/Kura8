@@ -1,9 +1,9 @@
 import type { CompId, KuraDoc, RatioId } from '../../core/document';
-import { compIds, ratioIds, guideIds } from '../../core/document';
+import { compIds, guideIds } from '../../core/document';
 import type { GuideId } from '../../core/guides/types';
 import { fractionsOf, guideById } from '../../core/guides';
-import { RINGS, ringPath, rotationFor, indexAt, detent, settle, type RingKey } from '../../core/dial';
-import { canvasSize, exportSize, ratioById, ratioNumbers } from '../../core/ratios';
+import { RINGS, ringPath, arcPath, rotationFor, indexAt, detent, settle, ratioStops, stopOf, settingFor, ratioSpans, type RingKey } from '../../core/dial';
+import { canvasSize, exportSize, ratioById, ratioNumbers, formatById, formatFor, type Platform } from '../../core/ratios';
 import { layout, compositionFit, type FitReason } from '../../core/compositions';
 import { hsl, hsvToHex, hexToHsv, HUES, resolve } from '../../core/palette';
 import { norm, modn } from '../../core/geometry';
@@ -18,6 +18,11 @@ const NS = 'http://www.w3.org/2000/svg';
 const svg = (tag: string, attrs: Record<string, string | number> = {}) => { const el = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, String(v)); return el; };
 const COMP_NAMES: Record<CompId, string> = { cover: 'Cover', split: 'Split', stack: 'Stack', poster: 'Poster', frame: 'Frame', band: 'Band' };
 const HUE_STOPS: (number | null)[] = [...HUES, null];
+// Phosphor's regular Instagram and LinkedIn logos (MIT, 256 box), drawn in ink like the rest of the chrome (D-092).
+const LOGOS: Record<Platform, string> = {
+  instagram: 'M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160ZM176,24H80A56.06,56.06,0,0,0,24,80v96a56.06,56.06,0,0,0,56,56h96a56.06,56.06,0,0,0,56-56V80A56.06,56.06,0,0,0,176,24Zm40,152a40,40,0,0,1-40,40H80a40,40,0,0,1-40-40V80A40,40,0,0,1,80,40h96a40,40,0,0,1,40,40ZM192,76a12,12,0,1,1-12-12A12,12,0,0,1,192,76Z',
+  linkedin: 'M216,24H40A16,16,0,0,0,24,40V216a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V40A16,16,0,0,0,216,24Zm0,192H40V40H216V216ZM96,112v64a8,8,0,0,1-16,0V112a8,8,0,0,1,16,0Zm88,28v36a8,8,0,0,1-16,0V140a20,20,0,0,0-40,0v36a8,8,0,0,1-16,0V112a8,8,0,0,1,15.79-1.78A36,36,0,0,1,184,140ZM100,84A12,12,0,1,1,88,72,12,12,0,0,1,100,84Z',
+};
 const REASONS: Record<FitReason, (ratio: string) => string> = { narrow: r => `Columns too narrow at ${r}`, shallow: r => `Bands too shallow at ${r}`, overflow: r => `Text runs off the canvas at ${r}` };
 const pct = (f: number) => String(Math.round(f * 1000) / 10);
 function describe(comp: CompId, guide: GuideId): string {
@@ -32,11 +37,16 @@ export type DialHost = {
   start(): void; fresh(): void; back(): void;
 };
 export function showDial(root: HTMLElement, host: DialHost): { paint(): void; destroy(): void } {
-  const index = (key: RingKey, s = host.settings()): number => key === 'ratio' ? ratioIds.indexOf(s.ratio) : key === 'comp' ? compIds.indexOf(s.comp) : key === 'guide' ? guideIds.indexOf(s.guide) : HUE_STOPS.indexOf(s.hue);
-  const patchFor = (key: RingKey, i: number): Partial<DialSettings> => key === 'ratio' ? { ratio: ratioIds[i] } : key === 'comp' ? { comp: compIds[i] } : key === 'guide' ? { guide: guideIds[i] } : { hue: HUE_STOPS[i] };
+  // The ratio ring's Social segment opens into Instagram and LinkedIn formats (D-092); `spread` is how far it has opened
+  // while it animates, null at rest.
+  let open = false, spread: number | null = null, tween = 0;
+  const stops = () => ratioStops(open);
+  const count = (key: RingKey): number => key === 'ratio' ? stops().length : RINGS.find(r => r.key === key)!.n;
+  const index = (key: RingKey, s = host.settings()): number => key === 'ratio' ? stopOf(stops(), s.ratio, s.format) : key === 'comp' ? compIds.indexOf(s.comp) : key === 'guide' ? guideIds.indexOf(s.guide) : HUE_STOPS.indexOf(s.hue);
+  const patchFor = (key: RingKey, i: number): Partial<DialSettings> => key === 'ratio' ? settingFor(stops()[i], host.settings().format) : key === 'comp' ? { comp: compIds[i] } : key === 'guide' ? { guide: guideIds[i] } : { hue: HUE_STOPS[i] };
   const rot: Record<RingKey, number> = { ratio: 0, comp: 0, guide: 0, hue: 0 };
   // A small opening turn into the saved settings (the prototype's first spin).
-  for (const r of RINGS) rot[r.key] = rotationFor(0, index(r.key), r.n) + [60, -50, 80, -70][RINGS.indexOf(r)];
+  for (const r of RINGS) rot[r.key] = rotationFor(0, index(r.key), count(r.key)) + [60, -50, 80, -70][RINGS.indexOf(r)];
   let focus = 0, hoverRing: number | null = null, hoverRatio: RatioId | null = null, dragging: RingKey | null = null, lastWheel = 0;
   const wheel = svg('svg', { viewBox: '0 0 640 640', width: 640, height: 640, role: 'group', 'aria-label': 'Dial' }) as SVGSVGElement;
   wheel.append(svg('path', { d: 'M312 -16H328L320 -5Z', fill: '#000' }));
@@ -45,7 +55,7 @@ export function showDial(root: HTMLElement, host: DialHost): { paint(): void; de
     g.addEventListener('wheel', e => {
       e.preventDefault(); const now = Date.now(), dv = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
       if (Math.abs(dv) < 3 || now - lastWheel < 130) return;
-      lastWheel = now; focus = ri; pick(r.key, modn(index(r.key) + (dv > 0 ? 1 : -1), r.n));
+      lastWheel = now; focus = ri; if (ri) shut(); pick(r.key, modn(index(r.key) + (dv > 0 ? 1 : -1), count(r.key)));
     }, { passive: false });
     g.addEventListener('pointerenter', () => { hoverRing = ri; paint(); });
     g.addEventListener('pointerleave', () => { hoverRing = null; paint(); });
@@ -56,7 +66,7 @@ export function showDial(root: HTMLElement, host: DialHost): { paint(): void; de
   const hubCanvas = h('canvas'), hub = h('button', { type: 'button', className: 'hub', title: 'Start (Enter)', 'aria-label': 'Go to the canvas' }, hubCanvas, h('span', { className: 'go', html: ICON.go }));
   hub.addEventListener('click', () => host.start());
   const wheelBox = h('div', { className: 'wheel' }, wheel, hub);
-  const cards = RINGS.map((_, i) => { const c = h('button', { type: 'button', className: 'card' }, h('span', { className: 'name' }), h('span', { className: 'value' }), h('span', { className: 'sub' })); c.addEventListener('click', () => { focus = i; paint(); }); return c; });
+  const cards = RINGS.map((_, i) => { const c = h('button', { type: 'button', className: 'card' }, h('span', { className: 'name' }), h('span', { className: 'value' }), h('span', { className: 'sub' })); c.addEventListener('click', () => { focus = i; if (i) shut(); paint(); }); return c; });
   const sv = h('div', { className: 'sv', title: 'Drag to set the accent to any colour', style: 'height:130px' }, h('i')), hueBar = h('div', { className: 'hue-bar', title: 'Drag to change hue' }, h('i'));
   const anyChip = h('span', { className: 'dot', style: 'width:14px;height:14px' }), anyHex = h('span');
   const any = h('div', { className: 'any-colour' }, h('div', { className: 'row' }, h('span', { className: 'muted', style: 'font-size:11px' }, 'Any colour'), h('span', { style: 'display:flex;align-items:center;gap:6px;font-size:12px' }, anyChip, anyHex)), sv, hueBar, h('div', { className: 'muted', style: 'font-size:11px;line-height:1.35' }, 'Sets the accent. Turning the colour ring resets it.'));
@@ -70,7 +80,7 @@ export function showDial(root: HTMLElement, host: DialHost): { paint(): void; de
   picker(sv, 'sv'); picker(hueBar, 'h');
   const light = h('button', { type: 'button', title: 'Light ground', 'aria-label': 'Light ground' }, h('i', { style: 'background:#ECF0F3' })), dark = h('button', { type: 'button', title: 'Dark ground', 'aria-label': 'Dark ground' }, h('i', { style: 'background:#000' }));
   light.addEventListener('click', () => host.set({ dark: false })); dark.addEventListener('click', () => host.set({ dark: true }));
-  const startLabel = h('span'), start = h('button', { type: 'button', className: 'solid' }, startLabel, h('span', { html: ICON.go, style: 'display:grid' }));
+  const startLabel = h('span'), start = h('button', { type: 'button', className: 'solid', 'data-start': '' }, startLabel, h('span', { html: ICON.go, style: 'display:grid' }));
   start.addEventListener('click', () => host.start());
   const fresh = h('button', { type: 'button', className: 'outline', title: 'Start a new design from the dial; Undo brings the old one back' }, 'New');
   fresh.addEventListener('click', () => host.fresh());
@@ -80,65 +90,125 @@ export function showDial(root: HTMLElement, host: DialHost): { paint(): void; de
   const hints = h('div', { className: 'dial-hints' }, h('div', { className: 'muted' }, 'Drag or scroll a ring to turn it'),
     h('div', {}, h('span', { className: 'muted', style: 'margin-right:5px' }, 'Choose ring'), h('span', { className: 'key' }, '↑'), h('span', { className: 'key' }, '↓')),
     h('div', {}, h('span', { className: 'muted', style: 'margin-right:5px' }, 'Turn'), h('span', { className: 'key' }, '←'), h('span', { className: 'key' }, '→')),
+    h('div', {}, h('span', { className: 'muted', style: 'margin-right:5px' }, 'Social formats'), h('span', { className: 'key' }, 'Space')),
     h('div', {}, h('span', { className: 'muted', style: 'margin-right:5px' }, 'Start'), h('span', { className: 'key' }, 'Enter')));
   const screen = h('div', { className: 'dial' }, h('div', { className: 'wordmark' }, 'Kura8'), h('div', { className: 'readout-cards' }, ...cards), wheelBox, any, actions, hints);
   root.replaceChildren(screen);
-  function pick(key: RingKey, i: number): void { const r = RINGS.find(x => x.key === key)!; rot[key] = rotationFor(rot[key], i, r.n); host.set(patchFor(key, i)); }
+  // Picking a ratio outside Social closes it, turning that ratio to the top as the formats fold away.
+  function pick(key: RingKey, i: number): void {
+    const closing = key === 'ratio' && open && !formatById(stops()[i]);
+    if (!closing) rot[key] = rotationFor(rot[key], i, count(key));
+    host.set(patchFor(key, i));
+    if (closing) setOpen(false);
+  }
+  const shut = () => { if (open) setOpen(false); };
+  function setOpen(next: boolean): void {
+    if (next === open && spread === null) return;
+    cancelAnimationFrame(tween);
+    if (next && !open) { open = true; buildRatio(); }
+    const s = host.settings(), from = rot.ratio, target = ratioStops(next), to = rotationFor(from, stopOf(target, s.ratio, s.format), target.length);
+    const p0 = spread ?? (next ? 0 : 1), t0 = performance.now(), dur = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 280;
+    const step = (now: number) => {
+      const u = dur ? Math.min(1, (now - t0) / dur) : 1, e = 1 - (1 - u) ** 3;
+      spread = p0 + (+next - p0) * e; rot.ratio = from + (to - from) * e;
+      if (u < 1) { paint(); tween = requestAnimationFrame(step); return; }
+      spread = null;
+      if (!next) { open = false; buildRatio(); }
+      paint();
+    };
+    tween = requestAnimationFrame(step);
+  }
   // ring dragging
   const angleAt = (e: PointerEvent) => { const r = wheel.getBoundingClientRect(); return Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2)) * 180 / Math.PI; };
   wheel.addEventListener('pointerdown', e => {
     const seg = (e.target as Element).closest('[data-ring]');
     if (!seg || e.button !== 0) return;
     e.preventDefault();
-    const key = seg.getAttribute('data-ring') as RingKey, i = Number(seg.getAttribute('data-index')), ring = RINGS.find(r => r.key === key)!;
+    const key = seg.getAttribute('data-ring') as RingKey, i = Number(seg.getAttribute('data-index')), ring = RINGS.find(r => r.key === key)!, n = count(key);
     focus = RINGS.indexOf(ring);
+    if (key !== 'ratio') shut();
+    if (key === 'ratio' && spread !== null) return;
     const d = { last: angleAt(e), acc: 0, r0: rot[key], moved: false, x: e.clientX, y: e.clientY };
     wheel.setPointerCapture(e.pointerId);
     const move = (ev: PointerEvent) => {
       const a = angleAt(ev); d.acc += norm(a - d.last); d.last = a;
       if (!d.moved && Math.hypot(ev.clientX - d.x, ev.clientY - d.y) > 4) d.moved = true;
       if (!d.moved) return;
-      dragging = key; const raw = d.r0 + d.acc, idx = indexAt(raw, ring.n);
-      rot[key] = detent(raw, ring.n);
+      dragging = key; const raw = d.r0 + d.acc, idx = indexAt(raw, n);
+      rot[key] = detent(raw, n);
       if (idx !== index(key)) { try { navigator.vibrate?.(6); } catch { /* unsupported */ } host.set(patchFor(key, idx)); } else paint();
     };
     const up = () => {
       wheel.removeEventListener('pointermove', move); wheel.removeEventListener('pointerup', up); wheel.removeEventListener('pointercancel', up);
       dragging = null;
-      if (!d.moved) pick(key, i); else { rot[key] = settle(d.r0 + d.acc, ring.n); paint(); }
+      if (!d.moved) { pick(key, i); if (key === 'ratio' && stops()[i] === 'social') setOpen(true); return; }
+      rot[key] = settle(d.r0 + d.acc, n); paint();
+      if (key === 'ratio' && open && !formatById(stops()[index(key)])) setOpen(false);
     };
     wheel.addEventListener('pointermove', move); wheel.addEventListener('pointerup', up); wheel.addEventListener('pointercancel', up);
   });
   const onKey = (e: KeyboardEvent) => {
     if ((e.target as Element).closest?.('input, textarea')) return;
     if (e.key === 'Enter' && !(e.target instanceof HTMLButtonElement)) { e.preventDefault(); host.start(); }
-    else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); focus = modn(focus + (e.key === 'ArrowDown' ? 1 : -1), 4); paint(); }
-    else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); const r = RINGS[focus]; pick(r.key, modn(index(r.key) + (e.key === 'ArrowRight' ? 1 : -1), r.n)); }
+    else if (e.key === ' ' && !(e.target instanceof HTMLButtonElement)) { e.preventDefault(); focus = 0; setOpen(!open); }
+    else if (e.key === 'Escape' && open) { e.preventDefault(); shut(); }
+    else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); focus = modn(focus + (e.key === 'ArrowDown' ? 1 : -1), 4); shut(); paint(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); const r = RINGS[focus]; pick(r.key, modn(index(r.key) + (e.key === 'ArrowRight' ? 1 : -1), count(r.key))); }
   };
   document.addEventListener('keydown', onKey);
   const onResize = () => paint();
   window.addEventListener('resize', onResize);
   // Persistent segment elements per ring, so turning animates and hovering never rebuilds what is under the pointer.
-  type Seg = { g: SVGGElement; path: SVGPathElement; content: SVGGElement; c: [number, number]; built: string };
-  const segs: Seg[][] = RINGS.map((r, ri) => Array.from({ length: r.n }, (_, i) => {
+  // Ratio segments draw their content about their own centre (`pos`), since Social's segments move as it opens.
+  type Seg = { g: SVGGElement; path: SVGPathElement; content: SVGGElement; c: [number, number]; built: string; pos?: SVGGElement };
+  const segs: Seg[][] = RINGS.map((r, ri) => ri === 0 ? [] : Array.from({ length: r.n }, (_, i) => {
     const { d, c } = ringPath(320, 320, r.ro, r.ri, i, r.n);
     const g = svg('g', { 'data-ring': r.key, 'data-index': i }) as SVGGElement, path = svg('path', { d, 'stroke-width': 2, 'vector-effect': 'non-scaling-stroke', class: 'seg-path' }) as SVGPathElement;
     const content = svg('g', { style: `transform-origin:${c[0]}px ${c[1]}px;pointer-events:none` }) as SVGGElement;
     g.append(path, content); ringEls[ri].append(g);
-    if (r.key === 'ratio') { g.addEventListener('pointerenter', () => { hoverRatio = ratioIds[i]; paint(); }); g.addEventListener('pointerleave', () => { hoverRatio = null; paint(); }); }
     return { g, path, content, c, built: '' };
   }));
+  function buildRatio(): void {
+    for (const seg of segs[0]) seg.g.remove();
+    segs[0] = stops().map((stop, i) => {
+      const g = svg('g', { 'data-ring': 'ratio', 'data-index': i, 'data-stop': stop }) as SVGGElement, path = svg('path', { 'stroke-width': 2, 'vector-effect': 'non-scaling-stroke', class: 'seg-path', fill: 'rgba(236,240,243,0)', stroke: focus === 0 ? '#000' : 'rgba(0,0,0,.15)' }) as SVGPathElement;
+      const pos = svg('g', { style: 'pointer-events:none' }) as SVGGElement, content = svg('g', { style: 'transform-origin:0px 0px' }) as SVGGElement;
+      pos.append(content); g.append(path, pos); ringEls[0].append(g);
+      g.addEventListener('pointerenter', () => { hoverRatio = settingFor(stop, host.settings().format).ratio; paint(); });
+      g.addEventListener('pointerleave', () => { hoverRatio = null; paint(); });
+      return { g, path, content, pos, c: [0, 0], built: '' };
+    });
+  }
+  buildRatio();
+  // A press anywhere but the ratio ring folds Social away.
+  screen.addEventListener('pointerdown', e => { if (open && !ringEls[0].contains(e.target as Node)) shut(); });
   function updateSegments(ri: number): void {
     const r = RINGS[ri], s = host.settings(), cur = index(r.key), active = focus === ri, hovered = hoverRing === ri, show = active ? 1 : hovered ? .5 : 0;
+    const spans = ri ? null : open ? ratioSpans(spread ?? 1) : stops().map((_, i, all) => ({ from: (i - .5) * 360 / all.length, to: (i + .5) * 360 / all.length }));
     segs[ri].forEach((seg, i) => {
       const { c } = seg, sel = i === cur, on = sel && active && r.key !== 'hue', ink = on ? '#fff' : '#000';
       let fill = on ? '#000' : !active && sel ? 'rgba(156,171,194,.35)' : 'rgba(236,240,243,0)', stroke = active ? '#000' : 'rgba(0,0,0,.15)', opacity = show, tip = '';
       const text = (t: string, dy: number, size = 11, extra = '') => { const el = svg('text', { x: c[0], y: c[1] + dy, 'text-anchor': 'middle', 'dominant-baseline': 'central', 'font-size': size, fill: ink, style: extra }); el.textContent = t; return el; };
       const build = (key: string, make: () => SVGElement[]) => { if (seg.built !== key) { seg.built = key; seg.content.replaceChildren(...make()); } };
       if (r.key === 'ratio') {
-        const id = ratioIds[i], cs = canvasSize(id), k = 16 / Math.max(cs.w, cs.h);
-        build(ink, () => [svg('rect', { x: c[0] - cs.w * k / 2, y: c[1] - 10 - cs.h * k / 2, width: cs.w * k, height: cs.h * k, fill: 'none', stroke: ink, 'stroke-width': 2 }), text(ratioNumbers(id), 5), text(ratioById(id).label, 15, 8.5, 'opacity:.7')]);
-        tip = `${ratioById(id).label} ${ratioNumbers(id)}`;
+        const span = spans![i], at = arcPath(320, 320, r.ro, r.ri, span.from, span.to), stop = stops()[i], f = formatById(stop);
+        seg.path.setAttribute('d', at.d); seg.pos!.setAttribute('transform', `translate(${at.c[0]} ${at.c[1]})`);
+        const logo = (p: Platform, x: number, y: number, size: number) => svg('path', { d: LOGOS[p], fill: ink, transform: `translate(${x - size / 2} ${y - size / 2}) scale(${size / 256})` });
+        const shape = (id: RatioId, x: number, size: number, width: number) => { const cs = canvasSize(id), k = size / Math.max(cs.w, cs.h); return svg('rect', { x: x - cs.w * k / 2, y: -10 - cs.h * k / 2, width: cs.w * k, height: cs.h * k, fill: 'none', stroke: ink, 'stroke-width': width }); };
+        if (stop === 'social') {
+          const mine = formatById(settingFor('social', s.format).format)!;
+          build(`${ink}|${mine.id}`, () => [logo('instagram', -9, -10, 15), logo('linkedin', 9, -10, 15), text('Social', 5), text(ratioNumbers(mine.ratio), 15, 8.5, 'opacity:.7')]);
+          tip = 'Social: Instagram and LinkedIn formats';
+        } else if (f) {
+          // The logo above the word reads as the destination ("IG post", "LinkedIn banner") and stays inside the ring.
+          build(ink, () => [logo(f.platform, -9, -10, 14), shape(f.ratio, 9, 14, 1.5), text(ratioNumbers(f.ratio), 5), text(f.kind, 15, 8.5, 'opacity:.7')]);
+          tip = `${f.name} ${ratioNumbers(f.ratio)}`;
+          if (spread !== null) opacity = show * spread;
+        } else {
+          const id = stop as RatioId;
+          build(ink, () => [shape(id, 0, 16, 2), text(ratioNumbers(id), 5), text(ratioById(id).label, 15, 8.5, 'opacity:.7')]);
+          tip = `${ratioById(id).label} ${ratioNumbers(id)}`;
+        }
       } else if (r.key === 'comp') {
         const comp = compIds[i], fit = compositionFit({ canvas: canvasSize(s.ratio), guide: s.guide, comp, measure, headline: 'Headline', body: 'Body text' });
         build(`${ink}|${s.ratio}|${s.guide}`, () => [thumb(comp, s.ratio, s.guide, c[0], c[1] - 10, ink), text(COMP_NAMES[comp], 25)]);
@@ -160,7 +230,7 @@ export function showDial(root: HTMLElement, host: DialHost): { paint(): void; de
       seg.g.setAttribute('data-tip', tip); seg.g.style.cursor = dragging === r.key ? 'grabbing' : 'pointer';
       seg.content.style.opacity = String(opacity);
       seg.content.style.transform = `rotate(${-rot[r.key]}deg)`;
-      seg.content.style.transition = dragging === r.key ? 'opacity 280ms' : 'transform 560ms cubic-bezier(.2,0,.2,1), opacity 280ms';
+      seg.content.style.transition = dragging === r.key || ri === 0 && spread !== null ? 'none' : 'transform 560ms cubic-bezier(.2,0,.2,1), opacity 280ms';
     });
   }
   function thumb(comp: CompId, ratio: RatioId, guide: GuideId, cx: number, cy: number, ink: string): SVGElement {
@@ -182,7 +252,7 @@ export function showDial(root: HTMLElement, host: DialHost): { paint(): void; de
     RINGS.forEach((r, ri) => {
       const g = ringEls[ri];
       g.style.transform = `rotate(${rot[r.key]}deg)`;
-      g.style.transition = dragging === r.key ? 'none' : 'transform 560ms cubic-bezier(.2,0,.2,1)';
+      g.style.transition = dragging === r.key || ri === 0 && spread !== null ? 'none' : 'transform 560ms cubic-bezier(.2,0,.2,1)';
       updateSegments(ri);
     });
     hueWindow.style.opacity = focus === 3 ? '1' : '.15';
@@ -190,7 +260,7 @@ export function showDial(root: HTMLElement, host: DialHost): { paint(): void; de
     const r = ratioById(s.ratio), e = exportSize(s.ratio, r.mm ? { dpi: 300 } : { scale: 1 }), F = fractionsOf(s.guide);
     const doc = host.preview(hoverRatio ? { ...s, ratio: hoverRatio } : s), p = doc.palette;
     const values: [string, string, string][] = [
-      ['Ratio', `${r.label} ${ratioNumbers(s.ratio)}`, `Exports at ${e.w} × ${e.h} px${r.mm ? ' (300 dpi)' : ''}`],
+      ['Ratio', `${formatFor(s.ratio, s.format)?.name ?? r.label} ${ratioNumbers(s.ratio)}`, `Exports at ${e.w} × ${e.h} px${r.mm ? ' (300 dpi)' : ''}`],
       ['Layout', COMP_NAMES[s.comp], describe(s.comp, s.guide)],
       ['Guide', guideById(s.guide).name, `Lines at ${F.map(pct).join(', ')}%`],
       ['Colour', s.accent ? `Custom ${s.accent.toUpperCase()}` : s.hue === null ? 'No hue' : `Hue ${s.hue}°`, s.dark ? 'Dark ground' : 'Light ground'],
@@ -219,6 +289,6 @@ export function showDial(root: HTMLElement, host: DialHost): { paint(): void; de
     }
   }
   paint();
-  requestAnimationFrame(() => { for (const r of RINGS) rot[r.key] = rotationFor(rot[r.key], index(r.key), r.n); paint(); });
-  return { paint, destroy() { document.removeEventListener('keydown', onKey); window.removeEventListener('resize', onResize); } };
+  requestAnimationFrame(() => { for (const r of RINGS) rot[r.key] = rotationFor(rot[r.key], index(r.key), count(r.key)); paint(); });
+  return { paint, destroy() { cancelAnimationFrame(tween); document.removeEventListener('keydown', onKey); window.removeEventListener('resize', onResize); } };
 }

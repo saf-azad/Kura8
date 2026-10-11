@@ -2,11 +2,13 @@ import { migrate, serialiseDocument, type ColourRef, type CompId, type InlineIma
 import type { GuideId } from '../core/guides/types';
 import { emptyHistory, record, redo, undo, type History } from '../core/history';
 import type { Flag } from '../core/reratio';
+import type { FormatId } from '../core/ratios';
 // One store holds the document and the editor's UI state. Documents are immutable, so a history step is a
 // reference. Commits record history and schedule the 500 ms autosave of the one current document.
 export type Tool = 'pen' | 'erase' | 'lasso';
 export type PanelId = 'shapes' | 'colour' | 'fonts' | 'arrange' | 'layers' | 'grid' | 'ratio' | 'keys' | 'export';
-export type DialSettings = { ratio: RatioId; comp: CompId; guide: GuideId; hue: number | null; dark: boolean; accent?: string };
+/** `format` is the Social format last picked on the dial (D-092); it names the ratio there but never reaches the document. */
+export type DialSettings = { ratio: RatioId; comp: CompId; guide: GuideId; hue: number | null; dark: boolean; accent?: string; format?: FormatId };
 export type UI = {
   screen: 'dial' | 'editor'; size: string; sel: string[]; panel: PanelId | null; tool: Tool | null;
   guides: boolean; grid: { on: boolean; size: number }; help: boolean;
@@ -48,7 +50,7 @@ export class Store {
     this.doc = doc;
     this.dial = { ...defaultDial(), ...read<DialSettings>(KEYS.dial) };
     const prefs = read<Partial<UI>>(KEYS.prefs) ?? {};
-    this.ui = { screen: doc ? 'editor' : 'dial', size: doc?.sizes[0].id ?? 'main', sel: [], panel: null, tool: null, guides: prefs.guides ?? true, grid: prefs.grid ?? { on: false, size: 40 }, help: false,
+    this.ui = { screen: doc ? 'editor' : 'dial', size: doc?.sizes.some(s => s.id === prefs.size) ? prefs.size! : doc?.sizes[0].id ?? 'main', sel: [], panel: null, tool: null, guides: prefs.guides ?? true, grid: prefs.grid ?? { on: false, size: 40 }, help: false,
       armed: null, swatch: { role: 'accent' }, row: 'accent', editing: null, flags: [], removing: null, previewDark: null, ratioMode: 'change', reposition: null };
   }
   on(fn: (c: Change) => void): () => void { this.listeners.add(fn); return () => this.listeners.delete(fn); }
@@ -61,6 +63,20 @@ export class Store {
     this.doc = doc;
     const ids = new Set(doc.nodes.map(n => n.id)), sel = this.ui.sel.filter(id => ids.has(id));
     this.ui = { ...this.ui, sel, flags: o.keepFlags ? this.ui.flags : this.ui.flags.filter(f => ids.has(f.id)), size: doc.sizes.some(s => s.id === this.ui.size) ? this.ui.size : doc.sizes[0].id };
+    this.scheduleSave(); this.emit({ doc: true, ui: true });
+  }
+  /**
+   * Takes back a step nobody wanted (a label the Text tool added and left empty): when `base` is the latest step, the
+   * document goes to `doc` and the step is forgotten, so Undo does not bring the label back; otherwise a plain commit (D-088).
+   */
+  retract(base: KuraDoc, doc: KuraDoc, o: { id?: string; future?: KuraDoc[] } = {}): void {
+    // Steps after `base` that only changed the label (a Bold or Larger on it before typing) go with it (D-090).
+    const past = this.history.past, at = past.lastIndexOf(base), same = (d: KuraDoc) => JSON.stringify({ ...d, nodes: d.nodes.filter(n => n.id !== o.id) }) === JSON.stringify(base);
+    if (at < 0 || !past.slice(at + 1).every(same)) { this.commit(doc, {}); return; }
+    // The Redo steps the label's adding cleared come back, so T then Escape is as if T was never pressed (D-090).
+    this.history = { ...this.history, past: past.slice(0, at), future: o.future ?? [] }; this.doc = doc;
+    const ids = new Set(doc.nodes.map(n => n.id));
+    this.ui = { ...this.ui, sel: this.ui.sel.filter(id => ids.has(id)) };
     this.scheduleSave(); this.emit({ doc: true, ui: true });
   }
   undo(): boolean { return this.step(undo); }
@@ -77,7 +93,8 @@ export class Store {
   }
   setUI(patch: Partial<UI>): void {
     this.ui = { ...this.ui, ...patch };
-    if ('guides' in patch || 'grid' in patch) write(KEYS.prefs, { guides: this.ui.guides, grid: this.ui.grid });
+    // The active size outlives a reload too (D-081).
+    if ('guides' in patch || 'grid' in patch || 'size' in patch) write(KEYS.prefs, { guides: this.ui.guides, grid: this.ui.grid, size: this.ui.size });
     this.emit({ ui: true });
   }
   setDial(patch: Partial<DialSettings>): void { this.dial = { ...this.dial, ...patch }; if (!('accent' in patch) && 'hue' in patch) delete this.dial.accent; write(KEYS.dial, this.dial); this.emit({ ui: true }); }

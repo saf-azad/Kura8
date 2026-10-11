@@ -1,5 +1,5 @@
 import type { ColourRef, DocNode, Palette, RowId, Step } from '../../../core/document';
-import { center, containsRotated } from '../../../core/geometry';
+import { containsRotated, type Point } from '../../../core/geometry';
 import { setOpacity } from '../../../core/ops';
 import { addCustom, contrast, hexToHsv, hsvToHex, hueSwatch, HUES, passingShade, rows, resolve } from '../../../core/palette';
 import type { Editor } from '../../editor';
@@ -16,20 +16,26 @@ export function colourPanel(ed: Editor): HTMLElement {
   });
   const shades = h('div', { className: 'shades' }), hues = h('div', { className: 'hues' });
   const sv = h('div', { className: 'sv', title: 'Drag to pick any colour' }, h('i')), hueBar = h('div', { className: 'hue-bar', title: 'Drag to change hue' }, h('i'));
-  const hex = h('input', { className: 'field', 'aria-label': 'Hex colour', spellcheck: 'false', maxlength: 7 });
+  const hex = h('input', { className: 'field', 'aria-label': 'Hex colour', spellcheck: 'false', maxlength: 24 });
   const addHue = h('button', { type: 'button', className: 'pill', title: 'Add as hue', style: 'height:32px' }, '+ Add as hue');
-  const hexRow = h('div', { style: 'display:flex;gap:8px;align-items:center' }, hex, addHue);
+  // A typed brand colour can become the accent role itself, so the accent block and everything in Accent follow (D-077).
+  const asAccent = h('button', { type: 'button', className: 'pill', title: 'Set as accent', style: 'height:32px' }, 'Set as accent');
+  const hexRow = h('div', { style: 'display:flex;gap:8px;align-items:center;flex-wrap:wrap' }, hex, addHue, asAccent);
   const contrastBox = h('div', { className: 'contrast hidden' });
   // Opacity of the selection (D-052), coalesced into one undo step while dragging.
   const opacity = h('input', { type: 'range', min: 5, max: 100, step: 5, 'aria-label': 'Opacity', title: 'Opacity', style: 'flex:1' }), opacityValue = h('span', { style: 'width:38px;text-align:right' });
   const opacityRow = h('div', { className: 'row', style: 'font-size:12px;gap:10px' }, h('span', { className: 'muted' }, 'Opacity'), opacity, opacityValue);
+  let slidingOpacity = false;
+  opacity.addEventListener('pointerdown', () => { slidingOpacity = true; }); opacity.addEventListener('pointerup', () => { slidingOpacity = false; }); opacity.addEventListener('blur', () => { slidingOpacity = false; });
   opacity.addEventListener('input', () => { const ids = ed.selected().filter(n => !n.locked).map(n => n.id); if (ids.length) ed.store.commit(setOpacity(ed.doc, ids, Number(opacity.value) / 100), { key: 'opacity' }); });
   // Arrow keys step the slider rather than nudging the selection; Escape still closes the panel.
   opacity.addEventListener('keydown', e => { if (e.key.startsWith('Arrow')) e.stopPropagation(); });
   const light = h('button', { type: 'button', title: 'Light ground', style: 'background:#ECF0F3' }), dark = h('button', { type: 'button', title: 'Dark ground', style: 'background:#000' });
   const hint = h('div', { className: 'muted' });
+  // With nothing selected, the current colour fills the ground in one tap instead of arming paint (D-077).
+  const fillGround = h('button', { type: 'button', className: 'pill', title: 'Fill the ground with this colour', style: 'height:28px;font-size:12px' }, 'Fill ground');
   const panel = h('div', { className: 'panel colour-panel', hidden: true, role: 'dialog', 'aria-label': 'Colour' },
-    h('div', { className: 'roles' }, ...roleButtons), shades, hues, sv, hueBar, hexRow, opacityRow, contrastBox, h('div', { className: 'grounds' }, hint, h('div', { className: 'pair' }, light, dark)));
+    h('div', { className: 'roles' }, ...roleButtons), shades, hues, sv, hueBar, hexRow, opacityRow, contrastBox, h('div', { className: 'grounds' }, hint, fillGround, h('div', { className: 'pair' }, light, dark)));
   let pick = { h: 210, s: 60, v: 70 }, editingHex = false, sliding = false, focusValue = '', built = '';
   const current = (): ColourRef => { const one = ed.one(); return one && one.kind !== 'image' ? one.fill : ed.store.ui.armed ?? ed.store.ui.swatch; };
   const drag = (el: HTMLElement, kind: 'sv' | 'h') => el.addEventListener('pointerdown', e => {
@@ -49,11 +55,26 @@ export function colourPanel(ed: Editor): HTMLElement {
     el.addEventListener('pointermove', move); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
   });
   drag(sv, 'sv'); drag(hueBar, 'h');
-  const typed = () => { const v = hex.value.trim().replace(/^#/, ''); return /^[0-9a-f]{6}$/i.test(v) ? `#${v.toLowerCase()}` : null; };
-  hex.addEventListener('focus', () => { editingHex = true; focusValue = hex.value.trim().toLowerCase().replace(/^#/, ''); });
-  hex.addEventListener('input', () => { const v = typed(); addHue.classList.toggle('hidden', !v || Object.values(rows(ed.palette())).some(r => r.includes(v))); });
+  // Six hex digits, or three (#fff), with or without '#' (D-082); spaces and a full-width or doubled '#' are forgiven,
+  // and nothing is cut short to fit the field (D-083).
+  const digits = () => hex.value.normalize('NFKC').replace(/[\s\u200B-\u200D\u2060\uFEFF]+/g, '').replace(/^#+/, '');
+  const typed = () => { const v = digits(); return /^[0-9a-f]{6}$/i.test(v) ? `#${v.toLowerCase()}` : /^[0-9a-f]{3}$/i.test(v) ? `#${[...v.toLowerCase()].map(c => c + c).join('')}` : null; };
+  /** Text in the field that is not a colour ("white", "#12345"): said, rather than silently using the last colour. */
+  const garbled = () => editingHex && !typed() && digits().toLowerCase() !== focusValue;
+  // The field selects its value on focus, so typing replaces it; the hue and accent buttons follow what is typed (D-081).
+  hex.addEventListener('focus', () => { editingHex = true; focusValue = digits().toLowerCase(); requestAnimationFrame(() => hex.select()); });
+  hex.addEventListener('input', () => {
+    const v = typed(); addHue.classList.toggle('hidden', !v || Object.values(rows(ed.palette())).some(r => r.includes(v)));
+    asAccent.classList.toggle('hidden', !v || v === resolve({ role: 'accent' }, ed.palette()).toLowerCase());
+  });
   hex.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); hex.blur(); } if (e.key === 'Escape') { editingHex = false; hex.blur(); } });
-  hex.addEventListener('blur', () => { const v = editingHex ? typed() : null; editingHex = false; if (v && v.slice(1) !== focusValue) { ed.applySwatch({ hex: v }); pick = hexToHsv(v); } ed.invalidate(); });
+  hex.addEventListener('blur', () => {
+    const v = editingHex ? typed() : null, bad = garbled(); editingHex = false;
+    if (v && v.slice(1) !== focusValue) { ed.applySwatch({ hex: v }); pick = hexToHsv(v); }
+    // A non-colour is said, then the field shows the colour in use again (D-083).
+    if (bad) toast('Type a colour like #1B1F3B');
+    ed.invalidate();
+  });
   addHue.addEventListener('pointerdown', e => e.preventDefault());
   addHue.addEventListener('click', () => {
     const v = typed() ?? (('hex' in current()) ? (current() as { hex: string }).hex : null);
@@ -62,6 +83,15 @@ export function colourPanel(ed: Editor): HTMLElement {
     if (palette !== ed.doc.palette) ed.setPalette({ custom: palette.custom }, 'Added as a hue');
     editingHex = false; hex.blur(); ed.store.setUI({ row: ref.row }); ed.applySwatch(ref);
   });
+  asAccent.addEventListener('pointerdown', e => e.preventDefault());
+  asAccent.addEventListener('click', () => {
+    const v = typed() ?? (('hex' in current()) ? (current() as { hex: string }).hex : null);
+    if (!v || garbled()) { toast('Type a colour like #1B1F3B'); return; }
+    // Setting the accent ends any paint armed by the typed colour, so the next tap selects rather than paints.
+    editingHex = false; hex.blur(); ed.store.setUI({ armed: null }); ed.setPalette({ accent: v }, 'Accent set');
+  });
+  fillGround.addEventListener('pointerdown', e => e.preventDefault());
+  fillGround.addEventListener('click', () => { if (garbled()) { toast('Type a colour like #1B1F3B'); return; } const ref = typed() ? { hex: typed()! } : current(); editingHex = false; hex.blur(); ed.fillGround(ref); });
   // 5i: tap a ground to switch; hold it to preview the other ground and let go to return.
   const ground = (b: HTMLElement, isDark: boolean) => {
     let t0 = 0;
@@ -74,8 +104,8 @@ export function colourPanel(ed: Editor): HTMLElement {
     b.addEventListener('pointerup', end(true)); b.addEventListener('pointerleave', end(false));
   };
   ground(light, false); ground(dark, true);
-  const backdrop = (t: DocNode, p: Palette): string | null => {
-    const nodes = ed.doc.nodes, c = center(ed.box(t));
+  const backdrop = (t: DocNode, p: Palette, c: Point): string | null => {
+    const nodes = ed.doc.nodes;
     for (let i = nodes.indexOf(t) - 1; i >= 0; i--) {
       const n = nodes[i], f = ed.frame(n);
       if (f.hidden || !containsRotated(ed.box(n), f.rot, c)) continue;
@@ -111,22 +141,51 @@ export function colourPanel(ed: Editor): HTMLElement {
     if (!editingHex && !sliding) pick = { ...hexToHsv(value), h: hexToHsv(value).s ? hexToHsv(value).h : pick.h };
     const inRows = Object.values(all).some(r => r.includes(typed() ?? value));
     addHue.classList.toggle('hidden', inRows);
+    const candidate = typed() ?? ('hex' in ref ? ref.hex : null);
+    asAccent.classList.toggle('hidden', !candidate || candidate.toLowerCase() === resolve({ role: 'accent' }, p).toLowerCase());
+    fillGround.classList.toggle('hidden', !!ed.selected().length);
     sv.style.background = `linear-gradient(to top,#000,transparent),linear-gradient(to right,#fff,${hsvToHex(pick.h, 100, 100)})`;
     const svDot = sv.firstElementChild as HTMLElement; svDot.style.left = `${pick.s}%`; svDot.style.top = `${100 - pick.v}%`; svDot.style.background = value;
     (hueBar.firstElementChild as HTMLElement).style.left = `${pick.h / 3.59}%`;
     const sel = ed.selected(), first = sel[0];
     opacityRow.classList.toggle('hidden', !sel.length);
-    if (first && document.activeElement !== opacity) opacity.value = String(Math.round((first.opacity ?? 1) * 100));
+    if (first && !slidingOpacity) opacity.value = String(Math.round((first.opacity ?? 1) * 100));
     opacityValue.textContent = `${opacity.value}%`;
     // 5h: text below 4.5:1 against what is behind it (the topmost solid block under its centre, else the ground) shows
     // its ratio and the nearest passing shade; over a picture the check is left to the eye (D-053).
-    const text = sel.find(n => n.kind === 'text'), bg = text ? backdrop(text, p) : null;
-    if (text?.kind === 'text' && bg) {
-      const ratio = contrast(resolve(text.fill, p), bg), fix = passingShade(text.fill, bg, p);
-      contrastBox.classList.toggle('hidden', ratio >= 4.5);
-      if (ratio < 4.5) {
+    // Every selected text block is checked at nine points over its lines, so a second line running onto a dark block
+    // counts, and the worst one is shown (D-077).
+    let worst: { text: DocNode & { kind: 'text' }; bg: string; ratio: number } | null = null;
+    const failing = new Map<string, { text: DocNode & { kind: 'text' }; bg: string; ratio: number }>(), behind = new Map<string, Set<string>>();
+    for (const t of sel) {
+      if (t.kind !== 'text') continue;
+      const e = ed.extent(t), seen = new Set<string>();
+      for (const fx of [.15, .5, .85]) for (const fy of [.2, .5, .8]) {
+        const bg = backdrop(t, p, { x: e.x + e.w * fx, y: e.y + e.h * fy }), ratio = bg ? contrast(resolve(t.fill, p), bg) : Infinity;
+        if (bg) seen.add(bg);
+        if (bg && ratio < 4.5 && ratio < (failing.get(t.id)?.ratio ?? Infinity)) failing.set(t.id, { text: t, bg, ratio });
+        if (bg && (!worst || ratio < worst.ratio)) worst = { text: t, bg, ratio };
+      }
+      behind.set(t.id, seen);
+    }
+    if (worst) {
+      // A shade must pass on everything behind the text: a label across a band and the ground reads on both (D-090).
+      const { text, bg, ratio } = worst, fix = passingShade(text.fill, [...(behind.get(text.id) ?? [bg])], p);
+      // A passing ratio shows too, so a palette card can state it (D-081).
+      contrastBox.classList.remove('hidden');
+      if (ratio >= 4.5) contrastBox.replaceChildren(h('span', { className: 'muted' }, 'Contrast'), h('span', {}, `${ratio.toFixed(1)} : 1  passes`), h('span'));
+      else {
         const use = h('button', { type: 'button', title: 'Use the nearest passing shade' }, 'use');
-        use.addEventListener('click', () => { if (fix) { ed.applySwatch(fix.ref); toast(`Contrast ${fix.ratio.toFixed(1)} : 1`); } });
+        // Only the failing text takes a passing shade, each block the one nearest its own colour on what lies behind
+        // it; the rest of the selection keeps its colours (D-082, D-083).
+        use.addEventListener('click', () => {
+          const open = [...failing.values()].filter(f => !f.text.locked), locked = failing.size - open.length;
+          const fixes = open.flatMap(f => { const s = passingShade(f.text.fill, [...(behind.get(f.text.id) ?? [f.bg])], p); return s ? [{ id: f.text.id, ...s }] : []; });
+          if (!fixes.length) { if (locked) toast('Locked · unlock it to change its colour'); return; }
+          ed.fillEach(Object.fromEntries(fixes.map(f => [f.id, f.ref])));
+          const low = Math.min(...fixes.map(f => f.ratio)), missed = open.length - fixes.length;
+          toast(`Contrast ${low.toFixed(1)} : 1${missed ? ` · ${missed} still fails: no shade on its row passes` : ''}${locked ? ` · ${locked} locked left as it is` : ''}`);
+        });
         contrastBox.replaceChildren(h('span', { className: 'muted' }, 'Contrast'), h('span', {}, `${ratio.toFixed(1)} : 1  fails`), h('span'),
           ...(fix ? [h('span', { className: 'muted' }, 'Nearest pass'), h('span', {}, `${fix.ratio.toFixed(1)} : 1`), use] : [h('span', { className: 'muted' }, 'No shade on this row passes')]));
       }
