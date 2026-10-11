@@ -156,18 +156,21 @@ export function colourPanel(ed: Editor): HTMLElement {
     // Every selected text block is checked at nine points over its lines, so a second line running onto a dark block
     // counts, and the worst one is shown (D-077).
     let worst: { text: DocNode & { kind: 'text' }; bg: string; ratio: number } | null = null;
-    const failing = new Map<string, { text: DocNode & { kind: 'text' }; bg: string; ratio: number }>();
+    const failing = new Map<string, { text: DocNode & { kind: 'text' }; bg: string; ratio: number }>(), behind = new Map<string, Set<string>>();
     for (const t of sel) {
       if (t.kind !== 'text') continue;
-      const e = ed.extent(t);
+      const e = ed.extent(t), seen = new Set<string>();
       for (const fx of [.15, .5, .85]) for (const fy of [.2, .5, .8]) {
         const bg = backdrop(t, p, { x: e.x + e.w * fx, y: e.y + e.h * fy }), ratio = bg ? contrast(resolve(t.fill, p), bg) : Infinity;
+        if (bg) seen.add(bg);
         if (bg && ratio < 4.5 && ratio < (failing.get(t.id)?.ratio ?? Infinity)) failing.set(t.id, { text: t, bg, ratio });
         if (bg && (!worst || ratio < worst.ratio)) worst = { text: t, bg, ratio };
       }
+      behind.set(t.id, seen);
     }
     if (worst) {
-      const { text, bg, ratio } = worst, fix = passingShade(text.fill, bg, p);
+      // A shade must pass on everything behind the text: a label across a band and the ground reads on both (D-090).
+      const { text, bg, ratio } = worst, fix = passingShade(text.fill, [...(behind.get(text.id) ?? [bg])], p);
       // A passing ratio shows too, so a palette card can state it (D-081).
       contrastBox.classList.remove('hidden');
       if (ratio >= 4.5) contrastBox.replaceChildren(h('span', { className: 'muted' }, 'Contrast'), h('span', {}, `${ratio.toFixed(1)} : 1  passes`), h('span'));
@@ -177,7 +180,7 @@ export function colourPanel(ed: Editor): HTMLElement {
         // it; the rest of the selection keeps its colours (D-082, D-083).
         use.addEventListener('click', () => {
           const open = [...failing.values()].filter(f => !f.text.locked), locked = failing.size - open.length;
-          const fixes = open.flatMap(f => { const s = passingShade(f.text.fill, f.bg, p); return s ? [{ id: f.text.id, ...s }] : []; });
+          const fixes = open.flatMap(f => { const s = passingShade(f.text.fill, [...(behind.get(f.text.id) ?? [f.bg])], p); return s ? [{ id: f.text.id, ...s }] : []; });
           if (!fixes.length) { if (locked) toast('Locked · unlock it to change its colour'); return; }
           ed.fillEach(Object.fromEntries(fixes.map(f => [f.id, f.ref])));
           const low = Math.min(...fixes.map(f => f.ratio)), missed = open.length - fixes.length;

@@ -34,8 +34,12 @@ export function layout(o: LayoutInput): Layout {
   let lines = o.measure(o.headline, fs, 700, head.w).length;
   // Short canvases: step the headline down until headline and body clear the bottom margin, never below body size.
   let bodySize = scale.body, bodyLines = 1;
+  const headY = head.y;
   const place = () => {
-    const headH = textHeight(lines, fs), at = body ?? { x: head.x, y: head.y + headH + pad, w: head.w };
+    const headH = textHeight(lines, fs);
+    // Split: the headline and body rise together, as far as the margin, so two lines of body clear the accent block (D-090).
+    head.y = o.comp === 'split' ? Math.max(pad, Math.min(headY, by - pad / 2 - textHeight(2, bodySize) - pad - headH)) : headY;
+    const at = body ?? { x: head.x, y: head.y + headH + pad, w: head.w };
     bodyLines = o.measure(o.body, bodySize, 400, at.w).length;
     return { headH, at };
   };

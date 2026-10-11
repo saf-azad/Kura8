@@ -172,7 +172,20 @@ export class Editor {
   colour(ref: ColourRef): string { return resolve(ref, this.palette()); }
   /** Unit-space point under a pointer event. */
   toUnits(e: { clientX: number; clientY: number }): Point { const r = this.overlay.getBoundingClientRect(); return { x: (e.clientX - r.left - MARGIN) / this.scale, y: (e.clientY - r.top - MARGIN) / this.scale }; }
-  hitTest(p: Point): DocNode | undefined { return [...this.visible()].reverse().find(n => containsRotated(this.reach(n), this.frame(n).rot, p)); }
+  hitTest(p: Point): DocNode | undefined {
+    // Text takes a press on its letters; on the empty part of its box (an autofit room, a wide wrap box) a block under it
+    // takes the press first, so a picture inside a poster headline's room can be picked (D-090).
+    let empty: DocNode | undefined;
+    for (const n of [...this.visible()].reverse()) {
+      if (!containsRotated(this.reach(n), this.frame(n).rot, p)) continue;
+      if (n.kind === 'text' && !this.frame(n).rot) {
+        const e = this.extent(n), m = 8 / this.scale;
+        if (p.x < e.x - m || p.x > e.x + e.w + m || p.y < e.y - m || p.y > e.y + e.h + m) { empty ??= n; continue; }
+      }
+      return n;
+    }
+    return empty;
+  }
   /** Where a press takes a block: its box, at least 20 screen pixels thick, so a thin line or rule can be caught (D-088). */
   reach(n: DocNode): Rect {
     const b = this.box(n), min = 20 / this.scale, w = Math.max(b.w, min), h = Math.max(b.h, min);
@@ -680,7 +693,8 @@ export class Editor {
     const held = (r: Rect) => !block || r.x >= block.x - .5 && r.y >= block.y - .5 && r.x + r.w <= block.x + block.w + .5 && r.y + r.h <= block.y + block.h + .5;
     // Nor past the point where the text it pushes down would land on other text or a block, or stop at the canvas
     // bottom under it (D-088).
-    const boxOf = (n: DocNode) => n.kind === 'text' ? textBox(n, n.frames[this.sizeId], measure, scale).rect : n.frames[this.sizeId].rect;
+    // Text by its letters, not its wrap box (a title's box reaching icons it does not touch, D-090).
+    const boxOf = (n: DocNode) => n.kind === 'text' ? this.extent(n, this.sizeId) : n.frames[this.sizeId].rect;
     const meets = (a: Rect, r: Rect) => a.x < r.x + r.w - 1 && r.x < a.x + a.w - 1 && a.y < r.y + r.h - 1 && r.y < a.y + a.h - 1;
     const shown = (d: KuraDoc) => d.nodes.filter(x => x.frames[this.sizeId] && !x.frames[this.sizeId].hidden && !x.frames[this.sizeId].rot && x.kind !== 'ink');
     const crowds = (d: KuraDoc) => {
@@ -692,7 +706,8 @@ export class Editor {
     };
     const test = (size: number) => {
       const d = flowText(doc, hugText(doc, this.withSize(doc, id, size), id, measure), id, measure), m = nodeById(d, id) as TextNode, g = m.frames[this.sizeId], b = textBox(m, g, measure, scale);
-      return { whole: !splitsWord(m.text, b.lines), fits: !!g.rot || b.rect.y + b.rect.h <= limit + 1e-6 && held(b.rect) && !crowds(d) };
+      const bottom = !!g.rot || b.rect.y + b.rect.h <= limit + 1e-6, onBlock = !!g.rot || held(b.rect), clear = !!g.rot || !crowds(d);
+      return { whole: !splitsWord(m.text, b.lines), fits: bottom && onBlock && clear, bottom, onBlock };
     };
     const top = test(want);
     if (top.whole && top.fits) return { size: want, note: '' };
@@ -700,8 +715,11 @@ export class Editor {
     let lo = current, hi = want;
     while (hi - lo > .5) { const mid = (lo + hi) / 2, t = test(mid); if (t.whole && t.fits) lo = mid; else hi = mid; }
     // The note names what stops it just past the size it gets, and how a free label gets more room (D-087).
-    const stop = test(hi), space = n.slot ? 'Largest size that fits its space' : block ? 'Largest size that fits on its block' : 'Largest size that fits above the canvas bottom · move it up for more';
-    return { size: Math.max(current, Math.floor(lo * 2) / 2), note: stop.fits ? 'Largest size that keeps every word whole' : space };
+    // The note names what stops it just past the size it gets: a word, the canvas bottom or the space, the block it sits
+    // on, or the text and blocks it would push into (D-087, D-090).
+    const stop = test(hi), space = n.slot ? 'Largest size that fits its space' : 'Largest size that fits above the canvas bottom · move it up for more';
+    const note = !stop.whole ? 'Largest size that keeps every word whole' : !stop.bottom ? space : !stop.onBlock ? 'Largest size that fits on its block' : 'Largest size that keeps clear of the blocks around it';
+    return { size: Math.max(current, Math.floor(lo * 2) / 2), note };
   }
   /**
    * Resizes every selected unlocked text block to `want(current)`, capped (`sizeCap`). A hand-set size turns autofit off
@@ -800,7 +818,22 @@ export class Editor {
     const fellBack = !!largest && !inside(align(boxes, mode as AlignMode, c0, [bounds(largest)]));
     if (fellBack) largest = null;
     const key = largest ? [bounds(largest)] : locked;
-    const moves = mode === 'spread-x' || mode === 'spread-y' ? distribute(shown.map(n => ({ id: n.id, rect: bounds(n) })), mode === 'spread-x' ? 'x' : 'y', shown.filter(n => n.locked).map(n => n.id)) : align(boxes, mode, c0, key);
+    // Blocks wider together than the stretch between the outer two spread over the canvas within its margins instead,
+    // with the locked ones staying; too wide even for that, they are left as they are and the toast says so (D-090).
+    let spread = shown.map(n => ({ id: n.id, rect: bounds(n) })), across = false;
+    if (mode === 'spread-x' || mode === 'spread-y') {
+      const x = mode === 'spread-x', pos = (r: Rect) => x ? r.x : r.y, len = (r: Rect) => x ? r.w : r.h, total = spread.reduce((t, b) => t + len(b.rect), 0);
+      const lo = Math.min(...spread.map(b => pos(b.rect))), hi = Math.max(...spread.map(b => pos(b.rect) + len(b.rect))), pad = layoutPad(c0), room = (x ? c0.w : c0.h) - 2 * pad;
+      if (total > hi - lo + 1e-6) {
+        if (total > room + 1e-6 || locked.length) { toast(`Too ${x ? 'wide' : 'tall'} to space evenly · make them smaller or use two ${x ? 'rows' : 'columns'}`, 2600); return; }
+        const sorted = [...spread].sort((a, b) => pos(a.rect) - pos(b.rect)), first = sorted[0], last = sorted[sorted.length - 1];
+        const shift = (b: typeof first, to: number) => ({ ...b, rect: { ...b.rect, [x ? 'x' : 'y']: to } });
+        spread = spread.map(b => b === first ? shift(b, pad) : b === last ? shift(b, (x ? c0.w : c0.h) - pad - len(b.rect)) : b);
+        across = true;
+      }
+    }
+    const moves = mode === 'spread-x' || mode === 'spread-y' ? distribute(spread, mode === 'spread-x' ? 'x' : 'y', shown.filter(n => n.locked).map(n => n.id)) : align(boxes, mode, c0, key);
+    if (across) for (const b of spread) { const o = bounds(shown.find(n => n.id === b.id)!), m = moves[b.id] ?? { dx: 0, dy: 0 }; moves[b.id] = { dx: m.dx + b.rect.x - o.x, dy: m.dy + b.rect.y - o.y }; }
     // Nothing to move is said, not recorded as a step (D-083).
     if (sel.every(n => { const m = moves[n.id]; return !m || Math.abs(m.dx) < 1e-6 && Math.abs(m.dy) < 1e-6; })) { toast(mode.startsWith('spread') ? 'Already evenly spaced' : 'Already aligned'); return; }
     const frames = Object.fromEntries(sel.map(n => { const f = this.frame(n), m = moves[n.id] ?? { dx: 0, dy: 0 }; return [n.id, { ...f, rect: { ...f.rect, x: f.rect.x + m.dx, y: f.rect.y + m.dy } }]; }));
@@ -809,7 +842,7 @@ export class Editor {
       const n = nodeById(d, id)!, b = rotatedBounds(n.kind === 'text' ? this.extent(n, this.sizeId) : n.frames[this.sizeId].rect, n.frames[this.sizeId].rot);
       return b.x < -.5 || b.y < -.5 || b.x + b.w > c.w + .5 || b.y + b.h > c.h + .5;
     }, off = Object.keys(frames).filter(id => past(next, id) && !past(this.doc, id)).length;
-    this.commit(next, (mode.startsWith('spread') ? 'Spaced evenly' : largest ? 'Centred on the largest block' : fellBack ? 'Centred on the selection, so nothing leaves the canvas' : key.length ? 'Aligned to the locked block' : sel.length === 1 ? 'Aligned to the canvas' : 'Aligned')
+    this.commit(next, (mode.startsWith('spread') ? across ? 'Spaced evenly across the canvas' : 'Spaced evenly' : largest ? 'Centred on the largest block' : fellBack ? 'Centred on the selection, so nothing leaves the canvas' : key.length ? 'Aligned to the locked block' : sel.length === 1 ? 'Aligned to the canvas' : 'Aligned')
       + (off ? ` · ${off === 1 ? 'one block runs' : `${off} blocks run`} past the canvas edge` : ''));
     this.flagText(Object.keys(frames));
   }
@@ -822,8 +855,9 @@ export class Editor {
     const key = shown.find(n => n.locked && !lines(n)) ?? [...shown].sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id)).find(n => !lines(n));
     const others = key ? shown.filter(n => n !== key && !n.locked && !lines(n)) : [];
     if (!key || !others.length) { toast(mode === 'h' ? 'Text takes its height from its lines' : 'Nothing to match'); return; }
-    const rects = matchSize(others.map(n => ({ id: n.id, rect: this.frame(n).rect, keepAspect: n.kind === 'shape' && !!n.icon || n.kind === 'image' && n.mask === 'circle', rot: this.frame(n).rot })), this.frame(key).rect, mode);
-    // Pictures match exactly and re-cover their frames (D-081); one that showed whole now crops, which is said (D-084).
+    // A picture that shows whole (a logo) keeps its proportions, so it never crops (D-090); a cropped picture matches
+    // exactly and re-covers its frame (D-081), which is said if it starts to crop (D-084).
+    const rects = matchSize(others.map(n => ({ id: n.id, rect: this.frame(n).rect, keepAspect: n.kind === 'shape' && !!n.icon || n.kind === 'image' && (n.mask === 'circle' || !!n.asset && this.fitted(n)), rot: this.frame(n).rot })), this.frame(key).rect, mode);
     const cropped = others.filter(n => n.kind === 'image' && n.mask !== 'circle' && this.fitted(n)).map(n => n.id);
     const doc = setFrames(this.doc, this.sizeId, Object.fromEntries(others.map(n => [n.id, { ...this.frame(n), rect: rects[n.id] }])));
     const crops = cropped.filter(id => { const n = nodeById(doc, id); return n?.kind === 'image' && !this.fitted({ ...n, frames: n.frames }); }).length;
@@ -926,6 +960,8 @@ export class Editor {
       const mod = (e.metaKey || e.ctrlKey) && !e.altKey;
       // Undo before typing anything leaves the text and undoes the last change (e.g. New); Mod+B bolds the block being typed.
       if (mod && letterOf(e) === 'z' && !e.shiftKey && area.value === node.text) { e.preventDefault(); e.stopPropagation(); this.finishText(); this.undo(); return; }
+      // Mod+Shift+E opens Export while typing too; a new label is kept (D-090).
+      if (mod && e.shiftKey && letterOf(e) === 'e') { e.preventDefault(); e.stopPropagation(); this.touched ||= id === this.fresh; this.finishText(); this.openPanel('export'); return; }
       if (mod && letterOf(e) === 'b') { e.preventDefault(); e.stopPropagation(); const cur = nodeById(this.doc, id); if (cur?.kind === 'text' && fontById(cur.font).weights.length < 2) { toast(`${fontById(cur.font).name} has one weight`); return; } if (cur?.kind === 'text') { this.store.set(updateNodes(this.doc, [id], n => ({ ...n, weight: (n as TextNode).weight === 700 ? 400 : 700 }) as TextNode)); this.positionTextarea(); } return; }
       if (e.key === 'Escape' || e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); e.stopPropagation(); this.finishText(); this.overlay.focus({ preventScroll: true }); } });
     // A click on the untouched placeholder keeps it selected, so typing replaces "Text" rather than splitting it (D-087).

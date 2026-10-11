@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { layout, starterNodes, compositionFit, slotRect, textRoleOn, keepReadable, STARTER } from '../src/core/compositions';
+import { layout, layoutPad, starterNodes, compositionFit, slotRect, textRoleOn, keepReadable, STARTER } from '../src/core/compositions';
 import { compIds, guideIds, ratioIds, validateDocument, type DocNode, type KuraDoc, type Palette, type TextNode } from '../src/core/document';
 import { canvasSize } from '../src/core/ratios';
 import { fractionsOf } from '../src/core/guides';
-import { fitText, splitsWord, typeScale } from '../src/core/fit';
+import { fitText, splitsWord, textHeight, typeScale } from '../src/core/fit';
 import { contrast, resolve } from '../src/core/palette';
 import { fakeMeasure, doc, ids } from './helpers';
 const inside = (r: { x: number; y: number; w: number; h: number }, c: { w: number; h: number }) => r.x >= -1e-6 && r.y >= -1e-6 && r.x + r.w <= c.w + 1e-6 && r.y + r.h <= c.h + 1e-6 && r.w > 0 && r.h > 0;
@@ -150,4 +150,11 @@ it('treats text over an empty picture frame as text on the ground, since the exp
   const label = { id: 'l', kind: 'text', text: 'Register now', weight: 400, align: 'start', fill: { role: 'ground' }, frames: { main: { rect: { x: 450, y: 440, w: 271, h: 48 }, rot: 0 } } } as DocNode;
   const d: KuraDoc = { version: 2, id: 'd', createdAt: '', palette: p, ground: null, sizes: [{ id: 'main', ratio: 'square', guide: null, comp: null }], nodes: [frameNode, label] };
   expect(contrast(resolve((keepReadable(d).nodes[1] as TextNode).fill, p), resolve({ role: 'ground' }, p))).toBeGreaterThanOrEqual(4.5);
+});
+it('keeps two lines of body clear of the accent block in split layouts (D-090)', () => {
+  for (const ratio of ['square', 'portrait', 'tall', 'pin', 'a4', 'landscape', 'link'] as const) for (const guide of ['thirds', 'golden', 'divisions'] as const) {
+    const c = canvasSize(ratio), slots = layout({ canvas: c, guide, comp: 'split', measure: fakeMeasure, headline: 'Headline', body: 'Body text' }), ts = typeScale(guide, c);
+    expect(slots.body.rect.y + textHeight(2, ts.body)).toBeLessThanOrEqual(slots.accent.y + 1e-6);
+    expect(slots.headline.rect.y).toBeGreaterThanOrEqual(layoutPad(c) - 1e-6);
+  }
 });

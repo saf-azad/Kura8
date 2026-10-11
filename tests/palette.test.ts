@@ -62,3 +62,10 @@ describe('palette', () => {
     expect(passingShade({ hex: '#808080' }, '#808080', light, 30)).toBeNull();
   });
 });
+it('finds a shade that passes on every backdrop a text lies across (D-090)', () => {
+  const p = { hue: 120, dark: true, custom: [] }, neon = '#39ff14', ground = '#0f0f0f';
+  const one = passingShade({ hex: '#2ee012' }, neon, p)!, both = passingShade({ hex: '#2ee012' }, [neon, ground], p);
+  expect(contrast(one.hex, neon)).toBeGreaterThanOrEqual(4.5);
+  if (both) { expect(contrast(both.hex, neon)).toBeGreaterThanOrEqual(4.5); expect(contrast(both.hex, ground)).toBeGreaterThanOrEqual(4.5); expect(both.ratio).toBeLessThanOrEqual(one.ratio); }
+  else expect(Math.min(contrast(one.hex, ground), contrast(one.hex, neon))).toBeLessThan(4.5);
+});

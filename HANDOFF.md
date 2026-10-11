@@ -216,6 +216,19 @@ Append-only. New entries supersede named old entries; do not edit history. Forma
   - **Arrange.** Centring that falls back to the selection says so.
   - **Names.** Layer names from file names are cut between characters (`cleanName`).
   - Why: loop 8 cohort W (31 sessions; 14 of 23 loop-7 items fixed, 9 partly).
+- **D-090** 2026-10-11 fable — Loop 8 cohort X (12 fresh jobs).
+  - **Pasted lists.** Text with one line per paragraph counts as one line, so a pasted list that hugs its widest item widens as it grows: prices stay on their item's line.
+  - **Breaking words.** A hyphen after a single letter ("O-Week", "e-mail") does not break.
+  - **Split layout.** The headline and body rise together, as far as the margin, so two lines of body clear the accent block in every ratio and guide.
+  - **Same width and height.** Whole pictures (logos, Fit) keep their proportions, so they never crop. This supersedes D-081 for pictures that show whole; cropped pictures still match exactly.
+  - **Space evenly.** Blocks wider together than the stretch between the outer two spread across the canvas within its margins. Too wide even for that (or with locked blocks), they stay and the toast says so; this replaces negative gaps that overlapped them.
+  - **Pressing text.** Text takes a press on its letters. On the empty part of its box (an autofit room) a block under it takes the press, so a QR code inside a poster headline's room can be picked and dragged.
+  - **Larger and typed sizes**
+    - judge the text they push by its letters, not its wrap box;
+    - say which limit stopped them: a word, the canvas bottom, the block, or "keeps clear of the blocks around it".
+  - **Contrast.** The "use" fix picks a shade that passes on everything behind the text (`passingShade` with several backdrops), so a label across a band and the ground reads on both. Where none does, it says so.
+  - **Export.** Mod+Shift+E opens it while typing, keeping a new label.
+  - Why: loop 8 cohort X (12 personas, 19 sessions).
 
 ## Next steps
 

@@ -159,7 +159,8 @@ export function hugText(before: KuraDoc, after: KuraDoc, id: string, measure: Me
   for (const spec of after.sizes) {
     const f0 = was.frames[spec.id], f1 = now.frames[spec.id];
     if (!f0 || !f1) continue;
-    const canvas = canvasSize(spec.ratio), scale = typeScale(spec.guide, canvas), b0 = textBox(was, f0, measure, scale), oneLine = b0.lines.length === 1;
+    // One line per paragraph counts as one line: a pasted list that hugs its widest item grows like a label (D-090).
+    const canvas = canvasSize(spec.ratio), scale = typeScale(spec.guide, canvas), b0 = textBox(was, f0, measure, scale), oneLine = b0.lines.length === was.text.split('\n').length;
     const w0 = drawnWeight(was.font, was.weight), w1 = drawnWeight(now.font, now.weight), free = !now.slot, r = f1.rect, pad = layoutPad(canvas);
     const side = physicalAlign(now.align, direction(now.text)), whole = { x: 0, y: 0, ...canvas };
     // A free label keeps the inset it has from the canvas edge, or from the block it sits on (a badge, a photo caption),
@@ -183,7 +184,7 @@ export function hugText(before: KuraDoc, after: KuraDoc, id: string, measure: Me
       size = roomSize({ text: now.text, size, width: fit, height: canvas.h - keep - block.y, weight: w1, measure, font: now.font });
       if (size < s1 && size >= scale.body * .6) s1 = size;
     }
-    const natural0 = oneLineWidth(was.text, b0.size, w0, measure, was.font), natural1 = Math.max(...now.text.split('\n').map(p => p.trim() ? oneLineWidth(p, s1, w1, measure, now.font) : 0)) * 1.02;
+    const natural0 = Math.max(...was.text.split('\n').map(p => p.trim() ? oneLineWidth(p, b0.size, w0, measure, was.font) : 0)), natural1 = Math.max(...now.text.split('\n').map(p => p.trim() ? oneLineWidth(p, s1, w1, measure, now.font) : 0)) * 1.02;
     const hugging = free && oneLine && f0.rect.w <= natural0 * 1.15 + 1, lines = measure(now.text, s1, w1, r.w, now.font);
     // A free label that already wraps only widens when its new copy would split a word (D-087); otherwise its width stays.
     const keepWidth = !oneLine && !splitsWord(now.text, lines) || !hugging && (paragraphs || lines.length < 2 || !splitsWord(now.text, lines));

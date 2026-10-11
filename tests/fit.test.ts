@@ -64,4 +64,6 @@ it('finds the pieces a text never breaks inside: hyphens after a letter, slashes
   // A link also breaks after an underscore and a dot between letters, never inside a number (D-089).
   expect(pieces('instagram.com/usyd.marketing_society v2.5')).toEqual(['instagram.', 'com/', 'usyd.', 'marketing_', 'society', 'v2.5']);
   expect(splitsWord('usyd.marketing_society', ['usyd.', 'marketing_', 'society'])).toBe(false);
+  // A hyphen after a single letter does not break (D-090).
+  expect(pieces('O-Week e-mail late-night')).toEqual(['O-Week', 'e-mail', 'late-', 'night']);
 });

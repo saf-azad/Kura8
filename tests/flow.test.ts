@@ -318,3 +318,9 @@ it('grows a wrapped label at the canvas bottom upwards when edited again (D-089)
   const b = textBox(t, t.frames.main, charMeasure, typeScale('thirds', { w: 1000, h: 1000 })).rect;
   expect(b.y + b.h).toBeLessThanOrEqual(1000); expect(b.y).toBeLessThan(858);
 });
+it('widens a pasted list that hugs its widest item as it grows, one line per item (D-090)', () => {
+  const list = 'Jackets $15\nJeans $12\nTees $5\nBags $8', start = doc([textNode('t', frame(100, 100, 11 * 16.8 * 1.02, 129, { fontSize: 28 }), list)]);
+  const bigger = updateNodes(start, ['t'], n => ({ ...n, frames: { main: { ...n.frames.main, fontSize: 40 } } }));
+  const t = hugText(start, bigger, 't', charMeasure).nodes[0] as TextNode;
+  expect(textBox(t, t.frames.main, charMeasure, typeScale('thirds', { w: 1000, h: 1000 })).lines).toHaveLength(4);
+});
