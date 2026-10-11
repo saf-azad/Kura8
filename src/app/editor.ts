@@ -12,7 +12,7 @@ import { flowText, hugText, keepInRoom, sitsOn, unfit } from '../core/flow';
 import { keepReadable, layoutPad } from '../core/compositions';
 import { align, distribute, matchSize, type AlignMode } from '../core/arrange';
 import { drawnWeight, fontById } from '../core/fonts';
-import { letterOf } from './tools/shortcuts';
+import { isEditingTarget, letterOf } from './tools/shortcuts';
 import { addSize, removeSize } from '../core/sizes';
 import { containIn, CENTRE, freeSpot, fullImageRect, panFocus, spreadCells, tiles } from '../core/images';
 import { direction, fontStack, physicalAlign } from '../core/script';
@@ -1005,6 +1005,8 @@ export class Editor {
         if (!fresh && this.textBefore && this.textBefore !== this.doc) { this.store.commit(this.doc, { before: this.textBefore }); this.textBefore = this.doc; }
         setTimeout(() => {
           if (this.textarea !== area || document.activeElement === area) return;
+          // A panel that put its own field in focus (a layer's name being renamed) ends the edit as a typing field does, keeping a new label.
+          if (isEditingTarget(document.activeElement)) { if (fresh) this.touched = true; this.finishText(); return; }
           const n = nodeById(this.doc, id);
           const ui = this.store.ui;
           if (n?.kind !== 'text' || n.locked || ui.sel.length !== 1 || ui.sel[0] !== id || ui.panel === 'export' || ui.screen !== 'editor' || ui.tool) { if (fresh) this.touched = true; this.finishText(); return; }
