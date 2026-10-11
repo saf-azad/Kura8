@@ -14,7 +14,7 @@ export type SceneOp = { opacity?: number } & (
   | { kind: 'shape'; id: string; rect: Rect; rot: number; fill: string; d: string; scale?: [number, number] }
   | { kind: 'text'; id: string; rect: Rect; rot: number; fill: string; size: number; weight: 400 | 700; align: 'left' | 'center' | 'right'; dir: 'ltr' | 'rtl'; font: string; lines: string[]; lineHeight: number;
       /** Per line, only when a paragraph's direction differs from the block's (D-064). */ bidi?: { dir: 'ltr' | 'rtl'; align: 'left' | 'center' | 'right' }[] }
-  | { kind: 'image'; id: string; rect: Rect; rot: number; asset: string | null; cutout: boolean; focus: Point }
+  | { kind: 'image'; id: string; rect: Rect; rot: number; asset: string | null; cutout: boolean; focus: Point; circle?: boolean }
   | { kind: 'ink'; id: string; rect: Rect; rot: number; fill: string; stroke: number; paths: [number, number][][] });
 /** `filled` is false when the ground was never filled (5z); `hidden` counts nodes hidden in this size (5y); `empty` counts empty image frames. */
 export type Scene = { size: Size; ground: string; filled: boolean; ops: SceneOp[]; hidden: number; empty: number };
@@ -37,7 +37,7 @@ export function buildScene(doc: KuraDoc, sizeId: string, measure: Measure): Scen
       ops.push({ kind: 'text', id: n.id, rect: box.rect, rot, fill: resolve(n.fill, p), size: box.size, weight, align: physicalAlign(n.align, dir), dir, font: fontStack(n.text, n.font), lines: box.lines, lineHeight: box.size * LINE_HEIGHT, ...(bidi ? { bidi } : {}) });
     } else if (n.kind === 'image') {
       if (!n.asset) empty++;
-      ops.push({ kind: 'image', id: n.id, rect, rot, asset: n.asset, cutout: !!n.cutout, focus: n.focus ?? CENTRE });
+      ops.push({ kind: 'image', id: n.id, rect, rot, asset: n.asset, cutout: !!n.cutout, focus: n.focus ?? CENTRE, ...(n.mask === 'circle' ? { circle: true } : {}) });
     } else ops.push({ kind: 'ink', id: n.id, rect, rot, fill: resolve(n.fill, p), stroke: n.stroke, paths: n.paths.map(path => path.map(([u, v]): [number, number] => [u * rect.w, v * rect.h])) });
     if (n.opacity !== undefined && n.opacity < 1) ops[at].opacity = n.opacity;
   }

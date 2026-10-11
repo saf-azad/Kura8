@@ -74,11 +74,12 @@ export function wholeWordSize(text: string, size: number, width: number, weight:
   return Math.floor(lo * 2) / 2;
 }
 /**
- * One-line text keeps its shape (D-070, D-077): when a size, face, weight or text change alters a block that was a single
- * line, a box that hugged its words (within 15 %) follows them, growing or shrinking like an auto-width label, and a wider
- * box widens only when a word would otherwise break. The aligned edge stays where it is, rotated or not (the box grows
- * away from it, never back over what lies on that side), and the box never grows past the canvas: beyond that it wraps.
- * Autofit and multi-paragraph text keep their width. Applied in every size.
+ * One-line text keeps its shape (D-070, D-077, D-081): when a size, face, weight or text change alters a block that was a
+ * single line, a free label (no layout slot) whose box hugged its words (within 15 %) follows them like an auto-width
+ * label, growing away from its aligned edge and sliding back to stay on the canvas; beyond the canvas width it wraps.
+ * Layout text keeps its slot: it widens only when a word would otherwise break, and only towards the canvas edge on its
+ * growing side, so it never crosses back over a picture column. Rotated labels keep their aligned edge's point. Autofit
+ * and multi-paragraph text keep their width. Applied in every size.
  */
 export function hugText(before: KuraDoc, after: KuraDoc, id: string, measure: Measure): KuraDoc {
   const was = before.nodes.find(n => n.id === id), now = after.nodes.find(n => n.id === id);
@@ -91,15 +92,17 @@ export function hugText(before: KuraDoc, after: KuraDoc, id: string, measure: Me
     if (b0.lines.length !== 1) continue;
     const w0 = drawnWeight(was.font, was.weight), w1 = drawnWeight(now.font, now.weight), s1 = f1.fontSize ?? scale.body;
     const natural0 = oneLineWidth(was.text, b0.size, w0, measure, was.font), natural1 = oneLineWidth(now.text, s1, w1, measure, now.font) * 1.02;
-    const hugging = f0.rect.w <= natural0 * 1.15 + 1, r = f1.rect, lines = measure(now.text, s1, w1, r.w, now.font);
+    const free = !now.slot, hugging = free && f0.rect.w <= natural0 * 1.15 + 1, r = f1.rect, lines = measure(now.text, s1, w1, r.w, now.font);
     if (!hugging && (lines.length < 2 || !splitsWord(now.text, lines))) continue;
-    const side = physicalAlign(now.align, direction(now.text)), cx = r.x + r.w / 2, room = roomFor(now, f1, canvasSize(spec.ratio));
+    const canvas = canvasSize(spec.ratio), side = physicalAlign(now.align, direction(now.text)), cx = r.x + r.w / 2, room = free ? canvas.w : roomFor(now, f1, canvas);
     const cap = Math.max(room, hugging ? 0 : r.w), w = Math.max(hugging ? 0 : r.w, Math.min(natural1, cap));
     if (Math.abs(w - r.w) < 1e-6) continue;
     // Keep the aligned edge's point fixed on the page: the centre moves along the box's own x axis.
     const a = (width: number) => side === 'left' ? -width / 2 : side === 'right' ? width / 2 : 0, t = f1.rot * Math.PI / 180, d = a(r.w) - a(w);
     const c = { x: cx + d * Math.cos(t), y: r.y + r.h / 2 + d * Math.sin(t) };
-    doc = { ...doc, nodes: doc.nodes.map(n => n.id === id ? { ...n, frames: { ...n.frames, [spec.id]: { ...f1, rect: { ...r, x: c.x - w / 2, y: c.y - r.h / 2, w } } } } : n) };
+    // A free label at the canvas edge (an Arabic label against the left edge) slides back rather than wrapping.
+    const x = free && !f1.rot ? Math.max(Math.min(c.x - w / 2, canvas.w - w), Math.min(0, r.x)) : c.x - w / 2;
+    doc = { ...doc, nodes: doc.nodes.map(n => n.id === id ? { ...n, frames: { ...n.frames, [spec.id]: { ...f1, rect: { ...r, x, y: c.y - r.h / 2, w } } } } : n) };
   }
   return doc;
 }

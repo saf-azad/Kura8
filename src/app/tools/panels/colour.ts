@@ -56,8 +56,12 @@ export function colourPanel(ed: Editor): HTMLElement {
   });
   drag(sv, 'sv'); drag(hueBar, 'h');
   const typed = () => { const v = hex.value.trim().replace(/^#/, ''); return /^[0-9a-f]{6}$/i.test(v) ? `#${v.toLowerCase()}` : null; };
-  hex.addEventListener('focus', () => { editingHex = true; focusValue = hex.value.trim().toLowerCase().replace(/^#/, ''); });
-  hex.addEventListener('input', () => { const v = typed(); addHue.classList.toggle('hidden', !v || Object.values(rows(ed.palette())).some(r => r.includes(v))); });
+  // The field selects its value on focus, so typing replaces it; the hue and accent buttons follow what is typed (D-081).
+  hex.addEventListener('focus', () => { editingHex = true; focusValue = hex.value.trim().toLowerCase().replace(/^#/, ''); requestAnimationFrame(() => hex.select()); });
+  hex.addEventListener('input', () => {
+    const v = typed(); addHue.classList.toggle('hidden', !v || Object.values(rows(ed.palette())).some(r => r.includes(v)));
+    asAccent.classList.toggle('hidden', !v || v === resolve({ role: 'accent' }, ed.palette()).toLowerCase());
+  });
   hex.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); hex.blur(); } if (e.key === 'Escape') { editingHex = false; hex.blur(); } });
   hex.addEventListener('blur', () => { const v = editingHex ? typed() : null; editingHex = false; if (v && v.slice(1) !== focusValue) { ed.applySwatch({ hex: v }); pick = hexToHsv(v); } ed.invalidate(); });
   addHue.addEventListener('pointerdown', e => e.preventDefault());
@@ -149,8 +153,10 @@ export function colourPanel(ed: Editor): HTMLElement {
     }
     if (worst) {
       const { text, bg, ratio } = worst, fix = passingShade(text.fill, bg, p);
-      contrastBox.classList.toggle('hidden', ratio >= 4.5);
-      if (ratio < 4.5) {
+      // A passing ratio shows too, so a palette card can state it (D-081).
+      contrastBox.classList.remove('hidden');
+      if (ratio >= 4.5) contrastBox.replaceChildren(h('span', { className: 'muted' }, 'Contrast'), h('span', {}, `${ratio.toFixed(1)} : 1  passes`), h('span'));
+      else {
         const use = h('button', { type: 'button', title: 'Use the nearest passing shade' }, 'use');
         use.addEventListener('click', () => { if (fix) { ed.applySwatch(fix.ref); toast(`Contrast ${fix.ratio.toFixed(1)} : 1`); } });
         contrastBox.replaceChildren(h('span', { className: 'muted' }, 'Contrast'), h('span', {}, `${ratio.toFixed(1)} : 1  fails`), h('span'),

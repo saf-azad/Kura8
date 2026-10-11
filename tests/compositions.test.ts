@@ -113,3 +113,14 @@ describe('band text stays readable when the palette changes in the editor (D-077
     expect(dark.nodes.find(n => n.slot === 'headline')).toMatchObject({ fill: { role: 'ink' } });
   });
 });
+describe('text on a filled ground stays readable (D-081)', () => {
+  it('re-picks automatic text on bare ground after a dark fill, and leaves text on blocks and chosen colours', () => {
+    const p: Palette = { hue: 210, dark: false, custom: [] }, t = (id: string, x: number, extra = {}) => ({ id, kind: 'text', text: 'Hi', weight: 400, align: 'start', fill: { role: 'ink' }, frames: { main: { rect: { x, y: 600, w: 100, h: 30 }, rot: 0 } }, ...extra }) as DocNode;
+    const photo = { id: 'p', kind: 'image', asset: 'a', frames: { main: { rect: { x: 500, y: 500, w: 400, h: 400 }, rot: 0 } } } as DocNode;
+    const d: KuraDoc = { version: 2, id: 'd', createdAt: '', palette: p, ground: { hex: '#1b1f3b' }, sizes: [{ id: 'main', ratio: 'square', guide: null, comp: null }], nodes: [photo, t('bare', 50), t('over', 600), t('chosen', 250, { fill: { hex: '#202020' } })] };
+    const out = keepReadable(d), fill = (id: string) => (out.nodes.find(n => n.id === id) as TextNode).fill;
+    expect(contrast(resolve(fill('bare'), p), '#1b1f3b')).toBeGreaterThanOrEqual(4.5);
+    expect(fill('over')).toEqual({ role: 'ink' }); expect(fill('chosen')).toEqual({ hex: '#202020' });
+    expect(keepReadable({ ...d, ground: null })).toEqual({ ...d, ground: null });
+  });
+});

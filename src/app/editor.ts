@@ -14,7 +14,7 @@ import { align, distribute, matchSize, type AlignMode } from '../core/arrange';
 import { drawnWeight, fontById } from '../core/fonts';
 import { letterOf } from './tools/shortcuts';
 import { addSize, removeSize } from '../core/sizes';
-import { containIn, CENTRE, freeSpot, fullImageRect, panFocus, spreadCells } from '../core/images';
+import { containIn, CENTRE, freeSpot, fullImageRect, panFocus, spreadCells, tiles } from '../core/images';
 import { direction, fontStack, physicalAlign } from '../core/script';
 import { exportSize } from '../core/ratios';
 import type { SnapHit, SnapLine } from '../core/snap';
@@ -77,6 +77,7 @@ export class Editor {
     this.imageBar = h('div', { className: 'seg image-bar hidden' }, h('button', { type: 'button', 'data-act': 'pick', title: 'Replace the picture' }, 'Replace'), h('button', { type: 'button', 'data-act': 'move', title: 'Drag the picture inside its frame' }, 'Reposition'),
       h('button', { type: 'button', 'data-act': 'fit', title: 'Fit the frame to the whole picture' }, 'Fit'),
       h('button', { type: 'button', 'data-act': 'fill', title: 'Fill the whole canvas, behind everything else' }, 'Fill canvas'),
+      h('button', { type: 'button', 'data-act': 'circle', title: 'Show the picture in a circle', 'aria-pressed': 'false' }, 'Circle'),
       h('span', { className: 'cut' }, h('button', { type: 'button', 'data-cut': '0' }, 'Before'), h('button', { type: 'button', 'data-cut': '1' }, 'After')));
     this.stack = h('div', { className: 'canvas-stack' }, this.docCanvas, this.overlay, this.imageBar);
     this.info = h('div', { className: 'info' });
@@ -99,6 +100,7 @@ export class Editor {
       else if (b.dataset.act === 'move') { if (this.store.ui.reposition) this.finishReposition(); else this.startReposition(n.id); }
       else if (b.dataset.act === 'fit') this.fitFrame(n.id);
       else if (b.dataset.act === 'fill') this.fillCanvas(n.id);
+      else if (b.dataset.act === 'circle') this.toggleCircle(n.id);
       else this.setCutout(b.dataset.cut === '1');
     });
     this.file.addEventListener('change', () => { const files = [...this.file.files ?? []]; this.file.value = ''; const target = this.fillTarget; this.fillTarget = null; void this.placeFiles(files, null, target); });
@@ -233,12 +235,13 @@ export class Editor {
     const n = this.one(), ui = this.store.ui, show = n?.kind === 'image' && !n.locked && !this.display && !ui.tool && !ui.armed;
     this.imageBar.classList.toggle('hidden', !show);
     if (!show || n?.kind !== 'image') return;
-    const moving = ui.reposition === n.id, cut = !!n.asset && this.cutouts.has(n.asset) && !moving, [pick, move, fit, fill] = [...this.imageBar.querySelectorAll<HTMLButtonElement>('[data-act]')];
+    const moving = ui.reposition === n.id, cut = !!n.asset && this.cutouts.has(n.asset) && !moving, [pick, move, fit, fill, circle] = [...this.imageBar.querySelectorAll<HTMLButtonElement>('[data-act]')];
     const natural = this.natural(n), r = this.frame(n).rect;
     fit.classList.toggle('hidden', moving || !natural || Math.abs(Math.log((r.w / r.h) / (natural.w / natural.h))) < .01);
     pick.textContent = n.asset ? 'Replace' : 'Choose picture'; pick.classList.toggle('hidden', moving);
     const c = this.canvas(), full = !this.frame(n).rot && Math.abs(r.x) < .5 && Math.abs(r.y) < .5 && Math.abs(r.w - c.w) < .5 && Math.abs(r.h - c.h) < .5;
     fill.classList.toggle('hidden', moving || full && this.doc.nodes[0]?.id === n.id);
+    circle.classList.toggle('hidden', moving); circle.setAttribute('aria-pressed', String(n.mask === 'circle'));
     const fitted = !!natural && Math.abs(Math.log((r.w / r.h) / (natural.w / natural.h))) < .01;
     move.textContent = moving ? 'Done' : 'Reposition'; move.classList.toggle('hidden', !n.asset || fitted && !moving); move.setAttribute('aria-pressed', String(moving));
     this.imageBar.querySelector('.cut')!.classList.toggle('hidden', !cut);
@@ -261,6 +264,14 @@ export class Editor {
     this.finishReposition();
     const c = this.canvas(), f = this.frame(n);
     this.commit(reorder(setFrames(this.doc, this.sizeId, { [id]: { ...f, rot: 0, rect: { x: 0, y: 0, ...c } } }), [id], 'back'), 'Fills the canvas · sent to the back');
+  }
+  /** Circle (D-081): the picture shows in the ellipse its frame bounds; turning it on squares the frame about its centre in this size. */
+  toggleCircle(id: string): void {
+    const n = nodeById(this.doc, id); if (n?.kind !== 'image' || n.locked) return;
+    const on = n.mask !== 'circle', f = this.frame(n), side = Math.min(f.rect.w, f.rect.h);
+    let doc = updateNodes(this.doc, [id], x => { const m = { ...x } as ImageNode; if (on) m.mask = 'circle'; else delete m.mask; return m; });
+    if (on) doc = setFrames(doc, this.sizeId, { [id]: { ...f, rect: { x: f.rect.x + (f.rect.w - side) / 2, y: f.rect.y + (f.rect.h - side) / 2, w: side, h: side } } });
+    this.commit(doc, on ? 'Circle' : 'Full frame');
   }
   /** Reposition (D-048): dragging moves the picture inside its frame; the frame stays where it is. */
   startReposition(id: string): void {
@@ -294,7 +305,8 @@ export class Editor {
     return out;
   }
   add(nodes: DocNode[], message?: string): void {
-    this.commit(addNodes(this.doc, nodes), message);
+    // New text in an automatic colour reads on the ground it lands on (a dark filled ground, D-081).
+    this.commit(keepReadable(addNodes(this.doc, nodes)), message);
     this.store.setUI({ sel: nodes.map(n => n.id), armed: null, panel: this.store.ui.panel === 'colour' ? null : this.store.ui.panel });
   }
   centred(w: number, hgt: number): Rect { const c = this.canvas(), o = this.nextOffset(); return { x: (c.w - w) / 2 + o, y: (c.h - hgt) / 2 + o, w, h: hgt }; }
@@ -348,6 +360,10 @@ export class Editor {
     // The Image tool fills its frame, then the other empty frames in order, before adding new pictures (D-077); a drop
     // fills only the block under it.
     const fills = target ? [target, ...this.visible().filter(n => n.kind === 'image' && !n.asset && !n.locked && n.id !== target).map(n => n.id)] : hit ? [hit.id] : [];
+    // Several pictures for one empty frame share it as tiles (a team page, a mood board) instead of piling up (D-081).
+    let shared: ImageNode | null = null;
+    // A picture dropped on a circle shape takes its place as a circle picture (D-081).
+    let ring = !target && hit?.kind === 'shape' && hit.shape === 'circle' && !hit.locked ? hit : null;
     for (const original of images) {
       let stored: { key: string; natural: Size }, clear = false, file: Blob = original;
       try {
@@ -360,8 +376,14 @@ export class Editor {
       }
       // A see-through picture (logo, sticker) dropped on a photo goes on top of it; onto an empty frame it fills the
       // frame and the frame takes the picture's proportions, so a logo is never cropped (D-047).
+      if (ring) {
+        const img: ImageNode = { id: newId(), kind: 'image', asset: stored.key, mask: 'circle', frames: structuredClone(ring.frames), ...(ring.opacity !== undefined ? { opacity: ring.opacity } : {}) };
+        const id = ring.id; ring = null; fills.length = 0;
+        this.commit({ ...this.doc, nodes: this.doc.nodes.map(n => n.id === id ? img : n) }, 'Filled the circle'); this.select([img.id]); continue;
+      }
       const into = fills.length ? nodeById(this.doc, fills.shift()!) : undefined;
       if (into?.kind === 'image' && !into.locked && !(clear && into.asset && !target)) {
+        if (!into.asset && !shared && images.length > 1) shared = into;
         const f = this.frame(into), rect = clear ? containIn(f.rect, stored.natural) : f.rect;
         this.commit(setFrames(updateNodes(this.doc, [into.id], n => ({ ...n, asset: stored.key, cutout: false, focus: CENTRE }) as ImageNode), this.sizeId, { [into.id]: { ...f, rect } }), 'Filled');
         this.select([into.id]); continue;
@@ -372,6 +394,20 @@ export class Editor {
     // Skipped files are named in the closing toast, so a batch never hides them (D-074).
     const note = skipped.length ? ` · skipped ${skipped.join('; ')}` : '';
     if (!added.length) { if (skipped.length) toast(`Nothing added${note}`, 3600); return; }
+    if (shared) {
+      // The frame and the pictures left over split the frame's area in every size; each picture covers its tile.
+      const n = 1 + added.length, ids = added.map(() => newId()), frames: Record<string, Record<string, Frame>> = Object.fromEntries([shared.id, ...ids].map(id => [id, {}]));
+      for (const s of this.doc.sizes) {
+        const f = shared.frames[s.id]; if (!f) continue;
+        const c = canvasSize(s.ratio), t = tiles(f.rect, n, Math.min(c.w, c.h) * .015);
+        [shared.id, ...ids].forEach((id, i) => { frames[id][s.id] = { ...f, rect: t[i] }; });
+      }
+      const doc = { ...this.doc, nodes: this.doc.nodes.map(n => n.id === shared!.id ? { ...n, frames: { ...n.frames, ...frames[n.id] } } : n) };
+      const nodes: DocNode[] = added.map((a, i) => ({ id: ids[i], kind: 'image', asset: a.key, frames: frames[ids[i]] }));
+      const at = doc.nodes.findIndex(n => n.id === shared!.id) + 1;
+      this.commit({ ...doc, nodes: [...doc.nodes.slice(0, at), ...nodes, ...doc.nodes.slice(at)] }, `${n} pictures share the frame${note}`);
+      this.store.setUI({ sel: [shared.id, ...ids], armed: null }); return;
+    }
     // New pictures spread over the emptiest guide cells (the drop point's cell first), keep their own proportions
     // inside them, and go under the text (D-047, D-058). One undo step for the batch.
     const c = this.canvas(), p = at ?? { x: c.w / 2, y: c.h / 2 }, taken = this.taken();
@@ -434,7 +470,7 @@ export class Editor {
   }
   rename(id: string, name: string): void { const next = setName(this.doc, id, name); if (JSON.stringify(next) !== JSON.stringify(this.doc)) this.commit(next, 'Renamed'); }
   setLock(id: string, lock: boolean): void { this.commit(setLocked(this.doc, [id], lock), lock ? 'Locked' : 'Unlocked'); }
-  setHidden(id: string, hidden: boolean): void { this.commit(setHidden(this.doc, this.sizeId, [id], hidden), hidden ? 'Hidden' : 'Shown'); if (hidden) this.select(this.store.ui.sel.filter(x => x !== id)); }
+  setHidden(id: string, hidden: boolean): void { this.commit(setHidden(this.doc, this.sizeId, [id], hidden), (hidden ? 'Hidden' : 'Shown') + (this.doc.sizes.length > 1 ? ' in this size' : '')); if (hidden) this.select(this.store.ui.sel.filter(x => x !== id)); }
   reorder(mode: Order, ids = this.store.ui.sel): void {
     if (!ids.length) return;
     const next = reorder(this.doc, ids, mode);
@@ -454,10 +490,10 @@ export class Editor {
     else if (!sel.length) this.store.setUI({ armed: ref });
   }
   /** The ground takes a colour directly (Colour panel, D-077), and paint stops. */
-  fillGround(ref: ColourRef): void { this.store.setUI({ armed: null }); this.commit(setGround(this.doc, ref), 'Ground filled'); }
+  fillGround(ref: ColourRef): void { this.store.setUI({ armed: null }); this.commit(keepReadable(setGround(this.doc, ref)), 'Ground filled'); }
   paintAt(node: DocNode | undefined): void {
     const armed = this.store.ui.armed; if (!armed) return;
-    if (!node) { this.commit(setGround(this.doc, armed), 'Ground filled'); return; }
+    if (!node) { this.commit(keepReadable(setGround(this.doc, armed)), 'Ground filled'); return; }
     if (node.kind === 'image' || node.locked) return;
     this.commit(setFill(this.doc, [node.id], armed));
   }
@@ -554,14 +590,14 @@ export class Editor {
     const frames = Object.fromEntries(sel.map(n => { const f = this.frame(n), m = moves[n.id] ?? { dx: 0, dy: 0 }; return [n.id, { ...f, rect: { ...f.rect, x: f.rect.x + m.dx, y: f.rect.y + m.dy } }]; }));
     this.commit(setFrames(this.doc, this.sizeId, frames), mode.startsWith('spread') ? 'Spaced evenly' : key.length ? 'Aligned to the locked block' : sel.length === 1 ? 'Aligned to the canvas' : 'Aligned');
   }
-  /** Same width or height (D-077): the selection takes the locked block's size, else the first one picked; text takes widths only. */
+  /** Same width or height (D-077): the selection takes the locked block's size, else the first one picked; text takes widths only; pictures match exactly and re-cover their frames, so equal tiles are possible (D-081). */
   matchSize(mode: 'w' | 'h'): void {
     const shown = this.selected().filter(n => !this.frame(n).hidden);
     if (shown.length < 2) { toast('Select two or more to match sizes'); return; }
     const order = this.store.ui.sel, key = shown.find(n => n.locked) ?? [...shown].sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id))[0];
     const others = shown.filter(n => n !== key && !n.locked && !(mode === 'h' && n.kind === 'text' && !n.fit));
     if (!others.length) return;
-    const rects = matchSize(others.map(n => ({ id: n.id, rect: this.frame(n).rect, keepAspect: n.kind === 'image' && !!n.asset || n.kind === 'shape' && !!n.icon })), this.frame(key).rect, mode);
+    const rects = matchSize(others.map(n => ({ id: n.id, rect: this.frame(n).rect, keepAspect: n.kind === 'shape' && !!n.icon })), this.frame(key).rect, mode);
     this.commit(setFrames(this.doc, this.sizeId, Object.fromEntries(others.map(n => [n.id, { ...this.frame(n), rect: rects[n.id] }]))), mode === 'w' ? 'Same width' : 'Same height');
     this.flagAllText();
   }

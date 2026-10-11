@@ -42,12 +42,13 @@ export function layout(o: LayoutInput): Layout {
   }
   return { image, accent, headline: { rect: R(head.x, head.y, head.w, placed.headH), fontSize: fs }, body: { rect: R(placed.at.x, placed.at.y, placed.at.w, textHeight(bodyLines, bodySize)), fontSize: bodySize } };
 }
-/** Ink or ground, whichever reads better on the accent; when a mid-tone accent defeats both, black or white (D-056, D-076). */
-function readableOnAccent(palette: Palette): ColourRef {
-  const accent = resolve({ role: 'accent' }, palette), score = (c: ColourRef) => contrast(resolve(c, palette), accent);
+/** Ink or ground, whichever reads better on `bg`; when a mid-tone defeats both, black or white (D-056, D-076). */
+function readableOn(bg: string, palette: Palette): ColourRef {
+  const score = (c: ColourRef) => contrast(resolve(c, palette), bg);
   const pick = (refs: ColourRef[]) => refs.reduce((a, b) => score(b) > score(a) ? b : a), best = pick([{ role: 'ink' }, { role: 'ground' }]);
   return score(best) >= 4.5 ? best : pick([{ hex: '#000000' }, { hex: '#ffffff' }]);
 }
+const readableOnAccent = (palette: Palette): ColourRef => readableOn(resolve({ role: 'accent' }, palette), palette);
 /** Text that sits on the accent block (the poster band) takes ink or ground, whichever reads better on the accent (D-056). */
 export function textRoleOn(slots: Layout, text: Rect, palette: Palette): ColourRef {
   const inside = contains(slots.accent, { x: text.x, y: text.y }) && contains(slots.accent, { x: text.x + text.w, y: text.y + text.h });
@@ -56,22 +57,25 @@ export function textRoleOn(slots: Layout, text: Rect, palette: Palette): ColourR
 /** An automatic text colour: ink, ground, or the black or white chosen for a band; anything else was the person's choice. */
 export const autoFill = (fill: ColourRef): boolean => 'role' in fill && fill.role !== 'accent' || 'hex' in fill && /^#(000000|ffffff)$/i.test(fill.hex);
 /**
- * After a palette change (a hue, Dark ground), text in an automatic colour that lies on an accent block in any size and
- * no longer reaches 4.5 : 1 on it takes the readable colour again (D-077). Text that still reads, and chosen colours, stay.
+ * After a palette or ground change (a hue, Dark ground, a filled ground), text in an automatic colour that no longer reaches
+ * 4.5 : 1 on what lies behind it takes the readable colour again (D-077, D-081): on an accent block in any size, the
+ * accent; on nothing at all in every size, the ground. Text that still reads, text over pictures or other blocks, and
+ * chosen colours stay.
  */
 export function keepReadable(doc: KuraDoc): KuraDoc {
-  const accent = resolve({ role: 'accent' }, doc.palette);
+  const accent = resolve({ role: 'accent' }, doc.palette), ground = resolve(doc.ground ?? { role: 'ground' }, doc.palette);
+  const inside = (outer: Rect, inner: Rect) => contains(outer, { x: inner.x, y: inner.y }) && contains(outer, { x: inner.x + inner.w, y: inner.y + inner.h });
+  const meets = (a: Rect, b: Rect) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
   const nodes = doc.nodes.map((n, i) => {
-    if (n.kind !== 'text' || !autoFill(n.fill) || contrast(resolve(n.fill, doc.palette), accent) >= 4.5) return n;
-    const onBand = doc.sizes.some(({ id }) => {
+    if (n.kind !== 'text' || !autoFill(n.fill)) return n;
+    const below = doc.nodes.slice(0, i), sizes = doc.sizes.filter(({ id }) => n.frames[id] && !n.frames[id].hidden);
+    const onBand = sizes.some(({ id }) => {
       const t = n.frames[id];
-      return t && !t.hidden && doc.nodes.slice(0, i).some(b => {
-        const f = b.frames[id];
-        return b.kind === 'shape' && b.shape === 'rect' && 'role' in b.fill && b.fill.role === 'accent' && f && !f.hidden && !f.rot && !t.rot
-          && contains(f.rect, { x: t.rect.x, y: t.rect.y }) && contains(f.rect, { x: t.rect.x + t.rect.w, y: t.rect.y + t.rect.h });
-      });
+      return !t.rot && below.some(b => { const f = b.frames[id]; return b.kind === 'shape' && b.shape === 'rect' && 'role' in b.fill && b.fill.role === 'accent' && f && !f.hidden && !f.rot && inside(f.rect, t.rect); });
     });
-    return onBand ? { ...n, fill: readableOnAccent(doc.palette) } : n;
+    const bare = !onBand && sizes.length > 0 && sizes.every(({ id }) => below.every(b => { const f = b.frames[id]; return !f || f.hidden || b.kind === 'ink' || !meets(f.rect, n.frames[id].rect); }));
+    const bg = onBand ? accent : bare ? ground : null;
+    return bg && contrast(resolve(n.fill, doc.palette), bg) < 4.5 ? { ...n, fill: readableOn(bg, doc.palette) } : n;
   });
   return nodes.some((n, i) => n !== doc.nodes[i]) ? { ...doc, nodes } : doc;
 }

@@ -125,7 +125,8 @@ input.readout{width:58px;text-align:center;font:inherit;font-size:13px;backgroun
 .hue-bar i{top:50%;width:8px;height:20px;margin:-10px 0 0 -4px;border-radius:var(--r-pill);border:var(--stroke) solid var(--ink);background:var(--white)}
 .contrast{display:grid;grid-template-columns:auto 1fr auto;gap:4px 10px;align-items:center;font-size:12px}
 .contrast button{font-size:12px;border-bottom:1px solid var(--ink)}
-.grounds{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px}
+.grounds{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px 10px;font-size:12px}
+.grounds>.muted{flex:1 1 100%}
 .grounds .pair{display:flex;gap:6px}
 .grounds .pair button{width:22px;height:22px;border-radius:var(--r-pill);border:var(--stroke) solid var(--ink)}
 .grounds .pair button[aria-pressed=true]{outline:var(--stroke) solid var(--ink);outline-offset:2px}

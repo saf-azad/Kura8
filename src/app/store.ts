@@ -48,7 +48,7 @@ export class Store {
     this.doc = doc;
     this.dial = { ...defaultDial(), ...read<DialSettings>(KEYS.dial) };
     const prefs = read<Partial<UI>>(KEYS.prefs) ?? {};
-    this.ui = { screen: doc ? 'editor' : 'dial', size: doc?.sizes[0].id ?? 'main', sel: [], panel: null, tool: null, guides: prefs.guides ?? true, grid: prefs.grid ?? { on: false, size: 40 }, help: false,
+    this.ui = { screen: doc ? 'editor' : 'dial', size: doc?.sizes.some(s => s.id === prefs.size) ? prefs.size! : doc?.sizes[0].id ?? 'main', sel: [], panel: null, tool: null, guides: prefs.guides ?? true, grid: prefs.grid ?? { on: false, size: 40 }, help: false,
       armed: null, swatch: { role: 'accent' }, row: 'accent', editing: null, flags: [], removing: null, previewDark: null, ratioMode: 'change', reposition: null };
   }
   on(fn: (c: Change) => void): () => void { this.listeners.add(fn); return () => this.listeners.delete(fn); }
@@ -77,7 +77,8 @@ export class Store {
   }
   setUI(patch: Partial<UI>): void {
     this.ui = { ...this.ui, ...patch };
-    if ('guides' in patch || 'grid' in patch) write(KEYS.prefs, { guides: this.ui.guides, grid: this.ui.grid });
+    // The active size outlives a reload too (D-081).
+    if ('guides' in patch || 'grid' in patch || 'size' in patch) write(KEYS.prefs, { guides: this.ui.guides, grid: this.ui.grid, size: this.ui.size });
     this.emit({ ui: true });
   }
   setDial(patch: Partial<DialSettings>): void { this.dial = { ...this.dial, ...patch }; if (!('accent' in patch) && 'hue' in patch) delete this.dial.accent; write(KEYS.dial, this.dial); this.emit({ ui: true }); }

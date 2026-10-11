@@ -35,11 +35,13 @@ export function drawOp(ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingC
     const bitmap = o.asset ? opts.image(o.asset, o.cutout) : undefined;
     if (bitmap) {
       const c = coverCrop({ w: bitmap.width, h: bitmap.height }, r, o.focus);
+      if (o.circle) { ctx.beginPath(); ctx.ellipse(r.w / 2, r.h / 2, r.w / 2, r.h / 2, 0, 0, Math.PI * 2); ctx.clip(); }
       ctx.imageSmoothingQuality = 'high'; ctx.drawImage(bitmap, c.x, c.y, c.w, c.h, 0, 0, r.w, r.h);
     } else if (opts.placeholders) {
       const line = 2 / opts.scale;
-      ctx.fillStyle = 'rgba(156,171,194,.35)'; ctx.fillRect(0, 0, r.w, r.h);
-      ctx.strokeStyle = '#9CABC2'; ctx.lineWidth = line; ctx.strokeRect(line / 2, line / 2, r.w - line, r.h - line);
+      ctx.fillStyle = 'rgba(156,171,194,.35)'; ctx.strokeStyle = '#9CABC2'; ctx.lineWidth = line;
+      if (o.circle) { ctx.beginPath(); ctx.ellipse(r.w / 2, r.h / 2, r.w / 2 - line / 2, r.h / 2 - line / 2, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+      else { ctx.fillRect(0, 0, r.w, r.h); ctx.strokeRect(line / 2, line / 2, r.w - line, r.h - line); }
     }
   }
   ctx.restore();

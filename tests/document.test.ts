@@ -43,10 +43,11 @@ describe('document v2', () => {
       { ...r, fill: { hex: 'red' } }, { ...r, fill: { role: 'ink', hex: '#000000' } }, { ...r, fill: { row: 'base', step: 7 } }, { ...r, fill: { row: 'x', step: 1 } }, { ...r, shape: 'heart2' }, { ...r, shape: 7 }, { ...r, icon: o.kind === 'shape' && o.icon },
       { ...o, icon: undefined }, { ...o, icon: { set: 'phosphor', name: '', d: 'M0 0', licence: 'MIT' } },
       { ...t, text: 4 }, { ...t, weight: 500 }, { ...t, align: 'left' }, { ...t, fit: 'yes' },
-      { ...i, asset: '' }, { ...i, asset: 5 }, { ...i, cutout: 1 }, { ...i, focus: { x: 2, y: 0 } }, { ...i, focus: { x: 0, y: -1 } }, { ...i, focus: 'centre' },
+      { ...i, asset: '' }, { ...i, asset: 5 }, { ...i, cutout: 1 }, { ...i, focus: { x: 2, y: 0 } }, { ...i, focus: { x: 0, y: -1 } }, { ...i, focus: 'centre' }, { ...i, mask: 'square' },
       { ...k, paths: [] }, { ...k, paths: [[]] }, { ...k, paths: [[[0]]] }, { ...k, paths: [[[0, 'a']]] }, { ...k, paths: 'x' }, { ...k, paths: ['x'] }, { ...k, stroke: 0 }, { ...k, form: 'star' }];
     for (const n of bad) expect(validateDocument({ ...doc(), nodes: [n] })).toBe(false);
     expect(validateDocument(doc([r, r]))).toBe(false);
+    expect(validateDocument({ ...doc(), nodes: [{ ...i, mask: 'circle' }] })).toBe(true);
   });
   it('validates colour references exactly', () => {
     expect([{ role: 'ink' }, { row: 'base', step: 0 }, { row: 'accent', step: 6 }, { row: 'c12', step: 3 }, { hex: '#a1B2c3' }].every(validColour)).toBe(true);

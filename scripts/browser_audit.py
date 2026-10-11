@@ -385,7 +385,7 @@ def s_layers(app):
     p.locator('button[aria-label="Layers"]').click(); p.wait_for_timeout(200)
     rows = p.locator('.layer'); check(rows.count() == len(d['nodes']), 'layer count')
     check('Body text' in rows.nth(0).inner_text(), f'top layer {rows.nth(0).inner_text()}')
-    rows.nth(0).locator('button[aria-label="Hide"]').click()
+    rows.nth(0).locator('button[aria-label^="Hide"]').click()
     body = find(app.doc(), slot='body')[0]; check(body['frames']['main'].get('hidden') is True, 'hide')
     p.locator('.layer').nth(1).locator('button[aria-label="Lock"]').click(); check(find(app.doc(), slot='headline')[0].get('locked') is True, 'lock from layers')
     p.locator('.layer').nth(1).locator('button[aria-label="Send backward"]').click()
@@ -444,7 +444,7 @@ def s_5h(app):
     p.locator('.colour-panel .roles button', has_text='Ground').click(); p.wait_for_timeout(150)
     box = p.locator('.colour-panel .contrast'); check(box.is_visible() and 'fails' in box.inner_text(), 'no contrast warning')
     box.locator('button', has_text='use').click(); f = find(app.doc(), slot='headline')[0]['fill']
-    check('row' in f, f'fix fill {f}'); p.wait_for_timeout(150); check(not p.locator('.colour-panel .contrast').is_visible(), 'still failing after use')
+    check('row' in f, f'fix fill {f}'); p.wait_for_timeout(150); check('fails' not in p.locator('.colour-panel .contrast').inner_text(), 'still failing after use')
 
 
 @step('5i roles mirror in dark mode; holding the ground toggle previews the other ground')
@@ -625,7 +625,7 @@ def s_sizes(app):
 @step('5y hidden objects stay out of exports and the sheet says how many')
 def s_5y(app):
     app.start(SQUARE); p = app.page; d = app.doc(); acc = find(d, slot='accent')[0]
-    p.locator('button[aria-label="Layers"]').click(); p.locator('.layer', has_text='Rectangle').locator('button[aria-label="Hide"]').click(); p.keyboard.press('Escape')
+    p.locator('button[aria-label="Layers"]').click(); p.locator('.layer', has_text='Rectangle').locator('button[aria-label^="Hide"]').click(); p.keyboard.press('Escape')
     p.keyboard.press('Control+Shift+E'); p.wait_for_timeout(300)
     notes = p.locator('.sheet .notes').inner_text(); check('1 hidden object not included' in notes, f'notes: {notes}')
     check('1 empty image frame not included' in notes, f'empty frame note: {notes}')

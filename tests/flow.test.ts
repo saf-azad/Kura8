@@ -59,8 +59,8 @@ it('keeps one-line text on one line when its size or face changes (D-070)', () =
   const centred = updateNodes(hug, ['n'], n => ({ ...n, align: 'center', frames: { main: { ...n.frames.main, rect: { ...n.frames.main.rect, x: 400 } } } }));
   const c = w(hugText(centred, grow(centred, 150), 'n', charMeasure)); expect(c.x + c.w / 2).toBeCloseTo(400 + 153 / 2, 5);
   expect(w(hugText(hug, updateNodes(grow(hug, 150), ['n'], n => ({ ...n, align: 'center' })), 'n', charMeasure)).x).toBe(0);
-  // The aligned edge stays put: past the canvas edge the text wraps rather than sliding back over its neighbours (D-077).
-  const huge = grow(hug, 400); expect(w(hugText(hug, huge, 'n', charMeasure))).toMatchObject({ x: 100, w: 900 });
+  // A free label slides back to stay on the canvas, up to the canvas width (D-070, D-081).
+  const huge = grow(hug, 400); expect(w(hugText(hug, huge, 'n', charMeasure))).toMatchObject({ x: 0, w: 1000 });
   const two = updateNodes(hug, ['n'], n => ({ ...n, text: 'a\nb' }));
   expect(hugText(two, grow(two, 150), 'n', charMeasure)).toEqual(grow(two, 150));
   expect(hugText(hug, hug, 'missing', charMeasure)).toBe(hug);
@@ -101,7 +101,7 @@ it('lets a hugging label follow retyped text, and widens a wide box only to save
   expect(w(hugText(hug, retype(hug, 'Open now until late'), 'n', charMeasure)).w).toBeCloseTo(19 * 36 * 1.02, 0);
   expect(w(hugText(hug, retype(hug, 'Open'), 'n', charMeasure)).w).toBeCloseTo(4 * 36 * 1.02, 0);
   // A column box (a split layout's headline) wraps between words instead of growing across the picture.
-  const column = doc([textNode('n', frame(378, 0, 570, 69, { fontSize: 60 }), 'Marcus')]);
+  const column = doc([textNode('n', frame(378, 0, 570, 69, { fontSize: 60 }), 'Marcus', { slot: 'headline' } as Partial<TextNode>)]);
   expect(w(hugText(column, retype(column, 'Marcus Lee Digital Marketing'), 'n', charMeasure)).w).toBe(570);
   expect(w(hugText(column, retype(column, 'Communications'), 'n', charMeasure)).w).toBe(570);
   expect(w(hugText(column, retype(column, 'Communicationsandmarketing'), 'n', charMeasure))).toMatchObject({ x: 378, w: 622 });
@@ -127,4 +127,14 @@ it('finds the largest size that keeps every word whole, and the room a block may
   expect(roomFor({ ...t, align: 'end' }, t.frames.main, canvas)).toBe(500);
   expect(roomFor({ ...t, align: 'center' }, t.frames.main, canvas)).toBe(800);
   expect(roomFor(t, { ...t.frames.main, rot: 10 }, canvas)).toBe(1000);
+});
+it('keeps layout text in its slot when retyped, and slides a free label at the left edge back on (D-081)', () => {
+  // The starter headline nearly fills its slot, so it looked like a hugging label and grew across the picture column.
+  const slot = doc([textNode('h', frame(378, 0, 400, 69, { fontSize: 60 }), 'Headline', { slot: 'headline' } as Partial<TextNode>)]);
+  const retyped = updateNodes(slot, ['h'], n => ({ ...n, text: 'Graduate Showcase at Western Sydney University' }));
+  expect(hugText(slot, retyped, 'h', charMeasure)).toBe(retyped);
+  const label = doc([textNode('a', frame(20, 0, 123, 57.5, { fontSize: 50 }), '+142', { align: 'end' } as Partial<TextNode>)]);
+  const big = updateNodes(label, ['a'], n => ({ ...n, frames: { main: { ...n.frames.main, fontSize: 100 } } }));
+  expect(hugText(label, big, 'a', charMeasure).nodes[0].frames.main.rect).toMatchObject({ x: 0 });
+  expect(hugText(label, big, 'a', charMeasure).nodes[0].frames.main.rect.w).toBeCloseTo(240 * 1.02, 0);
 });

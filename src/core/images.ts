@@ -77,3 +77,19 @@ export function freeSpot(o: { size: Size; canvas: Size; cells: Rect[]; taken: Re
   }
   return best;
 }
+/**
+ * Tiles for several pictures sharing one frame (D-081): a grid in reading order,
+ * `gap` apart; the last row's tiles widen to fill it.
+ */
+export function tiles(rect: Rect, n: number, gap: number): Rect[] {
+  // Columns whose tiles come closest to square, a part-filled last row costing a little; ties go to more columns.
+  const score = (c: number) => Math.abs(Math.log((rect.w / c) / (rect.h / Math.ceil(n / c)))) + (n % c ? .5 : 0);
+  let cols = 1;
+  for (let c = 2; c <= n; c++) if (score(c) <= score(cols) + 1e-9) cols = c;
+  const rows = Math.ceil(n / cols), h = (rect.h - gap * (rows - 1)) / rows, out: Rect[] = [];
+  for (let r = 0; r < rows; r++) {
+    const k = r < rows - 1 ? cols : n - cols * (rows - 1), w = (rect.w - gap * (k - 1)) / k;
+    for (let c = 0; c < k; c++) out.push({ x: rect.x + c * (w + gap), y: rect.y + r * (h + gap), w, h });
+  }
+  return out;
+}

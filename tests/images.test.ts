@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { coverCrop, workingSize, nearestCell, containIn, CENTRE, panFocus, fullImageRect, spreadCells, freeSpot } from '../src/core/images';
+import { coverCrop, workingSize, nearestCell, containIn, CENTRE, panFocus, fullImageRect, spreadCells, freeSpot, tiles } from '../src/core/images';
 it('crops to cover around the focus point, clamped inside the image', () => {
   expect(coverCrop({ w: 2000, h: 1000 }, { w: 100, h: 100 })).toEqual({ x: 500, y: 0, w: 1000, h: 1000 });
   expect(coverCrop({ w: 2000, h: 1000 }, { w: 100, h: 100 }, { x: 0, y: .5 })).toEqual({ x: 0, y: 0, w: 1000, h: 1000 });
@@ -52,4 +52,11 @@ describe('a free spot for pasted copy and icons (D-077)', () => {
     expect(p.y >= headline.y + headline.h || p.x + 540 <= headline.x).toBe(true); expect(p.x + 540).toBeLessThanOrEqual(900);
     expect(freeSpot({ size: { w: 2000, h: 100 }, canvas, cells: [], taken: [], pad: 20 })).toEqual({ x: 0, y: 20 });
   });
+});
+it('tiles several pictures into one frame, closest to square, the last row filling its width (D-081)', () => {
+  const t = tiles({ x: 0, y: 0, w: 1000, h: 500 }, 4, 10);
+  expect(t).toHaveLength(4); expect(t.every(r => r.y === 0 && Math.abs(r.w - 242.5) < 1e-9 && r.h === 500)).toBe(true);
+  const six = tiles({ x: 0, y: 0, w: 600, h: 900 }, 5, 0);
+  expect(six.map(r => [r.x, r.y, r.w, r.h])).toEqual([[0, 0, 300, 300], [300, 0, 300, 300], [0, 300, 300, 300], [300, 300, 300, 300], [0, 600, 600, 300]]);
+  expect(tiles({ x: 5, y: 5, w: 100, h: 100 }, 1, 4)).toEqual([{ x: 5, y: 5, w: 100, h: 100 }]);
 });

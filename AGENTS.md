@@ -125,17 +125,18 @@ type Base = { id: string; locked?: boolean; slot?: Slot; opacity?: number; name?
 export type FontId = 'grotesk' | 'poppins' | 'playfair' | 'lora' | 'bebas' | 'caveat' | 'mono';
 export type TextNode = Base & { kind: 'text'; text: string; weight: 400 | 700; align: 'start' | 'center' | 'end'; fill: ColourRef; fit?: boolean; font?: FontId };
 export type ShapeNode = Base & { kind: 'shape'; shape: string; fill: ColourRef; icon?: { set: string; name: string; d: string; licence: string } };
-export type ImageNode = Base & { kind: 'image'; asset: string | null; cutout?: boolean; focus?: Point };
+export type ImageNode = Base & { kind: 'image'; asset: string | null; cutout?: boolean; focus?: Point; mask?: 'circle' };
 export type InkNode = Base & { kind: 'ink'; paths: [number, number][][]; stroke: number; fill: ColourRef; form?: 'line' | 'arrow' | 'rect' | 'ellipse' | 'tri' };
 export type DocNode = TextNode | ShapeNode | ImageNode | InkNode;
 export type SizeSpec = { id: string; ratio: RatioId; guide: GuideId | null; comp: CompId | null };
 export type KuraDoc = { version: 2; id: string; createdAt: string; palette: Palette; ground: ColourRef | null; sizes: SizeSpec[]; nodes: DocNode[] };
 ```
 
-- Content (text, fill, weight, align, font, shape, icon, asset, cutout, focus, paths, stroke, lock, opacity, name) lives on the node. Geometry (rect, rotation, font size, hidden) lives in `frames[sizeId]`. Linked sizes (5w) follow from this: content edits show in every size, geometry stays local. Adding or deleting a node affects every size; `hidden` leaves a node out of one size. Array order is the one shared draw order.
+- Content (text, fill, weight, align, font, shape, icon, asset, cutout, focus, mask, paths, stroke, lock, opacity, name) lives on the node. Geometry (rect, rotation, font size, hidden) lives in `frames[sizeId]`. Linked sizes (5w) follow from this: content edits show in every size, geometry stays local. Adding or deleting a node affects every size; `hidden` leaves a node out of one size. Array order is the one shared draw order.
 - Colours resolve through the palette. Dark mode maps row step `s` to `6 − s`; `{ hex }` never mirrors. A custom hue (5g) adds row `c{n}` at the seven lightness steps, with the step nearest the pasted hex replaced by it exactly.
 - `ground: null` means unfilled: the editor draws the palette ground. PNG export offers No ground for any ground (5z, D-050).
 - `opacity` is 0–1, absent means opaque (D-052). `name` is a Layers name, trimmed, at most 80 characters (D-066). `font` absent means Space Grotesk; a single-weight face draws its one weight (D-049).
+- `mask: 'circle'` shows a picture in the ellipse its frame bounds (D-081); absent means the full frame.
 - `asset: null` is an empty image frame. Assets are IndexedDB keys (SHA-256 of the bytes) holding original, working copy and optional cutout; `cutout` chooses which one shows (5o). The cover crop is derived from the frame and `focus` (default centre), never stored.
 - Never stored: effective font size, overflow and off-canvas flags, crop rects, physical alignment, text direction, guide anchors.
 - Icons are shape nodes with `shape: 'icon'` and the path inline in `icon.d` (100 × 100 box); every other `shape` is a key of the 41-shape library in `shapes.ts`.

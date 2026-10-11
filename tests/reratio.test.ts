@@ -4,7 +4,7 @@ import { relayout } from '../src/core/relayout';
 import { addSize, removeSize, closestSize } from '../src/core/sizes';
 import { layout, starterNodes } from '../src/core/compositions';
 import { canvasSize } from '../src/core/ratios';
-import { validateDocument, type KuraDoc } from '../src/core/document';
+import { validateDocument, type DocNode, type KuraDoc } from '../src/core/document';
 import { fakeMeasure, doc, frame, rectNode, textNode, ids, size } from './helpers';
 describe('re-ratio (5v)', () => {
   it('lists edge, centre and guide lines per axis', () => {
@@ -61,6 +61,12 @@ describe('re-ratio (5v)', () => {
       const r = out.nodes[0].frames.main.rect; expect(r.x + r.w / 2).toBeCloseTo(c.w / 2, 6); expect(r.y + r.h / 2).toBeCloseTo(c.h / 2, 6);
       expect(out.nodes[1].frames.main.rect.x).toBeCloseTo(c.w / 3, 6);
     }
+  });
+  it('keeps a loose picture’s proportions but lets a layout picture take its slot (D-081)', () => {
+    const logo: DocNode = { id: 'logo', kind: 'image', asset: 'a', frames: { main: frame(600, 30, 318, 95) } }, slotted: DocNode = { id: 's', kind: 'image', asset: 'b', slot: 'image', frames: { main: frame(0, 0, 1000 / 3, 250) } };
+    const out = reRatio(doc([logo, slotted], size({ ratio: 'cover' })), 'main', { ratio: 'square' }, fakeMeasure).doc;
+    const l = out.nodes[0].frames.main.rect, sl = out.nodes[1].frames.main.rect;
+    expect(l.w / l.h).toBeCloseTo(318 / 95, 6); expect(sl.w / sl.h).not.toBeCloseTo(1000 / 3 / 250, 1);
   });
   it('treats rotated nodes as free and changes the guide when asked', () => {
     const d = doc([rectNode('r', frame(0, 0, 100, 100, { rot: 30 }))]);

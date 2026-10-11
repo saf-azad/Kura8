@@ -62,7 +62,11 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
       else drag = { kind: 'resize', id: node.id, handle: knob.handle, before: ed.doc, frame: f, box: ed.box(node), size: node.kind === 'text' ? textBox(node, f, measure, ed.typeScale()).size : 0, moved: false, start: p };
       el.setPointerCapture(e.pointerId); e.preventDefault(); return;
     }
-    const hit = ed.hitTest(p);
+    // A drag that starts on the selection moves the selection even where another block covers it; a click there without
+    // a drag still selects the block on top (D-081).
+    const top = ed.hitTest(p), under = !e.shiftKey && !e.altKey && top && !ui.sel.includes(top.id)
+      ? [...ed.doc.nodes].reverse().find(n => ui.sel.includes(n.id) && !n.locked && !ed.frame(n).hidden && containsRotated(ed.box(n), ed.frame(n).rot, p)) : undefined;
+    const hit = under ?? top;
     const keepPanel = ui.panel === 'shapes' || ui.panel === 'layers' || ui.panel === 'colour' || ui.panel === 'fonts' || ui.panel === 'arrange' ? ui.panel : null;
     if (!hit) {
       const base = e.shiftKey ? ui.sel : [];
@@ -89,7 +93,7 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
     const single = movers.length === 1 ? movers[0] : null;
     const box = single ? ed.box(single) : unionRect(movers.map(n => rotatedBounds(ed.box(n), ed.frame(n).rot)));
     // Alt drags without snapping (5j); an Alt-click without a drag selects the block underneath instead (D-065).
-    const cycle = e.altKey && !e.shiftKey ? ed.hitBelow(p)?.id : undefined;
+    const cycle = e.altKey && !e.shiftKey ? ed.hitBelow(p)?.id : under ? top!.id : undefined;
     drag = { kind: 'move', ids: movers.map(n => n.id), start: p, before: ed.doc, frames, box, rot: single ? ed.frame(single).rot : 0, moved: false, release, cycle };
     el.setPointerCapture(e.pointerId); e.preventDefault();
   });
