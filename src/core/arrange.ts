@@ -34,3 +34,15 @@ export function distribute(boxes: { id: string; rect: Rect }[], mode: Distribute
   }
   return out;
 }
+/**
+ * Same width or height (D-077): every box takes the key's width (or height) with its top-left corner kept; a box that
+ * keeps its proportions (a filled picture, an icon) scales both sides. Works on unrotated frames.
+ */
+export function matchSize(boxes: { id: string; rect: Rect; keepAspect: boolean }[], key: Rect, mode: 'w' | 'h'): Record<string, Rect> {
+  const out: Record<string, Rect> = {};
+  for (const { id, rect: r, keepAspect } of boxes) {
+    const k = mode === 'w' ? key.w / r.w : key.h / r.h;
+    out[id] = mode === 'w' ? { ...r, w: key.w, h: keepAspect ? r.h * k : r.h } : { ...r, h: key.h, w: keepAspect ? r.w * k : r.w };
+  }
+  return out;
+}

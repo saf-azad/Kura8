@@ -50,6 +50,18 @@ describe('re-ratio (5v)', () => {
     const turned = { ...t.frames.main, rot: 90, rect: { ...t.frames.main.rect, x: 700 } }, b = letterBounds(t, turned, fakeMeasure, canvas, null);
     expect(b.w).toBeCloseTo(46, 5); expect(b.h).toBeLessThan(100);
   });
+  it('keeps an icon square when its edges sit on guide lines (D-077)', () => {
+    const icon = { ...rectNode('i', frame(1000 / 3, 1000 / 3, 1000 / 3, 1000 / 3)), shape: 'icon', icon: { set: 'phosphor', name: 'star', d: 'M0 0Z', licence: 'MIT' } };
+    const left = { ...icon, id: 'l', frames: { main: frame(1000 / 3, 400, 100, 100) } }, free = { ...icon, id: 'f', frames: { main: frame(400, 400, 100, 100) } };
+    const d = doc([icon, left, free]);
+    for (const ratio of ['cover', 'story', 'link'] as const) {
+      const out = reRatio(d, 'main', { ratio }, fakeMeasure).doc, c = canvasSize(ratio);
+      for (const n of out.nodes) expect(n.frames.main.rect.w / n.frames.main.rect.h, `${ratio} ${n.id}`).toBeCloseTo(1, 6);
+      // The centred icon stays centred in its cell; the one pinned on the left line keeps that edge.
+      const r = out.nodes[0].frames.main.rect; expect(r.x + r.w / 2).toBeCloseTo(c.w / 2, 6); expect(r.y + r.h / 2).toBeCloseTo(c.h / 2, 6);
+      expect(out.nodes[1].frames.main.rect.x).toBeCloseTo(c.w / 3, 6);
+    }
+  });
   it('treats rotated nodes as free and changes the guide when asked', () => {
     const d = doc([rectNode('r', frame(0, 0, 100, 100, { rot: 30 }))]);
     const out = reRatioFrames(d, d.sizes[0], { ratio: 'landscape', guide: null }, fakeMeasure);

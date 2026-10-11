@@ -10,7 +10,7 @@ import { addNodes, addUnderText, setName, duplicateNodes, nodeById, nudge, paste
 import { reRatioKept, flagsFor, type RatioOrigin } from '../core/reratio';
 import { flowText, hugText, roomFor, wholeWordSize } from '../core/flow';
 import { keepReadable } from '../core/compositions';
-import { align, distribute, type AlignMode } from '../core/arrange';
+import { align, distribute, matchSize, type AlignMode } from '../core/arrange';
 import { drawnWeight, fontById } from '../core/fonts';
 import { letterOf } from './tools/shortcuts';
 import { addSize, removeSize } from '../core/sizes';
@@ -554,8 +554,20 @@ export class Editor {
     const frames = Object.fromEntries(sel.map(n => { const f = this.frame(n), m = moves[n.id] ?? { dx: 0, dy: 0 }; return [n.id, { ...f, rect: { ...f.rect, x: f.rect.x + m.dx, y: f.rect.y + m.dy } }]; }));
     this.commit(setFrames(this.doc, this.sizeId, frames), mode.startsWith('spread') ? 'Spaced evenly' : key.length ? 'Aligned to the locked block' : sel.length === 1 ? 'Aligned to the canvas' : 'Aligned');
   }
-  undo(): void { this.finishReposition(); if (this.store.undo()) toast('Undo'); else toast('Nothing to undo'); }
-  redo(): void { this.finishReposition(); if (this.store.redo()) toast('Redo'); else toast('Nothing to redo'); }
+  /** Same width or height (D-077): the selection takes the locked block's size, else the first one picked; text takes widths only. */
+  matchSize(mode: 'w' | 'h'): void {
+    const shown = this.selected().filter(n => !this.frame(n).hidden);
+    if (shown.length < 2) { toast('Select two or more to match sizes'); return; }
+    const order = this.store.ui.sel, key = shown.find(n => n.locked) ?? [...shown].sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id))[0];
+    const others = shown.filter(n => n !== key && !n.locked && !(mode === 'h' && n.kind === 'text' && !n.fit));
+    if (!others.length) return;
+    const rects = matchSize(others.map(n => ({ id: n.id, rect: this.frame(n).rect, keepAspect: n.kind === 'image' && !!n.asset || n.kind === 'shape' && !!n.icon })), this.frame(key).rect, mode);
+    this.commit(setFrames(this.doc, this.sizeId, Object.fromEntries(others.map(n => [n.id, { ...this.frame(n), rect: rects[n.id] }]))), mode === 'w' ? 'Same width' : 'Same height');
+    this.flagAllText();
+  }
+  // A step that swaps whole designs (across New, or the one Undo kept after a reload) says so (D-077).
+  undo(): void { this.finishReposition(); const id = this.doc.id; if (this.store.undo()) toast(this.doc.id !== id ? 'Undo · back to the previous design' : 'Undo', this.doc.id !== id ? 2200 : undefined); else toast('Nothing to undo'); }
+  redo(): void { this.finishReposition(); const id = this.doc.id; if (this.store.redo()) toast(this.doc.id !== id ? 'Redo · back to the newer design' : 'Redo', this.doc.id !== id ? 2200 : undefined); else toast('Nothing to redo'); }
   // sizes and ratio (5v, 5w)
   changeRatio(ratio: RatioId): void {
     if (ratio === this.spec().ratio) return;

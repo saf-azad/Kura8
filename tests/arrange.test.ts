@@ -1,5 +1,5 @@
 import { it, expect } from 'vitest';
-import { align, distribute, unionOf } from '../src/core/arrange';
+import { align, distribute, matchSize, unionOf } from '../src/core/arrange';
 const canvas = { x: 0, y: 0, w: 1000, h: 500 };
 const a = { id: 'a', rect: { x: 100, y: 50, w: 100, h: 50 } }, b = { id: 'b', rect: { x: 400, y: 200, w: 200, h: 100 } }, c = { id: 'c', rect: { x: 700, y: 120, w: 100, h: 40 } };
 it('aligns one block to the canvas and several to their joint bounds (D-063)', () => {
@@ -25,4 +25,11 @@ it('spaces evenly around a pinned (locked) block, which stays put (D-077)', () =
 });
 it('aligns to key blocks (locked ones) when given', () => {
   expect(align([a, b], 'hcenter', canvas, [{ x: 0, y: 0, w: 334, h: 500 }])).toEqual({ a: { dx: 17, dy: 0 }, b: { dx: -333, dy: 0 } });
+});
+it('gives every block the key’s width or height, scaling pictures in proportion (D-077)', () => {
+  const key = { x: 0, y: 0, w: 300, h: 188 }, photo = { id: 'p', rect: { x: 400, y: 10, w: 291, h: 182 }, keepAspect: true }, box = { id: 'b', rect: { x: 0, y: 300, w: 100, h: 50 }, keepAspect: false };
+  const w = matchSize([photo, box], key, 'w');
+  expect(w.p).toEqual({ x: 400, y: 10, w: 300, h: 182 * 300 / 291 }); expect(w.b).toEqual({ x: 0, y: 300, w: 300, h: 50 });
+  const hgt = matchSize([photo, box], key, 'h');
+  expect(hgt.p.h).toBe(188); expect(hgt.p.w).toBeCloseTo(291 * 188 / 182); expect(hgt.b).toEqual({ x: 0, y: 300, w: 100, h: 188 });
 });

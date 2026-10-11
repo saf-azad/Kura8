@@ -69,6 +69,7 @@ export function toolbar(ed: Editor, panels: Panels): HTMLElement {
   const bar = h('div', { className: 'toolbar', role: 'toolbar', 'aria-label': 'Tools' }, text, shapes, image, pen, sketchGroup, h('span', { className: 'sep' }), colour, angle, textGroup, h('span', { className: 'sep' }), cut, arrange, dup, lock, del, h('span', { className: 'sep' }), undo, redo, h('span', { className: 'sep' }), exp, anchor);
   const pressed = (b: HTMLElement, on: boolean, attr = 'aria-pressed') => b.setAttribute(attr, String(on));
   const fade = (b: HTMLElement, on: boolean) => { b.classList.toggle('faded', !on); if (b instanceof HTMLButtonElement) b.disabled = !on; };
+  let natural = 0, rowH = 52, fitted = '', wrapK = 1;
   ed.chrome.push({ update() {
     const u = ui(), sel = ed.selected(), texts = ed.texts(), one = sel.length === 1 ? sel[0] : texts[0], isText = texts.length > 0, unlocked = sel.some(n => !n.locked);
     pressed(shapes, u.panel === 'shapes', 'aria-expanded'); pressed(colour, u.panel === 'colour', 'aria-expanded');
@@ -99,12 +100,26 @@ export function toolbar(ed: Editor, panels: Panels): HTMLElement {
     pressed(arrange, u.panel === 'arrange', 'aria-expanded'); panels.arrange.style.left = `${arrange.offsetLeft - 60}px`;
     pressed(lock, sel.length > 0 && sel.every(n => n.locked)); lock.title = sel.length && sel.every(n => n.locked) ? `Unlock (${MOD} ${SHIFT} L)` : `Lock (${MOD} ${SHIFT} L)`;
     fade(undo, ed.store.history.past.length > 0); fade(redo, ed.store.history.future.length > 0);
-    // Fit between the wordmark and the corner controls: centred in that span, scaled down only when it is too narrow
-    // (several linked-size pills widen the corner, D-069).
+    // Fit between the wordmark and the corner controls: centred in that span, scaled down only a little when it is too
+    // narrow (several linked-size pills widen the corner, D-069). Past that it wraps onto two rows rather than shrinking,
+    // so browser zoom makes the controls bigger, and the canvas moves down under it (D-077).
     const left = 130, right = window.innerWidth - (document.querySelector<HTMLElement>('.corner')?.offsetWidth ?? 0) - 60, room = right - left;
-    const k = Math.max(.45, Math.min(1, room / Math.max(1, bar.offsetWidth))), half = bar.offsetWidth * k / 2;
+    if (!bar.classList.contains('wrap')) { natural = bar.offsetWidth; rowH = bar.offsetHeight; }
+    const wrap = room / Math.max(1, natural) < .8;
+    let k = Math.min(1, room / Math.max(1, natural));
+    if (wrap && fitted !== `${room}|${natural}`) {
+      // The narrowest width that keeps the bar to two rows (whole groups wrap, so measure), three when two would be under
+      // three-quarter size; then the scale that fits the room.
+      fitted = `${room}|${natural}`; bar.classList.add('wrap');
+      const rows = (n: number) => { let mw = natural * (n === 2 ? .5 : .34); bar.style.maxWidth = `${mw}px`; while (bar.offsetHeight > n * rowH + (n - 1) * 4 + 2 && mw < natural) { mw += 16; bar.style.maxWidth = `${mw}px`; } return Math.min(1, room / bar.offsetWidth); };
+      wrapK = rows(2); if (wrapK < .75) wrapK = Math.max(.6, rows(3));
+    }
+    if (wrap) k = wrapK; else { fitted = ''; bar.classList.remove('wrap'); bar.style.maxWidth = ''; }
+    const half = bar.offsetWidth * k / 2;
     bar.style.left = `${Math.max(left + half, Math.min(window.innerWidth / 2, right - half))}px`;
     bar.style.transform = `translateX(-50%) scale(${k})`;
+    const top = `${Math.max(100, Math.ceil(20 + bar.offsetHeight * k + 16))}px`;
+    if (document.documentElement.style.getPropertyValue('--stage-top') !== top) { document.documentElement.style.setProperty('--stage-top', top); ed.fit(); }
   } });
   return bar;
 }
@@ -130,8 +145,10 @@ export function corner(ed: Editor, panels: Panels): HTMLElement {
     last = key;
     sizes.replaceChildren(...doc.sizes.map(s => {
       const r = ratioById(s.ratio), c = canvasSize(s.ratio), k = 16 / Math.max(c.w, c.h), active = s.id === u.size;
-      const b = h('button', { type: 'button', className: `pill${active && u.panel === 'ratio' && u.ratioMode === 'change' ? ' on' : ''}`, title: active ? 'Change ratio' : `Switch to ${r.label} ${ratioNumbers(s.ratio)}`, 'aria-pressed': String(active), style: active ? '' : 'opacity:.6' },
-        h('span', { className: 'ratio-glyph', style: `width:${Math.max(6, c.w * k)}px;height:${Math.max(6, c.h * k)}px` }), active || doc.sizes.length <= 2 ? h('span', {}, ratioNumbers(s.ratio)) : null);
+      // Two sizes of one ratio are numbered, so their pills can be told apart (D-077).
+      const twins = doc.sizes.filter(x => x.ratio === s.ratio), nth = twins.length > 1 ? String(twins.indexOf(s) + 1) : '';
+      const b = h('button', { type: 'button', className: `pill${active && u.panel === 'ratio' && u.ratioMode === 'change' ? ' on' : ''}`, title: active ? 'Change ratio' : `Switch to ${r.label} ${ratioNumbers(s.ratio)}${nth ? ` (${nth})` : ''}`, 'aria-pressed': String(active), style: active ? '' : 'opacity:.6' },
+        h('span', { className: 'ratio-glyph', style: `width:${Math.max(6, c.w * k)}px;height:${Math.max(6, c.h * k)}px` }), active || doc.sizes.length <= 2 ? h('span', {}, `${ratioNumbers(s.ratio)}${nth ? ` · ${nth}` : ''}`) : nth ? h('span', {}, nth) : null);
       // With more than two sizes the others show only their shape, so the toolbar keeps its room (D-073).
       b.addEventListener('click', () => { const cur = ui(); if (active) ed.store.setUI({ ratioMode: 'change', panel: cur.panel === 'ratio' && cur.ratioMode === 'change' ? null : 'ratio' }); else ed.switchSize(s.id); });
       return b;

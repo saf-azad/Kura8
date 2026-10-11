@@ -16,8 +16,8 @@ import type { SketchTools } from '../sketch';
 // removal) ends the drag rather than being overwritten from `before`.
 type Drag =
   | { kind: 'move'; ids: string[]; start: Point; before: KuraDoc; last?: KuraDoc; frames: Record<string, Frame>; box: Rect; rot: number; moved: boolean; held?: { x?: string; y?: string }; release?: string; cycle?: string }
-  | { kind: 'resize'; id: string; handle: Handle; before: KuraDoc; last?: KuraDoc; frame: Frame; box: Rect; size: number; moved: boolean }
-  | { kind: 'rotate'; id: string; c: Point; a0: number; r0: number; before: KuraDoc; last?: KuraDoc; held: number | null; moved: boolean }
+  | { kind: 'resize'; id: string; handle: Handle; before: KuraDoc; last?: KuraDoc; frame: Frame; box: Rect; size: number; moved: boolean; start: Point }
+  | { kind: 'rotate'; id: string; c: Point; a0: number; r0: number; before: KuraDoc; last?: KuraDoc; held: number | null; moved: boolean; start: Point }
   | { kind: 'marquee'; start: Point; base: string[]; skipLocked?: boolean }
   | { kind: 'pan'; id: string; start: Point; focus: Point; moved: boolean };
 const MIN = 20;
@@ -58,8 +58,8 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
     const knob = handleAt(p);
     if (knob) {
       const node = ed.doc.nodes.find(n => n.id === knob.id)!, f = ed.frame(node);
-      if (knob.handle === 'rotate') { const c = center(ed.box(node)); drag = { kind: 'rotate', id: node.id, c, a0: Math.atan2(p.y - c.y, p.x - c.x) * 180 / Math.PI, r0: f.rot, before: ed.doc, held: null, moved: false }; }
-      else drag = { kind: 'resize', id: node.id, handle: knob.handle, before: ed.doc, frame: f, box: ed.box(node), size: node.kind === 'text' ? textBox(node, f, measure, ed.typeScale()).size : 0, moved: false };
+      if (knob.handle === 'rotate') { const c = center(ed.box(node)); drag = { kind: 'rotate', id: node.id, c, a0: Math.atan2(p.y - c.y, p.x - c.x) * 180 / Math.PI, r0: f.rot, before: ed.doc, held: null, moved: false, start: p }; }
+      else drag = { kind: 'resize', id: node.id, handle: knob.handle, before: ed.doc, frame: f, box: ed.box(node), size: node.kind === 'text' ? textBox(node, f, measure, ed.typeScale()).size : 0, moved: false, start: p };
       el.setPointerCapture(e.pointerId); e.preventDefault(); return;
     }
     const hit = ed.hitTest(p);
@@ -125,6 +125,8 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
       for (const id of drag.ids) { const f = drag.frames[id]; next[id] = { ...f, rect: { ...f.rect, x: f.rect.x + dx, y: f.rect.y + dy } }; }
       drag.last = setFrames(drag.before, ed.sizeId, next); ed.store.set(drag.last); return;
     }
+    // A press on a handle that trembles a pixel or two is not a drag: nothing snaps until it moves 3 px (D-077).
+    if ((drag.kind === 'resize' || drag.kind === 'rotate') && !drag.moved && Math.hypot(p.x - drag.start.x, p.y - drag.start.y) * ed.scale < 3) return;
     if (drag.kind === 'resize') {
       drag.moved = true;
       const id = drag.id, node = drag.before.nodes.find(n => n.id === id)!, f = drag.frame, corner = drag.handle.length === 2;

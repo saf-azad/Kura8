@@ -43,6 +43,12 @@ export function reRatioFrames(doc: KuraDoc, from: SizeSpec, to: { ratio: RatioId
     const next: Frame = { ...f, rect: { x: 0, y: 0, w, h }, ...(fontSize === undefined ? {} : { fontSize }) };
     if (node.kind === 'text' && !node.fit) h = boxOf(node, next, measure, c1, to.guide).h;
     next.rect = { x: L !== null ? L : Rr !== null ? Rr - w : cx - w / 2, y: T !== null ? T : B !== null ? B - h : cy - h / 2, w, h };
+    // An icon keeps its proportions (D-077): it fits the mapped box, against the edges that stayed on a line, else centred.
+    if (node.kind === 'shape' && node.icon && f.rect.h > 0) {
+      const a = f.rect.w / f.rect.h, r = next.rect, iw = Math.min(r.w, r.h * a), ih = iw / a;
+      const place = (start: number, span: number, size: number, lo: number | null, hi: number | null) => lo !== null && hi === null ? start : hi !== null && lo === null ? start + span - size : start + (span - size) / 2;
+      next.rect = { x: place(r.x, r.w, iw, L, Rr), y: place(r.y, r.h, ih, T, B), w: iw, h: ih };
+    }
     frames[node.id] = next;
     flags.push(...flagsFor(node, next, measure, c1, to.guide));
   }

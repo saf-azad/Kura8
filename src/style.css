@@ -60,6 +60,7 @@ input.readout{width:58px;text-align:center;font:inherit;font-size:13px;backgroun
 .toolbar .readout.hex{width:84px;justify-content:start;display:flex;padding:0 10px}
 /* Narrow windows: the colour chip alone, so the toolbar keeps a usable size (the Shortcuts hint sits bottom right). */
 @media(max-width:1300px){.toolbar .readout.hex{display:none}}
+.toolbar.wrap{flex-wrap:wrap;justify-content:center;row-gap:4px;border-radius:26px}
 .toolbar .group{display:flex;align-items:center;gap:5px;transition:opacity var(--fast)}
 .toolbar .small{width:26px}
 .toolbar-anchor{position:absolute;left:0;top:calc(100% + 12px)}
@@ -70,7 +71,7 @@ input.readout{width:58px;text-align:center;font:inherit;font-size:13px;backgroun
 .ratio-glyph{border:var(--stroke) solid currentColor;flex:none;transition:width var(--sheet),height var(--sheet)}
 /* canvas */
 /* Side and bottom room keeps the corner controls, help and info off the canvas at every ratio. */
-.stage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:100px 100px 80px}
+.stage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:var(--stage-top,100px) 100px 80px}
 .canvas-stack{position:relative;flex:none;outline:var(--stroke) solid var(--ink);transition:transform 520ms var(--ease)}
 .canvas-stack canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .canvas-stack canvas.overlay{touch-action:none;outline:none;inset:-64px;width:calc(100% + 128px);height:calc(100% + 128px);z-index:2}

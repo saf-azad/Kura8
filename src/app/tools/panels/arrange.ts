@@ -24,8 +24,12 @@ export function arrangePanel(ed: Editor): HTMLElement {
   const buttons = MODES.map(([mode, label, icon]) => { const b = h('button', { type: 'button', className: 'btn', title: label, 'aria-label': label, html: icon }); b.addEventListener('click', () => ed.arrange(mode)); return b; });
   // Stacking order lives here too (F11): students looked for it next to align.
   const order = ORDER.map(([mode, label, icon]) => { const b = h('button', { type: 'button', className: 'btn', title: label, 'aria-label': label, html: icon }); b.addEventListener('click', () => ed.reorder(mode)); return b; });
+  // Same size (D-077): the selection takes the locked block's width or height, else the first one picked.
+  const same = ([['w', 'Same width', svg(bar(3, 4, 16, 5) + bar(3, 13, 16, 5))], ['h', 'Same height', svg(bar(4, 3, 5, 16) + bar(13, 3, 5, 16))]] as const).map(([mode, label, icon]) => {
+    const b = h('button', { type: 'button', className: 'btn', title: label, 'aria-label': label, html: icon }); b.addEventListener('click', () => ed.matchSize(mode)); return b;
+  });
   const panel = h('div', { className: 'panel arrange-panel', hidden: true, role: 'dialog', 'aria-label': 'Arrange' }, title,
-    h('div', { className: 'arrange-grid' }, ...buttons.slice(0, 6)), h('h3', {}, 'Space evenly'), h('div', { className: 'arrange-grid' }, ...buttons.slice(6)),
+    h('div', { className: 'arrange-grid' }, ...buttons.slice(0, 6)), h('h3', {}, 'Space evenly · same size'), h('div', { className: 'arrange-grid' }, ...buttons.slice(6), ...same),
     h('h3', {}, 'Order'), h('div', { className: 'arrange-grid', style: 'grid-template-columns:repeat(4,40px);gap:6px 8px' }, ...order));
   ed.chrome.push({ update() {
     const open = ed.store.ui.panel === 'arrange';
@@ -35,6 +39,7 @@ export function arrangePanel(ed: Editor): HTMLElement {
     title.textContent = sel.some(x => x.locked) && n ? 'Align to the locked block' : n > 1 ? 'Align to each other' : 'Align to the canvas';
     buttons.forEach((b, i) => { b.disabled = !n || i >= 6 && sel.filter(x => !ed.frame(x).hidden).length < 3; b.classList.toggle('faded', b.disabled); });
     order.forEach(b => { b.disabled = !n; b.classList.toggle('faded', !n); });
+    same.forEach(b => { b.disabled = !n || sel.filter(x => !ed.frame(x).hidden).length < 2; b.classList.toggle('faded', b.disabled); });
   } });
   return panel;
 }
