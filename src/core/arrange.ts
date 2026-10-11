@@ -9,8 +9,9 @@ export const unionOf = (rects: Rect[]): Rect => {
   const x = Math.min(...rects.map(r => r.x)), y = Math.min(...rects.map(r => r.y));
   return { x, y, w: Math.max(...rects.map(r => r.x + r.w)) - x, h: Math.max(...rects.map(r => r.y + r.h)) - y };
 };
-export function align(boxes: { id: string; rect: Rect }[], mode: AlignMode, canvas: Rect): Record<string, Move> {
-  const t = boxes.length === 1 ? canvas : unionOf(boxes.map(b => b.rect)), out: Record<string, Move> = {};
+/** `key`: blocks that stay put and set the target (locked blocks in the selection), as a key object does in Illustrator. */
+export function align(boxes: { id: string; rect: Rect }[], mode: AlignMode, canvas: Rect, key: Rect[] = []): Record<string, Move> {
+  const t = key.length ? unionOf(key) : boxes.length === 1 ? canvas : unionOf(boxes.map(b => b.rect)), out: Record<string, Move> = {};
   for (const { id, rect: r } of boxes) {
     const dx = mode === 'left' ? t.x - r.x : mode === 'right' ? t.x + t.w - r.x - r.w : mode === 'hcenter' ? t.x + t.w / 2 - r.x - r.w / 2 : 0;
     const dy = mode === 'top' ? t.y - r.y : mode === 'bottom' ? t.y + t.h - r.y - r.h : mode === 'vcenter' ? t.y + t.h / 2 - r.y - r.h / 2 : 0;

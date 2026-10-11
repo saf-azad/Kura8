@@ -55,18 +55,27 @@ export async function hasTransparency(file: Blob): Promise<boolean> {
 }
 /** An SVG drawn to a PNG with its longest side `longest` px. Drawn as an image, so nothing it references is fetched. */
 export async function svgToPng(file: Blob, longest: number): Promise<Blob> {
-  const text = await file.text(), root = text.match(/<svg\b[^>]*>/i)?.[0];
+  // Comments may mention <svg>; a quoted attribute may hold '>' (D-074).
+  const text = (await file.text()).replace(/<!--[\s\S]*?-->/g, ''), root = text.match(/<svg\b(?:[^>"']|"[^"]*"|'[^']*')*>/i)?.[0];
   if (!root) throw new Error('Not an SVG');
   const attr = (name: string) => root.match(new RegExp(`\\s${name}\\s*=\\s*["']([^"']*)["']`, 'i'))?.[1];
-  const box = attr('viewBox')?.trim().split(/[\s,]+/).map(Number), w0 = parseFloat(attr('width') ?? ''), h0 = parseFloat(attr('height') ?? '');
+  const box = attr('viewBox')?.trim().split(/[\s,]+/).map(Number), px = (v?: string) => v && /^[\d.]+(px)?$/.test(v.trim()) ? parseFloat(v) : NaN, w0 = px(attr('width')), h0 = px(attr('height'));
   const aspect = box?.length === 4 && box[2] > 0 && box[3] > 0 ? box[2] / box[3] : w0 > 0 && h0 > 0 ? w0 / h0 : 1;
   const w = Math.max(1, Math.round(aspect >= 1 ? longest : longest * aspect)), h = Math.max(1, Math.round(aspect >= 1 ? longest / aspect : longest));
   const sized = text.replace(root, root.replace(/\s(width|height)\s*=\s*["'][^"']*["']/gi, '').replace(/^<svg/i, `<svg width="${w}" height="${h}"${box ? '' : ` viewBox="0 0 ${w0 > 0 ? w0 : w} ${h0 > 0 ? h0 : h}"`}`));
   const url = URL.createObjectURL(new Blob([sized], { type: 'image/svg+xml' }));
   try {
     const img = new Image(); img.src = url; await img.decode();
-    const c = new OffscreenCanvas(w, h); c.getContext('2d')!.drawImage(img, 0, 0, w, h);
-    return await c.convertToBlob({ type: 'image/png' });
+    if (box) { const c = new OffscreenCanvas(w, h); c.getContext('2d')!.drawImage(img, 0, 0, w, h); return await c.convertToBlob({ type: 'image/png' }); }
+    // Without a viewBox the drawing's extent is a guess: find what was drawn on a small probe, then draw only that.
+    const q = Math.min(1, 1024 / Math.max(w, h)), pw = Math.max(1, Math.round(w * q)), ph = Math.max(1, Math.round(h * q)), probe = new OffscreenCanvas(pw, ph), px2 = probe.getContext('2d')!;
+    px2.drawImage(img, 0, 0, pw, ph);
+    const data = px2.getImageData(0, 0, pw, ph).data; let l = pw, t = ph, r = -1, b = -1;
+    for (let y = 0; y < ph; y++) for (let xx = 0; xx < pw; xx++) if (data[(y * pw + xx) * 4 + 3] > 8) { if (xx < l) l = xx; if (xx > r) r = xx; if (y < t) t = y; if (y > b) b = y; }
+    if (r < 0) throw new Error('Empty SVG');
+    const bw = (r - l + 1) / q, bh = (b - t + 1) / q, k = longest / Math.max(bw, bh), out = new OffscreenCanvas(Math.max(1, Math.round(bw * k)), Math.max(1, Math.round(bh * k)));
+    out.getContext('2d')!.drawImage(img, -l / q * k, -t / q * k, w * k, h * k);
+    return await out.convertToBlob({ type: 'image/png' });
   } finally { URL.revokeObjectURL(url); }
 }
 export async function setCutout(key: string, cutout: Blob): Promise<void> {

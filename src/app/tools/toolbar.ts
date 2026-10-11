@@ -26,9 +26,11 @@ export function toolbar(ed: Editor, panels: Panels): HTMLElement {
   const readout = (title: string, apply: (v: number) => void) => {
     const el = h('input', { className: 'readout', title, 'aria-label': title, inputmode: 'decimal', spellcheck: 'false', size: 4 });
     let shown = '';
+    // Enter applies and keeps the field focused with its value selected, so a corrective Backspace edits the number.
+    const commit = () => { if (el.value === shown) return; const v = parseFloat(el.value.replace(/[\u2212\u2013\u2014]/g, '-').replace(/[^0-9.\-]/g, '')); if (Number.isFinite(v)) { apply(v); shown = el.value; } else el.value = shown; };
     el.addEventListener('focus', () => { shown = el.value; el.select(); });
-    el.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); el.blur(); } else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); el.value = shown; el.blur(); } });
-    el.addEventListener('change', () => { const v = parseFloat(el.value.replace(/[^0-9.\-]/g, '')); if (Number.isFinite(v)) apply(v); else el.value = shown; });
+    el.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); commit(); requestAnimationFrame(() => el.select()); } else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); el.value = shown; el.blur(); } });
+    el.addEventListener('blur', commit);
     return el;
   };
   const angle = readout('Angle', v => ed.setAngle(v));
@@ -48,23 +50,22 @@ export function toolbar(ed: Editor, panels: Panels): HTMLElement {
   const lock = iconButton(`Lock (${MOD} ${SHIFT} L)`, ICON.lock, () => ed.toggleLock());
   const del = iconButton('Delete (Delete)', ICON.remove, () => ed.remove());
   const undo = iconButton(`Undo (${MOD} Z)`, ICON.undo, () => ed.undo()), redo = iconButton(`Redo (${SHIFT} ${MOD} Z)`, ICON.redo, () => ed.redo());
-  const keys = iconButton('Keyboard shortcuts (?)', ICON.keys, () => ed.openPanel('keys'));
   const exp = iconButton(`Export (${MOD} ${SHIFT} E)`, ICON.go, () => ed.openPanel('export'), 'btn solid-btn');
   exp.style.cssText = 'background:#000;color:#fff';
   const anchor = h('div', { className: 'toolbar-anchor' }, panels.shapes, panels.colour, panels.fonts, panels.arrange);
   panels.shapes.style.left = '0'; panels.colour.style.left = '110px';
-  const bar = h('div', { className: 'toolbar', role: 'toolbar', 'aria-label': 'Tools' }, text, shapes, image, pen, sketchGroup, h('span', { className: 'sep' }), colour, angle, textGroup, h('span', { className: 'sep' }), cut, arrange, dup, lock, del, h('span', { className: 'sep' }), undo, redo, h('span', { className: 'sep' }), keys, exp, anchor);
+  const bar = h('div', { className: 'toolbar', role: 'toolbar', 'aria-label': 'Tools' }, text, shapes, image, pen, sketchGroup, h('span', { className: 'sep' }), colour, angle, textGroup, h('span', { className: 'sep' }), cut, arrange, dup, lock, del, h('span', { className: 'sep' }), undo, redo, h('span', { className: 'sep' }), exp, anchor);
   const pressed = (b: HTMLElement, on: boolean, attr = 'aria-pressed') => b.setAttribute(attr, String(on));
   const fade = (b: HTMLElement, on: boolean) => { b.classList.toggle('faded', !on); if (b instanceof HTMLButtonElement) b.disabled = !on; };
   ed.chrome.push({ update() {
     const u = ui(), sel = ed.selected(), texts = ed.texts(), one = sel.length === 1 ? sel[0] : texts[0], isText = texts.length > 0, unlocked = sel.some(n => !n.locked);
-    pressed(shapes, u.panel === 'shapes', 'aria-expanded'); pressed(colour, u.panel === 'colour', 'aria-expanded'); pressed(keys, u.panel === 'keys', 'aria-expanded');
+    pressed(shapes, u.panel === 'shapes', 'aria-expanded'); pressed(colour, u.panel === 'colour', 'aria-expanded');
     pressed(pen, u.tool === 'pen'); pressed(erase, u.tool === 'erase'); pressed(lasso, u.tool === 'lasso');
     sketchGroup.classList.toggle('hidden', !u.tool);
     const swatch = one && one.kind !== 'image' ? one.fill : u.armed ?? u.swatch, value = ed.colour(swatch);
     chip.style.background = value; hex.textContent = value.toUpperCase();
-    if (document.activeElement !== angle) angle.value = one ? `${Math.round(ed.frame(one).rot)}°` : '—';
-    angle.classList.toggle('faded', !one); angle.disabled = !one || !!one.locked;
+    if (document.activeElement !== angle) angle.value = sel[0] ? `${Math.round(ed.frame(sel[0]).rot)}°` : '—';
+    const turnable = sel.some(n => !n.locked); angle.classList.toggle('faded', !turnable); angle.disabled = !turnable;
     textGroup.classList.toggle('faded', !isText || !!one?.locked);
     for (const b of [face, smaller, larger, bold, align, fit]) b.disabled = !isText || !!one?.locked;
     const def = fontById(one?.kind === 'text' ? one.font : undefined);
@@ -117,7 +118,8 @@ export function corner(ed: Editor, panels: Panels): HTMLElement {
     sizes.replaceChildren(...doc.sizes.map(s => {
       const r = ratioById(s.ratio), c = canvasSize(s.ratio), k = 16 / Math.max(c.w, c.h), active = s.id === u.size;
       const b = h('button', { type: 'button', className: `pill${active && u.panel === 'ratio' && u.ratioMode === 'change' ? ' on' : ''}`, title: active ? 'Change ratio' : `Switch to ${r.label} ${ratioNumbers(s.ratio)}`, 'aria-pressed': String(active), style: active ? '' : 'opacity:.6' },
-        h('span', { className: 'ratio-glyph', style: `width:${Math.max(6, c.w * k)}px;height:${Math.max(6, c.h * k)}px` }), h('span', {}, ratioNumbers(s.ratio)));
+        h('span', { className: 'ratio-glyph', style: `width:${Math.max(6, c.w * k)}px;height:${Math.max(6, c.h * k)}px` }), active || doc.sizes.length <= 2 ? h('span', {}, ratioNumbers(s.ratio)) : null);
+      // With more than two sizes the others show only their shape, so the toolbar keeps its room (D-073).
       b.addEventListener('click', () => { const cur = ui(); if (active) ed.store.setUI({ ratioMode: 'change', panel: cur.panel === 'ratio' && cur.ratioMode === 'change' ? null : 'ratio' }); else ed.switchSize(s.id); });
       return b;
     }));

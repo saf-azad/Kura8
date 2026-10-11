@@ -2,7 +2,7 @@ import { exportSize, ratioById, ratioNumbers, withinPixelLimit, type ExportScale
 import type { Editor } from '../../editor';
 import { h, iconButton, ICON, toast } from '../../ui';
 import { download, fileName, preview, render, summary, type ExportChoice, type Format } from '../../export';
-import { zip } from '../../../core/zip';
+import { zip, uniqueNames } from '../../../core/zip';
 import { nameStem } from '../../../core/export';
 // The export sheet (M14): PNG, JPG, SVG or PDF; 1×–3× or 300 dpi with print sizes defaulting to 300 dpi (5x);
 // sizes over the canvas pixel limit are disabled; notes say what is left out (5y); PNG offers No ground (5z), also
@@ -41,7 +41,9 @@ export function exportSheet(ed: Editor): HTMLElement {
           const own = 'dpi' in c.scale && !ratioById(s.ratio).mm || !withinPixelLimit(exportSize(s.ratio, c.scale)) ? { ...c, scale: { scale: 1 } as ExportScale } : c;
           files.push({ name: fileName(doc, s.id, own), data: new Uint8Array(await (await render(doc, s.id, own)).arrayBuffer()) });
         }
-        download(new Blob([zip(files).buffer as ArrayBuffer], { type: 'application/zip' }), `${nameStem(doc, ed.sizeId)}-all-sizes.zip`);
+        // Two sizes of one ratio get -2, -3 … so none is lost when unzipping.
+        uniqueNames(files.map(f => f.name)).forEach((name, i) => { files[i].name = name; });
+        download(new Blob([zip(files).buffer as ArrayBuffer], { type: 'application/zip' }), `${nameStem(doc)}-all-sizes.zip`);
       } else download(await render(doc, ed.sizeId, c), fileName(doc, ed.sizeId, c));
       label.textContent = 'Saved'; toast('Saved');
       setTimeout(() => { if (!working) label.textContent = 'Download'; }, 2400);

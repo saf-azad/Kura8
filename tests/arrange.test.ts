@@ -16,3 +16,6 @@ it('spreads three or more blocks to equal gaps, keeping the outermost two', () =
   expect(distribute([a, b, c], 'y')).toEqual({ a: { dx: 0, dy: 0 }, c: { dx: 0, dy: 10 }, b: { dx: 0, dy: 0 } });
   expect(distribute([a, b], 'x')).toEqual({});
 });
+it('aligns to key blocks (locked ones) when given', () => {
+  expect(align([a, b], 'hcenter', canvas, [{ x: 0, y: 0, w: 334, h: 500 }])).toEqual({ a: { dx: 17, dy: 0 }, b: { dx: -333, dy: 0 } });
+});

@@ -65,6 +65,9 @@ it('gives each paragraph its own direction in a mixed block (D-064)', () => {
   const op = buildScene(d, 'main', fakeMeasure).ops[0];
   expect(op.kind === 'text' && op.bidi).toEqual([{ dir: 'ltr', align: 'left' }, { dir: 'rtl', align: 'right' }, { dir: 'ltr', align: 'left' }]);
   const out = svg(buildScene(d, 'main', fakeMeasure), { pixels: { w: 1080, h: 1080 }, ground: true, licences: [], image: () => undefined });
-  expect(out).toContain('x="900" y="34.5" direction="rtl" text-anchor="start"');
+  expect(out).toContain('x="900" y="34.5" text-anchor="start" dominant-baseline="central" direction="rtl"');
+  expect(out.match(/<text /g)).toHaveLength(3);
+  const shifted = svg(buildScene(d, 'main', fakeMeasure), { pixels: { w: 1080, h: 1080 }, ground: true, licences: [], image: () => undefined, textShift: o => o.size * .3 });
+  expect(shifted).toContain('y="40.5"'); expect(shifted).not.toContain('dominant-baseline');
   expect(buildScene(doc([textNode('u', frame(0, 0, 900, 40), 'One\nTwo')]), 'main', fakeMeasure).ops[0]).not.toHaveProperty('bidi');
 });

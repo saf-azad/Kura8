@@ -8,9 +8,9 @@ import { defaultShapeSize, shapeLibrary, ICON_SHAPE } from '../core/shapes';
 import { LINE_HEIGHT, textBox, typeScale, crossing, type TypeScale } from '../core/fit';
 import { addNodes, addUnderText, setName, duplicateNodes, nodeById, nudge, pasteNodes, removeNodes, reorder, setFill, setFrames, setGround, setHidden, setLocked, updateNodes, type Order } from '../core/ops';
 import { reRatioKept, flagsFor, type RatioOrigin } from '../core/reratio';
-import { flowText } from '../core/flow';
+import { flowText, hugText } from '../core/flow';
 import { align, distribute, type AlignMode } from '../core/arrange';
-import { drawnWeight } from '../core/fonts';
+import { drawnWeight, fontById } from '../core/fonts';
 import { addSize, removeSize } from '../core/sizes';
 import { containIn, CENTRE, fullImageRect, panFocus, spreadCells } from '../core/images';
 import { fontStack } from '../core/script';
@@ -59,6 +59,8 @@ export class Editor {
   private file: HTMLInputElement;
   private fillTarget: string | null = null;
   textarea: HTMLTextAreaElement | null = null;
+  /** Another tab's save that arrived while typing; taken in, with the typed text on top, when the edit ends. */
+  foreign: KuraDoc | null = null;
   /** Presses on the canvas are ignored until then: the second click of a double-click on Start (D-062). */
   ignorePointerUntil = 0;
   private textBefore: KuraDoc | null = null;
@@ -91,6 +93,13 @@ export class Editor {
     this.file.addEventListener('change', () => { const files = [...this.file.files ?? []]; this.file.value = ''; const target = this.fillTarget; this.fillTarget = null; void this.placeFiles(files, null, target); });
     new ResizeObserver(() => this.fit()).observe(root);
     let evict = 0;
+    // A flagged block that is back on the canvas (moved, restyled, undone) loses its flag.
+    store.on(c => {
+      const flags = store.ui.flags;
+      if (!c.doc || !flags.length || !store.doc) return;
+      const spec = this.spec(), canvas = canvasSize(spec.ratio), still = flags.filter(f => { const n = nodeById(store.doc!, f.id), fr = n?.frames[spec.id]; return !!n && !!fr && flagsFor(n, fr, measure, canvas, spec.guide).some(x => x.kind === f.kind); });
+      if (still.length !== flags.length) store.setUI({ flags: still });
+    });
     // Selecting something else ends a reposition.
     store.on(() => { const r = store.ui.reposition; if (r && (store.ui.sel.length !== 1 || store.ui.sel[0] !== r)) this.finishReposition(); });
     store.on(c => { this.invalidate(); if (c.doc) { clearTimeout(evict); evict = window.setTimeout(() => { if (this.store.doc) this.evictBitmaps(); }, 2000); } });
@@ -122,7 +131,7 @@ export class Editor {
   boxes(): Box[] {
     const sel = this.selected().filter(n => !this.frame(n).hidden && n.id !== this.store.ui.editing), single = sel.length === 1 && !this.store.ui.armed && !this.store.ui.tool;
     return sel.map(n => {
-      const handles: HandleSet = !single || n.id === this.store.ui.reposition ? 'none' : n.kind === 'image' ? 'corners' : n.kind === 'text' ? (n.fit ? 'fit' : 'text') : 'all';
+      const handles: HandleSet = !single || n.id === this.store.ui.reposition ? 'none' : n.kind === 'image' ? 'all' : n.kind === 'text' ? (n.fit ? 'fit' : 'text') : 'all';
       return { id: n.id, rect: this.box(n), rot: this.frame(n).rot, handles, locked: !!n.locked };
     });
   }
@@ -214,7 +223,8 @@ export class Editor {
     const natural = this.natural(n), r = this.frame(n).rect;
     fit.classList.toggle('hidden', moving || !natural || Math.abs(Math.log((r.w / r.h) / (natural.w / natural.h))) < .01);
     pick.textContent = n.asset ? 'Replace' : 'Choose picture'; pick.classList.toggle('hidden', moving);
-    move.textContent = moving ? 'Done' : 'Reposition'; move.classList.toggle('hidden', !n.asset); move.setAttribute('aria-pressed', String(moving));
+    const fitted = !!natural && Math.abs(Math.log((r.w / r.h) / (natural.w / natural.h))) < .01;
+    move.textContent = moving ? 'Done' : 'Reposition'; move.classList.toggle('hidden', !n.asset || fitted && !moving); move.setAttribute('aria-pressed', String(moving));
     this.imageBar.querySelector('.cut')!.classList.toggle('hidden', !cut);
     const b = rotatedBounds(this.box(n), this.frame(n).rot);
     // Inside the picture's bottom edge when it is tall enough, so the bar does not cover what sits under it.
@@ -243,6 +253,7 @@ export class Editor {
   }
   /** The picture's natural proportions (its working copy) when it is loaded. */
   natural(n: ImageNode): Size | null { const b = n.asset ? this.image(n.asset, !!n.cutout) : null; return b ? { w: b.width, h: b.height } : null; }
+  nudgePicture(id: string, dx: number, dy: number): void { const n = nodeById(this.doc, id); if (n?.kind === 'image') this.panPicture(id, n.focus ?? CENTRE, { x: dx, y: dy }); }
   panPicture(id: string, focus0: Point, delta: Point): void {
     const n = nodeById(this.doc, id); if (n?.kind !== 'image') return;
     const natural = this.natural(n), f = this.frame(n); if (!natural) return;
@@ -302,7 +313,8 @@ export class Editor {
     const kind = (f: File) => /^image\/(png|jpeg|webp|gif)$/.test(f.type) ? 'raster' : f.type === 'image/svg+xml' || /\.svg$/i.test(f.name) ? 'svg' : /^image\/hei[cf]$/.test(f.type) || /\.hei[cf]$/i.test(f.name) ? 'heic' : null;
     const images = files.filter(f => kind(f));
     if (!images.length) { if (files.length) toast('Choose a PNG, JPEG, WebP, GIF or SVG image', 2200); return; }
-    const hit = target ? nodeById(this.doc, target) : at ? this.hitTest(at) : undefined, added: { key: string; natural: Size }[] = [];
+    const hit = target ? nodeById(this.doc, target) : at ? this.hitTest(at) : undefined, added: { key: string; natural: Size }[] = [], skipped: string[] = [];
+    if (files.length > images.length) skipped.push(`${files.length - images.length} not an image`);
     for (const [i, original] of images.entries()) {
       let stored: { key: string; natural: Size }, clear = false, file: Blob = original;
       try {
@@ -310,7 +322,7 @@ export class Editor {
         if (kind(original) === 'svg') file = await assets.svgToPng(original, Math.min(4096, 2 * this.maxExport()));
         stored = await assets.putImage(file, this.maxExport()); clear = await assets.hasTransparency(file);
       } catch {
-        toast(kind(original) === 'heic' ? 'This browser can’t open HEIC photos. Save it as JPEG (iPhone: Share → Options → Most Compatible) and try again' : 'That image could not be read', 3200);
+        skipped.push(kind(original) === 'heic' ? 'HEIC: save it as JPEG (iPhone: Share → Options → Most Compatible)' : kind(original) === 'svg' && /foreignObject/i.test(await original.text().catch(() => '')) ? 'SVG with embedded HTML: export it as PNG' : `${original.name || 'one file'} could not be read`);
         continue;
       }
       // A see-through picture (logo, sticker) dropped on a photo goes on top of it; onto an empty frame it fills the
@@ -322,16 +334,19 @@ export class Editor {
       }
       added.push(stored);
     }
-    if (!added.length) return;
+    // Skipped files are named in the closing toast, so a batch never hides them (D-074).
+    const note = skipped.length ? ` · skipped ${skipped.join('; ')}` : '';
+    if (!added.length) { if (skipped.length) toast(`Nothing added${note}`, 3600); return; }
     // New pictures spread over the emptiest guide cells (the drop point's cell first), keep their own proportions
     // inside them, and go under the text (D-047, D-058). One undo step for the batch.
-    const c = this.canvas(), p = at ?? { x: c.w / 2, y: c.h / 2 }, taken = this.visible().map(n => rotatedBounds(this.box(n), this.frame(n).rot));
+    const c = this.canvas(), p = at ?? { x: c.w / 2, y: c.h / 2 }, taken = this.taken();
     const boxes = spreadCells(p, this.cells(), taken, added.length, c, !!at);
     const nodes: DocNode[] = added.map((a, i) => ({ id: newId(), kind: 'image', asset: a.key, frames: this.framesFor(containIn(boxes[i], a.natural)) }));
-    this.commit(addUnderText(this.doc, nodes), nodes.length > 1 ? `${nodes.length} images` : 'Image');
+    this.commit(addUnderText(this.doc, nodes)); toast(`${nodes.length > 1 ? `${nodes.length} images` : 'Image'}${note}`, note ? 3600 : 1300);
     this.store.setUI({ sel: nodes.map(n => n.id), armed: null });
   }
   remove(): void {
+    this.finishReposition();
     const ids = this.selected().filter(n => !n.locked).map(n => n.id);
     if (!ids.length) return;
     this.commit(removeNodes(this.doc, ids), this.doc.sizes.length > 1 ? 'Deleted from every size · Hide in Layers keeps it in the others' : 'Deleted'); this.select([]);
@@ -340,6 +355,15 @@ export class Editor {
     const r = duplicateNodes(this.doc, this.store.ui.sel, newId);
     if (!r.ids.length) return;
     this.commit(r.doc, 'Duplicated'); this.select(r.ids);
+  }
+  /** What occupies the canvas for placing new things: blocks' rotated bounds, text by the extent of its lines rather than its box (an autofit room is mostly empty). */
+  taken(): Rect[] {
+    return this.visible().map(n => {
+      const f = this.frame(n);
+      if (n.kind !== 'text') return rotatedBounds(this.box(n), f.rot);
+      const b = textBox(n, f, measure, this.typeScale()), w = Math.min(b.rect.w, Math.max(0, ...b.lines.map(l => textWidth(l, b.size, drawnWeight(n.font, n.weight), n.font))));
+      return rotatedBounds({ ...b.rect, w, h: Math.min(b.rect.h, b.lines.length * b.size * LINE_HEIGHT) }, f.rot);
+    });
   }
   /** Plain text the last copy wrote to the system clipboard; null when the browser gave no copy event to write it. */
   clipText: string | null = null;
@@ -350,11 +374,13 @@ export class Editor {
   addPastedText(raw: string): void {
     const text = raw.replace(/\r\n?/g, '\n').replace(/\t/g, ' ').trim();
     if (!text) return;
-    // One short line hugs its words; longer copy wraps at 60 % of the canvas width.
-    const c = this.canvas(), scale = this.typeScale(), long = text.length > 40 || text.includes('\n'), size = long ? scale.body : scale.headline;
-    const w = long ? c.w * .6 : Math.min(c.w * .8, textWidth(text, size, 700) + size * .3);
-    const node: TextNode = { id: newId(), kind: 'text', text, weight: long ? 400 : 700, align: 'start', fill: { role: 'ink' }, frames: {} };
-    const rect = this.centred(w, size * LINE_HEIGHT), frames = this.framesFor(rect, { fontSize: size });
+    // Pasted copy arrives at body size (D-074): one line hugs its words, longer copy wraps at 60 % of the width; it lands
+    // in the emptiest guide cell rather than on the centre, so several pastes do not pile up.
+    const c = this.canvas(), size = this.typeScale().body, long = text.length > 40 || text.includes('\n');
+    const w = long ? c.w * .6 : Math.min(c.w * .8, textWidth(text, size, 400) * 1.02);
+    const node: TextNode = { id: newId(), kind: 'text', text, weight: 400, align: 'start', fill: { role: 'ink' }, frames: {} };
+    const cell = spreadCells({ x: c.w / 2, y: c.h / 2 }, this.cells(), this.taken(), 1, c, false)[0], pad = Math.min(c.w, c.h) * .045;
+    const rect = { x: Math.max(0, Math.min(cell.x + pad, c.w - w)), y: Math.min(cell.y + pad, c.h - size * LINE_HEIGHT), w, h: size * LINE_HEIGHT }, frames = this.framesFor(rect, { fontSize: size });
     for (const id of Object.keys(frames)) frames[id].rect.h = textBox(node, frames[id], measure, this.typeScale()).rect.h;
     this.add([{ ...node, frames }], 'Pasted text'); this.flagText([node.id]);
   }
@@ -374,7 +400,9 @@ export class Editor {
   setHidden(id: string, hidden: boolean): void { this.commit(setHidden(this.doc, this.sizeId, [id], hidden), hidden ? 'Hidden' : 'Shown'); if (hidden) this.select(this.store.ui.sel.filter(x => x !== id)); }
   reorder(mode: Order, ids = this.store.ui.sel): void {
     if (!ids.length) return;
-    this.commit(reorder(this.doc, ids, mode), { front: 'Brought to front', back: 'Sent to back', forward: 'Brought forward', backward: 'Sent backward' }[mode]);
+    const next = reorder(this.doc, ids, mode);
+    if (next.nodes.every((n, i) => n === this.doc.nodes[i])) return;
+    this.commit(next, { front: 'Brought to front', back: 'Sent to back', forward: 'Brought forward', backward: 'Sent backward' }[mode]);
   }
   /** Keyboard moves never snap; quick repeats fold into one undo step. */
   nudge(dx: number, dy: number): void {
@@ -400,7 +428,7 @@ export class Editor {
     const n = this.one(); if (!n || n.locked) return;
     const next = updateNodes(this.doc, [n.id], fn);
     this.store.commit(n.kind === 'text' ? flowText(this.doc, next, n.id, measure) : next, { key });
-    if (n.kind === 'text') this.flagText([n.id]);
+    if (n.kind === 'text') this.flagAllText();
   }
   /** Selected unlocked text blocks; text controls apply to all of them (D-063). */
   texts(): TextNode[] { return this.selected().filter((n): n is TextNode => n.kind === 'text' && !n.locked); }
@@ -408,8 +436,8 @@ export class Editor {
   editTexts(fn: (n: TextNode) => TextNode, key?: string): void {
     const ids = this.texts().map(n => n.id); if (!ids.length) return;
     let doc = this.doc;
-    for (const id of ids) doc = flowText(doc, updateNodes(doc, [id], n => fn(n as TextNode)), id, measure);
-    this.store.commit(doc, { key }); this.flagText(ids);
+    for (const id of ids) doc = flowText(doc, hugText(doc, updateNodes(doc, [id], n => fn(n as TextNode)), id, measure), id, measure);
+    this.store.commit(doc, { key }); this.flagAllText();
   }
   fontStep(dir: 1 | -1): void {
     this.editTexts(n => {
@@ -424,8 +452,8 @@ export class Editor {
     // Measure in the real face, so the text under it moves by the right amount.
     await Promise.all([loadFont(font, 400), loadFont(font, 700)]);
     let doc = this.doc;
-    for (const id of ids) doc = flowText(doc, updateNodes(doc, [id], n => { const t = { ...n, font } as TextNode; if (font === 'grotesk') delete t.font; return t; }), id, measure);
-    this.store.commit(doc, {});
+    for (const id of ids) doc = flowText(doc, hugText(doc, updateNodes(doc, [id], n => { const t = { ...n, font } as TextNode; if (font === 'grotesk') delete t.font; return t; }), id, measure), id, measure);
+    this.store.commit(doc, {}); this.flagAllText();
   }
   /** Marks text that runs off the canvas after an edit (the 5v flag), and clears the mark once it fits again. */
   flagText(ids: string[]): void {
@@ -437,15 +465,23 @@ export class Editor {
   setFontSize(value: number): void {
     const size = Math.max(4, Math.min(2000, value)), ids = this.selected().filter(n => n.kind === 'text' && !n.locked).map(n => n.id);
     let doc = this.doc;
-    for (const id of ids) doc = flowText(doc, updateNodes(doc, [id], n => { const t = { ...n, frames: { ...n.frames, [this.sizeId]: { ...n.frames[this.sizeId], fontSize: size } } } as TextNode; delete t.fit; return t; }), id, measure);
-    if (ids.length) { this.store.commit(doc, {}); this.flagText(ids); }
+    for (const id of ids) doc = flowText(doc, hugText(doc, updateNodes(doc, [id], n => { const t = { ...n, frames: { ...n.frames, [this.sizeId]: { ...n.frames[this.sizeId], fontSize: size } } } as TextNode; delete t.fit; return t; }), id, measure), id, measure);
+    if (ids.length) { this.store.commit(doc, {}); this.flagAllText(); }
   }
   /** A typed angle for the selection, about each block's centre (D-060). */
   setAngle(deg: number): void {
     const ids = this.selected().filter(n => !n.locked).map(n => n.id), rot = norm(deg);
     if (ids.length) this.store.commit(setFrames(this.doc, this.sizeId, Object.fromEntries(ids.map(id => { const f = nodeById(this.doc, id)!.frames[this.sizeId]; return [id, { ...f, rot: Math.abs(rot) < 1e-9 ? 0 : rot }]; }))), {});
   }
-  toggleBold(): void { const weight = this.texts().every(n => n.weight === 700) ? 400 : 700; this.editTexts(n => ({ ...n, weight })); }
+  /** Re-checks every text block in this size after an edit, so text pushed off the canvas is flagged and text back on it is not. */
+  flagAllText(): void { this.flagText(this.doc.nodes.filter(n => n.kind === 'text').map(n => n.id)); }
+  toggleBold(): void {
+    // A single-weight face (Bebas Neue) has no bold to switch to; say so rather than change a weight nobody sees.
+    const texts = this.texts(), two = texts.filter(n => fontById(n.font).weights.length > 1);
+    if (texts.length && !two.length) { toast(`${fontById(texts[0].font).name} has one weight`); return; }
+    const weight = two.every(n => n.weight === 700) ? 400 : 700, ids = new Set(two.map(n => n.id));
+    this.editTexts(n => ids.has(n.id) ? { ...n, weight } : n);
+  }
   cycleAlign(): void { const a = this.texts()[0]?.align, align = a === 'start' ? 'center' : a === 'center' ? 'end' : 'start'; this.editTexts(n => ({ ...n, align })); }
   /** Autofit on keeps today's box; the size then steps down the type scale as text grows (5q). */
   toggleFit(): void {
@@ -459,13 +495,15 @@ export class Editor {
   }
   /** Align or distribute the selection (D-063): one block to the canvas, several to their joint bounds. */
   arrange(mode: AlignMode | 'spread-x' | 'spread-y'): void {
-    const sel = this.selected().filter(n => !n.locked && !this.frame(n).hidden);
+    const shown = this.selected().filter(n => !this.frame(n).hidden), sel = shown.filter(n => !n.locked);
     if (!sel.length) return;
-    const boxes = sel.map(n => ({ id: n.id, rect: rotatedBounds(this.box(n), this.frame(n).rot) }));
+    const bounds = (n: DocNode) => rotatedBounds(this.box(n), this.frame(n).rot), boxes = sel.map(n => ({ id: n.id, rect: bounds(n) }));
     if (mode.startsWith('spread') && boxes.length < 3) { toast('Select three or more to space evenly'); return; }
-    const moves = mode === 'spread-x' || mode === 'spread-y' ? distribute(boxes, mode === 'spread-x' ? 'x' : 'y') : align(boxes, mode, { x: 0, y: 0, ...this.canvas() });
+    // Locked blocks in the selection stay put and are what the others line up with (D-072).
+    const key = shown.filter(n => n.locked).map(bounds);
+    const moves = mode === 'spread-x' || mode === 'spread-y' ? distribute(boxes, mode === 'spread-x' ? 'x' : 'y') : align(boxes, mode, { x: 0, y: 0, ...this.canvas() }, key);
     const frames = Object.fromEntries(sel.map(n => { const f = this.frame(n), m = moves[n.id] ?? { dx: 0, dy: 0 }; return [n.id, { ...f, rect: { ...f.rect, x: f.rect.x + m.dx, y: f.rect.y + m.dy } }]; }));
-    this.commit(setFrames(this.doc, this.sizeId, frames), mode.startsWith('spread') ? 'Spaced evenly' : sel.length === 1 ? 'Aligned to the canvas' : 'Aligned');
+    this.commit(setFrames(this.doc, this.sizeId, frames), mode.startsWith('spread') ? 'Spaced evenly' : key.length ? 'Aligned to the locked block' : sel.length === 1 ? 'Aligned to the canvas' : 'Aligned');
   }
   undo(): void { this.finishReposition(); if (this.store.undo()) toast('Undo'); else toast('Nothing to undo'); }
   redo(): void { this.finishReposition(); if (this.store.redo()) toast('Redo'); else toast('Nothing to redo'); }
@@ -549,11 +587,16 @@ export class Editor {
     area.remove(); this.store.setUI({ editing: null });
     const node = id ? nodeById(this.doc, id) : undefined;
     if (!node || node.kind !== 'text') return;
+    const foreign = this.foreign; this.foreign = null;
+    if (foreign) {
+      const there = nodeById(foreign, node.id), merged = there?.kind === 'text' ? flowText(foreign, updateNodes(foreign, [node.id], n => ({ ...n, text: node.text })), node.id, measure) : foreign;
+      this.store.commit(merged, { before: before ?? undefined }); toast('Updated from another tab · your text is kept', 2400); return;
+    }
     if (!node.text.trim()) { this.store.commit(removeNodes(this.doc, [node.id]), { before: before ?? undefined }); this.select([]); return; }
     const f = this.frame(node), b = this.box(node);
     const synced = node.fit ? this.doc : updateNodes(this.doc, [node.id], n => ({ ...n, frames: { ...n.frames, [this.sizeId]: { ...f, rect: { ...f.rect, h: b.h } } } }));
     if (before && JSON.stringify(nodeById(before, node.id)) !== JSON.stringify(nodeById(synced, node.id))) this.store.commit(synced, { before }); else this.store.set(synced);
-    this.flagText([node.id]);
+    this.flagAllText();
   }
   // 5d: on the first open ever, blocks lift 2px one after another, once.
   lift(): void {

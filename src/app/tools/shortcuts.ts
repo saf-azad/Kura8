@@ -47,6 +47,8 @@ export function installShortcuts(ed: Editor): void {
     }
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     const arrows: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+    // While repositioning, arrows move the picture inside its frame instead of the frame.
+    if (arrows[e.key] && ui.reposition) { e.preventDefault(); const s = nudgeStep(e.shiftKey, ui.grid); ed.nudgePicture(ui.reposition, arrows[e.key][0] * s, arrows[e.key][1] * s); return; }
     if (arrows[e.key]) { if (!ui.sel.length) return; e.preventDefault(); const s = nudgeStep(e.shiftKey, ui.grid); ed.nudge(arrows[e.key][0] * s, arrows[e.key][1] * s); return; }
     if (ui.reposition && (e.key === 'Escape' || e.key === 'Enter')) { e.preventDefault(); ed.finishReposition(); return; }
     if (e.key === 'Escape') {

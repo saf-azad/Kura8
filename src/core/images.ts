@@ -52,5 +52,6 @@ export function spreadCells(p: Point, cells: Rect[], taken: Rect[], count: numbe
   const order = [...(first ? [first] : []), ...cells.filter(c => !first || c.x !== first.x || c.y !== first.y || c.w !== first.w || c.h !== first.h)
     .map(c => ({ c, o: occupancy(c, taken), d: d(c) })).sort((a, b) => a.o - b.o || a.d - b.d).map(x => x.c)];
   const pool = order.length ? order : [nearestCell(p, [], canvas)];
-  return Array.from({ length: count }, (_, i) => { const c = pool[i % pool.length], k = Math.floor(i / pool.length) * 20; return { ...c, x: c.x + k, y: c.y + k }; });
+  // Cascaded rounds stay inside the canvas.
+  return Array.from({ length: count }, (_, i) => { const c = pool[i % pool.length], k = Math.floor(i / pool.length) * 20; return { ...c, x: Math.min(c.x + k, Math.max(c.x, canvas.w - c.w)), y: Math.min(c.y + k, Math.max(c.y, canvas.h - c.h)) }; });
 }

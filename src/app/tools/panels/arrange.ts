@@ -1,4 +1,5 @@
 import type { AlignMode } from '../../../core/arrange';
+import type { Order } from '../../../core/ops';
 import type { Editor } from '../../editor';
 import { h } from '../../ui';
 // Arrange (D-063): align one block to the canvas or several to each other, and space three or more evenly.
@@ -16,18 +17,24 @@ const MODES: [AlignMode | 'spread-x' | 'spread-y', string, string][] = [
   ['spread-x', 'Space evenly across', svg(bar(2, 6, 4, 10) + bar(9, 6, 4, 10) + bar(16, 6, 4, 10))],
   ['spread-y', 'Space evenly down', svg(bar(6, 2, 10, 4) + bar(6, 9, 10, 4) + bar(6, 16, 10, 4))],
 ];
+const stack = (top: number) => svg([0, 1, 2].map(i => i === top ? `<rect x="${4 + i * 4}" y="${4 + i * 4}" width="10" height="10" rx="2" fill="currentColor"/>` : `<rect x="${4 + i * 4}" y="${4 + i * 4}" width="10" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/>`).join(''));
+const ORDER: [Order, string, string][] = [['front', 'Bring to front', stack(2)], ['forward', 'Bring forward', stack(1)], ['backward', 'Send backward', stack(1)], ['back', 'Send to back', stack(0)]];
 export function arrangePanel(ed: Editor): HTMLElement {
   const title = h('h3', {}, 'Align');
   const buttons = MODES.map(([mode, label, icon]) => { const b = h('button', { type: 'button', className: 'btn', title: label, 'aria-label': label, html: icon }); b.addEventListener('click', () => ed.arrange(mode)); return b; });
+  // Stacking order lives here too (F11): students looked for it next to align.
+  const order = ORDER.map(([mode, label, icon]) => { const b = h('button', { type: 'button', className: 'btn', title: label, 'aria-label': label, html: icon }); b.addEventListener('click', () => ed.reorder(mode)); return b; });
   const panel = h('div', { className: 'panel arrange-panel', hidden: true, role: 'dialog', 'aria-label': 'Arrange' }, title,
-    h('div', { className: 'arrange-grid' }, ...buttons.slice(0, 6)), h('h3', {}, 'Space evenly'), h('div', { className: 'arrange-grid' }, ...buttons.slice(6)));
+    h('div', { className: 'arrange-grid' }, ...buttons.slice(0, 6)), h('h3', {}, 'Space evenly'), h('div', { className: 'arrange-grid' }, ...buttons.slice(6)),
+    h('h3', {}, 'Order'), h('div', { className: 'arrange-grid', style: 'grid-template-columns:repeat(4,40px);gap:6px 8px' }, ...order));
   ed.chrome.push({ update() {
     const open = ed.store.ui.panel === 'arrange';
     panel.hidden = !open; panel.inert = !open;
     if (!open) return;
-    const n = ed.selected().filter(x => !x.locked).length;
-    title.textContent = n > 1 ? 'Align to each other' : 'Align to the canvas';
+    const sel = ed.selected(), n = sel.filter(x => !x.locked).length;
+    title.textContent = sel.some(x => x.locked) && n ? 'Align to the locked block' : n > 1 ? 'Align to each other' : 'Align to the canvas';
     buttons.forEach((b, i) => { b.disabled = !n || i >= 6 && n < 3; b.classList.toggle('faded', b.disabled); });
+    order.forEach(b => { b.disabled = !n; b.classList.toggle('faded', !n); });
   } });
   return panel;
 }

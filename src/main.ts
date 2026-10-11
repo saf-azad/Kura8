@@ -45,15 +45,19 @@ const loaded = loadDocument();
 const store = new Store(loaded?.doc ?? null);
 // The design New replaced stays one Undo away, also after a reload (D-057).
 const previous = loadPrevious();
-let previousId: string | null = previous?.id ?? null;
-if (previous && store.doc && previous.id !== store.doc.id) store.history = { past: [previous], future: [] }; else if (previous) { keepPrevious(null); previousId = null; }
-store.on(() => { if (previousId && store.doc?.id === previousId) { keepPrevious(null); previousId = null; } });
+// The slot always holds the other design: the one left behind whenever the current design's id changes (New, Undo or
+// Redo across New, another tab), so Undo and Redo across New survive a reload too (D-072).
+if (previous && store.doc && previous.id !== store.doc.id) store.history = { past: [previous], future: [] };
+let shown = store.doc;
+store.on(() => { if (store.doc && shown && store.doc.id !== shown.id) keepPrevious(shown); shown = store.doc; });
 // Another tab saved the design: take its version (one Undo brings this tab's back) instead of overwriting it later.
 addEventListener('storage', e => {
   if (e.key !== DOC_KEY || !e.newValue || !store.doc || e.newValue === JSON.stringify(store.doc)) return;
   let next;
   try { next = migrate(JSON.parse(e.newValue)).doc; } catch { return; }
-  editor?.finishText(); store.commit(next, {}); toast('Updated from another tab', 2000);
+  // While this tab is typing, the other tab's save waits and the typed text is laid over it when the edit ends (D-072).
+  if (editor?.textarea) { editor.foreign = next; return; }
+  store.commit(next, {}); toast('Updated from another tab', 2000);
 });
 void navigator.storage?.persist?.().catch(() => false);
 addEventListener('pagehide', () => store.save());
@@ -162,7 +166,6 @@ function go(): void {
 }
 function fresh(): void {
   const had = !!store.doc, { doc, headline } = starter(store.dial);
-  keepPrevious(store.doc); previousId = store.doc?.id ?? null;
   store.commit(doc, { before: store.doc });
   store.setUI({ screen: 'editor', size: 'main', sel: [], flags: [] });
   route();

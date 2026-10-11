@@ -2,7 +2,7 @@ import type { KuraDoc } from '../../core/document';
 import type { Size } from '../../core/geometry';
 import { buildScene, type SceneOp } from '../../core/scene';
 import { exportSize, ratioById, type ExportScale } from '../../core/ratios';
-import { svg, pdf, pageSize, licences, nameStem } from '../../core/export';
+import { svg, pdf, pageSize, licences, nameStem, type TextShift } from '../../core/export';
 import { scriptOf } from '../../core/script';
 import { measure, loadFont } from '../measure';
 import { FONT_FILES } from './fonts';
@@ -62,6 +62,14 @@ async function fontCss(faces: { font: FontId; weight: 400 | 700 }[]): Promise<st
   const more = FONT_FILES.filter(f => faces.some(u => u.font === f.font && u.weight === f.weight)).map(f => face(f.url, f.weight, f.subset === 'latin' ? latin : ext, fontById(f.font).family));
   return (await Promise.all([face(grotesk400, 400, latin), face(grotesk700, 700, latin), face(groteskExt400, 400, ext), face(groteskExt700, 700, ext), ...more])).join('');
 }
+/** How far below the canvas's middle line the alphabetic baseline sits for an op's face and size, so SVG text lands where the canvas draws it (D-075). */
+const metrics = document.createElement('canvas').getContext('2d')!;
+const textShift: TextShift = o => {
+  metrics.font = `${o.weight} ${o.size}px ${o.font}`;
+  metrics.textBaseline = 'middle'; const middle = metrics.measureText('H').actualBoundingBoxAscent;
+  metrics.textBaseline = 'alphabetic'; const alphabetic = metrics.measureText('H').actualBoundingBoxAscent;
+  return alphabetic - middle;
+};
 export async function render(doc: KuraDoc, sizeId: string, c: ExportChoice): Promise<Blob> {
   const ratio = doc.sizes.find(s => s.id === sizeId)!.ratio, pixels = exportSize(ratio, c.scale), faces = usedFaces(doc, sizeId);
   await Promise.all(faces.map(f => loadFont(f.font, f.weight)));
@@ -71,7 +79,7 @@ export async function render(doc: KuraDoc, sizeId: string, c: ExportChoice): Pro
       const r = await assets.getRecord(o.asset).catch(() => undefined), blob = r && (o.cutout ? r.cutout ?? r.working : r.original);
       if (r && blob) hrefs.set(`${o.asset}#${o.cutout}`, { href: await assets.blobToDataUrl(blob), natural: o.cutout ? r.work : r.natural });
     }
-    const text = svg(scene, { pixels: exportSize(ratio, { scale: 1 }), ground: c.ground, fontCss: await fontCss(faces), licences: licences(doc, sizeId), image: o => hrefs.get(`${o.asset}#${o.cutout}`) });
+    const text = svg(scene, { pixels: exportSize(ratio, { scale: 1 }), ground: c.ground, fontCss: await fontCss(faces), licences: licences(doc, sizeId), image: o => hrefs.get(`${o.asset}#${o.cutout}`), textShift });
     return new Blob([text], { type: 'image/svg+xml' });
   }
   const canvas = await raster(doc, sizeId, pixels, c.format === 'png' && !c.ground);

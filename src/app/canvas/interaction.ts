@@ -98,6 +98,7 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
     if (ui.tool && !drag) { sketch.move(e, p); return; }
     if (!drag) { hover(p); return; }
     const snapping = !e.altKey;
+    if (drag.kind === 'pan' && ed.store.ui.reposition !== drag.id) { drag = null; return; }
     if (drag.kind === 'pan') { drag.moved = true; ed.panPicture(drag.id, drag.focus, { x: p.x - drag.start.x, y: p.y - drag.start.y }); return; }
     if (drag.kind !== 'marquee' && drag.last && ed.doc !== drag.last) { drag = null; ed.live = emptyLive(); ed.invalidate(); return; }
     if (drag.kind === 'marquee') {
@@ -127,7 +128,9 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
     if (drag.kind === 'resize') {
       drag.moved = true;
       const id = drag.id, node = drag.before.nodes.find(n => n.id === id)!, f = drag.frame, corner = drag.handle.length === 2;
-      const lockAspect = node.kind === 'image' || (node.kind === 'text' || node.kind === 'shape' && !!node.icon) && corner || e.shiftKey && corner;
+      // A filled picture keeps its proportions on the corners; its edges reshape the frame, which the picture re-covers,
+      // and an empty frame resizes freely, so equal tiles are possible (D-073).
+      const lockAspect = corner && (node.kind === 'image' ? !!node.asset : node.kind === 'text' || node.kind === 'shape' && !!node.icon) || e.shiftKey && corner;
       const min = { w: Math.min(MIN, drag.box.w), h: Math.min(MIN, drag.box.h) };
       const raw = resizeLocal(drag.box, f.rot, drag.handle, p, { lockAspect, min });
       let rect = raw.rect;

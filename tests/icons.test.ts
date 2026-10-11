@@ -163,3 +163,10 @@ describe.runIf(real)('baked Phosphor catalog', () => {
     }
   });
 });
+describe('curated synonym answers (D-074)', () => {
+  it('ranks a synonym key’s listed answers above icons that only carry the word as a tag', () => {
+    const places: IconIndex = { categories: ['places'], picks: [], icons: [['bed', 0, 'location hotel'], ['bus', 0, 'location transit'], ['map-pin', 0, 'marker']] };
+    expect(searchIcons(places, 'location', { location: ['map pin'] }).names).toEqual(['map-pin', 'bed', 'bus']);
+    expect(searchIcons(places, 'location', {}).names).toEqual(['bed', 'bus']);
+  });
+});

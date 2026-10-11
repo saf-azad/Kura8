@@ -15,16 +15,20 @@ export function licences(doc: KuraDoc, sizeId: string): Licence[] {
     out.push({ name: n.icon.name, set: n.icon.set, licence: n.icon.licence, source: n.icon.set === 'phosphor' ? 'https://github.com/phosphor-icons/core' : n.icon.set });
   return out;
 }
-function op(o: SceneOp, image: (o: Extract<SceneOp, { kind: 'image' }>) => SvgImage | undefined): string {
+/** Distance from a line's middle down to its alphabetic baseline, from the app's font metrics (D-075). */
+export type TextShift = (o: Extract<SceneOp, { kind: 'text' }>) => number;
+function op(o: SceneOp, image: (o: Extract<SceneOp, { kind: 'image' }>) => SvgImage | undefined, shift?: TextShift): string {
   const { rect: r } = o, open = `<g transform="translate(${n2(r.x + r.w / 2)} ${n2(r.y + r.h / 2)}) rotate(${n2(o.rot)}) translate(${n2(-r.w / 2)} ${n2(-r.h / 2)})"${o.opacity !== undefined ? ` opacity="${n2(o.opacity)}"` : ''}>`;
   if (o.kind === 'shape') return `${open}<path fill-rule="evenodd" fill="${o.fill}"${o.scale ? ` transform="scale(${n2(o.scale[0])} ${n2(o.scale[1])})"` : ''} d="${o.d}"/></g>`;
   if (o.kind === 'text') {
     const x = (align: string) => align === 'left' ? 0 : align === 'center' ? r.w / 2 : r.w, anchor = (align: string, dir: string) => align === 'center' ? 'middle' : (align === 'left') === (dir === 'ltr') ? 'start' : 'end';
-    const spans = o.lines.map((line, i) => {
-      const b = o.bidi?.[i], own = b && b.dir !== o.dir ? ` direction="${b.dir}" text-anchor="${anchor(b.align, b.dir)}"` : '';
-      return `<tspan x="${n2(x(b?.align ?? o.align))}" y="${n2(i * o.lineHeight + o.lineHeight / 2)}"${own}>${escapeXml(line)}</tspan>`;
-    }).join('');
-    return `${open}<text font-family="${o.font.replace(/"/g, '\'')}" font-weight="${o.weight}" font-size="${n2(o.size)}" fill="${o.fill}" text-anchor="${anchor(o.align, o.dir)}" dominant-baseline="central"${o.dir === 'rtl' ? ' direction="rtl"' : ''} xml:space="preserve">${spans}</text></g>`;
+    // With app metrics the lines sit on their alphabetic baseline exactly where the canvas draws them; without, central.
+    const dy = shift?.(o), base = dy === undefined ? ' dominant-baseline="central"' : '', y = (i: number) => n2(i * o.lineHeight + o.lineHeight / 2 + (dy ?? 0));
+    const font = `font-family="${o.font.replace(/"/g, '\'')}" font-weight="${o.weight}" font-size="${n2(o.size)}" fill="${o.fill}"`;
+    // Lines of differing direction are separate text elements, each its own bidi paragraph (D-064, D-075).
+    if (o.bidi) return `${open}${o.lines.map((line, i) => { const b = o.bidi![i]; return `<text ${font} x="${n2(x(b.align))}" y="${y(i)}" text-anchor="${anchor(b.align, b.dir)}"${base}${b.dir === 'rtl' ? ' direction="rtl"' : ''} xml:space="preserve">${escapeXml(line)}</text>`; }).join('')}</g>`;
+    const spans = o.lines.map((line, i) => `<tspan x="${n2(x(o.align))}" y="${y(i)}">${escapeXml(line)}</tspan>`).join('');
+    return `${open}<text ${font} text-anchor="${anchor(o.align, o.dir)}"${base}${o.dir === 'rtl' ? ' direction="rtl"' : ''} xml:space="preserve">${spans}</text></g>`;
   }
   if (o.kind === 'ink') return `${open}<path fill="none" stroke="${o.fill}" stroke-width="${n2(o.stroke)}" stroke-linecap="round" stroke-linejoin="round" d="${o.paths.map(p => 'M' + p.map(([u, v]) => `${n2(u)} ${n2(v)}`).join('L')).join('')}"/></g>`;
   const img = o.asset ? image(o) : undefined;
@@ -33,12 +37,12 @@ function op(o: SceneOp, image: (o: Extract<SceneOp, { kind: 'image' }>) => SvgIm
   return `${open}<svg width="${n2(r.w)}" height="${n2(r.h)}" viewBox="${n2(c.x)} ${n2(c.y)} ${n2(c.w)} ${n2(c.h)}" preserveAspectRatio="none"><image href="${escapeXml(img.href)}" width="${img.natural.w}" height="${img.natural.h}"/></svg></g>`;
 }
 /** SVG of a scene at `pixels` size. Empty image frames are left out; `ground: false` leaves the ground transparent. */
-export function svg(scene: Scene, o: { pixels: Size; ground: boolean; fontCss?: string; licences: Licence[]; image: (op: Extract<SceneOp, { kind: 'image' }>) => SvgImage | undefined }): string {
+export function svg(scene: Scene, o: { pixels: Size; ground: boolean; fontCss?: string; licences: Licence[]; image: (op: Extract<SceneOp, { kind: 'image' }>) => SvgImage | undefined; textShift?: TextShift }): string {
   const { w, h } = scene.size;
   const meta = o.licences.length ? `<metadata><licences xmlns="urn:kura8:licences">${o.licences.map(l => `<icon name="${escapeXml(l.name)}" set="${escapeXml(l.set)}" licence="${escapeXml(l.licence)}" source="${escapeXml(l.source)}"/>`).join('')}</licences></metadata>` : '';
   const style = o.fontCss ? `<defs><style>${o.fontCss}</style></defs>` : '';
   const ground = o.ground ? `<rect width="${n2(w)}" height="${n2(h)}" fill="${scene.ground}"/>` : '';
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${o.pixels.w}" height="${o.pixels.h}" viewBox="0 0 ${n2(w)} ${n2(h)}">${meta}${style}${ground}${scene.ops.map(s => op(s, o.image)).join('')}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${o.pixels.w}" height="${o.pixels.h}" viewBox="0 0 ${n2(w)} ${n2(h)}">${meta}${style}${ground}${scene.ops.map(s => op(s, o.image, o.textShift)).join('')}</svg>`;
 }
 const ascii = (s: string) => Uint8Array.from(s, c => c.charCodeAt(0) & 255);
 const pdfText = (s: string) => s.replace(/[\\()]/g, m => '\\' + m).replace(/[^\x20-\x7e]/g, '?');
@@ -66,11 +70,15 @@ export function pdf(jpeg: Uint8Array, image: Size, page: Size, title = 'Kura8'):
 }
 /** Page size in points: print sizes use their paper size, screen sizes 0.75 pt per pixel. */
 export const pageSize = (pixels: Size, mm?: Size): Size => mm ? { w: mm.w / 25.4 * 72, h: mm.h / 25.4 * 72 } : { w: pixels.w * .75, h: pixels.h * .75 };
-/** A file-name stem from the design's headline (else its first visible text): ASCII words joined by hyphens, at most 40 characters; "kura8" when there is none. */
-export function nameStem(doc: KuraDoc, sizeId: string): string {
-  const texts = doc.nodes.filter(n => n.kind === 'text' && !n.frames[sizeId]?.hidden && n.text.trim());
+/**
+ * A file-name stem from the design's headline (else its first visible text): words joined by hyphens, accents dropped
+ * from Latin letters, other scripts kept (D-071), at most 40 characters; "kura8" when there is none. Without a size,
+ * text hidden in some size still counts (All sizes).
+ */
+export function nameStem(doc: KuraDoc, sizeId?: string): string {
+  const texts = doc.nodes.filter(n => n.kind === 'text' && !(sizeId && n.frames[sizeId]?.hidden) && n.text.trim());
   const pick = texts.find(n => n.slot === 'headline') ?? texts[0], text = pick?.kind === 'text' ? pick.text : '';
-  const words = text.normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  const words = text.normalize('NFD').replace(/(\p{Script=Latin})\p{M}+/gu, '$1').normalize('NFC').toLowerCase().split(/[^\p{L}\p{M}\p{N}]+/u).filter(Boolean);
   let stem = '';
   for (const w of words) { const next = stem ? `${stem}-${w}` : w; if (next.length > 40) break; stem = next; }
   return stem || (words[0] ?? '').slice(0, 40) || 'kura8';

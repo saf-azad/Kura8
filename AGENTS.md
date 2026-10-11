@@ -186,7 +186,7 @@ export function snapAngle(o: { angle: number; canvas: Size; regions: Rect[]; shi
 - Position targets: guide lines, canvas edges and centre (`centre-x|y`), other objects' edges and centres by rotated bounding box (`obj-<id>-l|c|r|t|m|b`), grid lines (`grid-x-n`). Points are drawn, never snapped to.
 - Size candidates only from tier-0 lines and canvas edges: every span (`span-<idA>-<idB>`) and every region width/height, deduplicated keeping the first in `[edges, anchors]` order; they move only the handle edge.
 - Hits name the winner only (5k); a span hit still flashes both lines and two exactly spanning edges both flash.
-- Locked aspect snaps only `dominantAxis` (required with `lockAspect`) and derives the other dimension, opposite corner fixed. Images always lock aspect; Shift locks shape corners; text corner handles scale the font while e/w rewrap.
+- Locked aspect snaps only `dominantAxis` (required with `lockAspect`) and derives the other dimension, opposite corner fixed. A filled image locks aspect on its corners while its edges reshape the frame, and an empty frame resizes freely (D-073); Shift locks shape corners; text corner handles scale the font while e/w rewrap.
 - Rotated nodes (5m): move snaps the four rotated corners and centre; at multiples of 90° resize uses the axis-aligned path with remapped handles; at other angles resize gets size candidates only, in the local frame.
 - `snapAngle` targets multiples of 45°, ± the canvas diagonal and ± every guide-cell diagonal (3a); lock 3°, pull 11°, hold 7°; Shift rounds to 15° with no targets.
 - App values: move lock 6, reach 20, hold 13; resize 8 with no pull; all in screen px divided by the fit scale. Alt skips snapping entirely (5j).

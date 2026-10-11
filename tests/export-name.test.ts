@@ -7,7 +7,12 @@ it('names exports after the headline, else the first visible text, else kura8', 
   expect(nameStem(doc([textNode('b', frame(0, 0, 10, 10), 'Body first'), head]), 'main')).toBe('bean-there-done-that');
   expect(nameStem(doc([textNode('b', frame(0, 0, 10, 10), 'Cultural Night 2026')]), 'main')).toBe('cultural-night-2026');
   expect(nameStem(doc([textNode('b', frame(0, 0, 10, 10, { hidden: true }), 'Hidden'), textNode('c', frame(0, 0, 10, 10), '  ')]), 'main')).toBe('kura8');
-  expect(nameStem(doc([textNode('z', frame(0, 0, 10, 10), '你好世界')]), 'main')).toBe('kura8');
+  expect(nameStem(doc([textNode('z', frame(0, 0, 10, 10), '你好世界')]), 'main')).toBe('你好世界');
+  expect(nameStem(doc([textNode('k', frame(0, 0, 10, 10), '추석 축제 2026')]), 'main')).toBe('추석-축제-2026');
+  expect(nameStem(doc([textNode('h', frame(0, 0, 10, 10), 'दिवाली मेला')]), 'main')).toBe('दिवाली-मेला');
+  expect(nameStem(doc([textNode('v', frame(0, 0, 10, 10), 'Tết Trung Thu')]), 'main')).toBe('tet-trung-thu');
+  expect(nameStem(doc([textNode('x', frame(0, 0, 10, 10, { hidden: true }), 'Hidden here')]))).toBe('hidden-here');
+  expect(nameStem(doc([textNode('e', frame(0, 0, 10, 10), '!!!')]), 'main')).toBe('kura8');
   expect(nameStem(doc([textNode('l', frame(0, 0, 10, 10), 'The quick brown fox jumps over the lazy dog again and again')]), 'main')).toBe('the-quick-brown-fox-jumps-over-the-lazy');
   expect(nameStem(doc([textNode('w', frame(0, 0, 10, 10), 'Supercalifragilisticexpialidocious-and-even-longer-words')]), 'main')).toBe('supercalifragilisticexpialidocious-and');
   expect(nameStem(doc([textNode('w', frame(0, 0, 10, 10), 'Abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz')]), 'main')).toBe('abcdefghijklmnopqrstuvwxyzabcdefghijklmn');

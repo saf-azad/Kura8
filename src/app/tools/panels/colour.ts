@@ -23,6 +23,8 @@ export function colourPanel(ed: Editor): HTMLElement {
   // Opacity of the selection (D-052), coalesced into one undo step while dragging.
   const opacity = h('input', { type: 'range', min: 5, max: 100, step: 5, 'aria-label': 'Opacity', title: 'Opacity', style: 'flex:1' }), opacityValue = h('span', { style: 'width:38px;text-align:right' });
   const opacityRow = h('div', { className: 'row', style: 'font-size:12px;gap:10px' }, h('span', { className: 'muted' }, 'Opacity'), opacity, opacityValue);
+  let slidingOpacity = false;
+  opacity.addEventListener('pointerdown', () => { slidingOpacity = true; }); opacity.addEventListener('pointerup', () => { slidingOpacity = false; }); opacity.addEventListener('blur', () => { slidingOpacity = false; });
   opacity.addEventListener('input', () => { const ids = ed.selected().filter(n => !n.locked).map(n => n.id); if (ids.length) ed.store.commit(setOpacity(ed.doc, ids, Number(opacity.value) / 100), { key: 'opacity' }); });
   // Arrow keys step the slider rather than nudging the selection; Escape still closes the panel.
   opacity.addEventListener('keydown', e => { if (e.key.startsWith('Arrow')) e.stopPropagation(); });
@@ -116,7 +118,7 @@ export function colourPanel(ed: Editor): HTMLElement {
     (hueBar.firstElementChild as HTMLElement).style.left = `${pick.h / 3.59}%`;
     const sel = ed.selected(), first = sel[0];
     opacityRow.classList.toggle('hidden', !sel.length);
-    if (first && document.activeElement !== opacity) opacity.value = String(Math.round((first.opacity ?? 1) * 100));
+    if (first && !slidingOpacity) opacity.value = String(Math.round((first.opacity ?? 1) * 100));
     opacityValue.textContent = `${opacity.value}%`;
     // 5h: text below 4.5:1 against what is behind it (the topmost solid block under its centre, else the ground) shows
     // its ratio and the nearest passing shade; over a picture the check is left to the eye (D-053).

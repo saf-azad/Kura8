@@ -94,9 +94,13 @@ const categoryGrams = memo((index: IconIndex) => {
   return index.categories.map((c, i) => [...new Set([...wordsOf(c), ...entries.filter(e => e.cat === i).flatMap(e => [...e.words, ...e.tags])])].map(grams));
 });
 const MISS = 9;
-/** 2 a name word starts with the query word, 3 a tag does, 4 a synonym names or tags the icon, 5 the word sits inside a name word ("love" in clover). */
-function level(e: Entry, w: string, terms: string[]): number {
+/**
+ * 1.5 the query word is a synonym key and the icon is one of its listed answers (curated, D-074), 2 a name word starts
+ * with the query word, 3 a tag does, 4 a synonym names or tags the icon, 5 the word sits inside a name word ("love" in clover).
+ */
+function level(e: Entry, w: string, terms: string[], answers: string[] = []): number {
   const s = stem(w);
+  if (answers.some(t => e.stems.has(t))) return 1.5;
   if (e.words.some(x => x.startsWith(s))) return 2;
   if (e.tags.some(x => x.startsWith(s))) return 3;
   if (terms.some(t => e.stems.has(t))) return 4;
@@ -110,7 +114,7 @@ function nearest(index: IconIndex, entries: Entry[], words: string[]): number {
 }
 /**
  * 5s: matches query words against names, tags and synonyms (accent- and case-insensitive, prefix matching, plural- and
- * hyphen/space-agnostic), ranked exact name, name prefix, a name word, a tag, a synonym, inside a name word. Icons matching
+ * hyphen/space-agnostic), ranked exact name, name prefix, a curated synonym answer, a name word, a tag, a synonym, inside a name word. Icons matching
  * every word come before icons matching some. Empty query → picks. No match → the nearest category's icons (its picks
  * first) with `category` set.
  */
@@ -119,8 +123,9 @@ export function searchIcons(index: IconIndex, q: string, synonyms: Record<string
   if (!words.length) return { names: index.picks.slice(0, limit) };
   const entries = entriesOf(index), groups = groupsOf(synonyms);
   const terms = words.map(w => groups.flatMap(([k, v]) => k === stem(w) ? [k, ...v] : v.includes(stem(w)) ? [k] : []));
+  const answers = words.map(w => groups.flatMap(([k, v]) => k === stem(w) ? v : []));
   const scored = entries.map(e => {
-    const hit = words.map((w, i) => level(e, w, terms[i])).filter(l => l < MISS), sum = hit.reduce((a, b) => a + b, 0);
+    const hit = words.map((w, i) => level(e, w, terms[i], answers[i])).filter(l => l < MISS), sum = hit.reduce((a, b) => a + b, 0);
     if (e.flat.startsWith(flat)) return { e, miss: 0, rank: e.flat === flat ? 0 : 1, sum };
     return { e, miss: words.length - hit.length, rank: Math.max(...hit), sum };
   }).filter(s => s.miss < words.length);
