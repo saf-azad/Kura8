@@ -41,6 +41,8 @@ Everything working in `Kura8 Prototype.dc.html` and the refinement cards 5a–5z
 - **Export:** PNG, JPG, SVG, PDF; scale or 300 dpi (5x); hidden count (5y); No ground (5z); icon licences in SVG metadata (5u).
 - **Persistence:** autosave of the one current document to `localStorage`, image assets to IndexedDB.
 
+Added by D-045 (Safwat's student-test loop, 2026-10-10): typefaces (seven OFL faces), opacity, picture reposition and Fit, text flow under growing text, pasted text, align and distribute, typed size and angle, per-paragraph direction, layer names, SVG import, All sizes .zip export, cross-tab safety and a persisted undo of New. See HANDOFF D-045–D-067.
+
 Out of scope: handwriting recognition, user zoom/pan, groups, free crop, per-size z-order, file open/save or a file manager, accounts, collaboration, telemetry, vector PDF, image adjustments beyond background removal, booleans, pen/path editing beyond ink strokes, mobile layout.
 
 ## Stack
@@ -50,7 +52,7 @@ D-002 governs the stack. Supersede it explicitly before changing it.
 - Strict TypeScript, Vite, Vitest, npm. No UI framework: vanilla DOM/SVG chrome, HTML canvas 2D document.
 - `src/core/` has zero DOM access and zero runtime dependencies. Every function depends only on its inputs and is fully unit tested.
 - The app layer's only runtime dependency is `onnxruntime-web` (MIT), imported lazily by `src/app/tools/background.ts` alone (D-022). Model weights (ISNet, Apache-2.0; float16 derived in Node from the pinned checkpoint, D-023) and the ORT wasm are written to `public/` as 16 MB parts by `scripts/prepare-model.mjs`.
-- Space Grotesk (`@fontsource/space-grotesk`, OFL-1.1) is a devDependency bundled by Vite. Phosphor fill icons (`@phosphor-icons/core`, MIT) are a devDependency baked into gitignored `public/icons/` by `scripts/prepare-icons.mjs`. Both prepare scripts run before `npm run dev` and `npm run build`.
+- Space Grotesk (`@fontsource/space-grotesk`, OFL-1.1) is a devDependency bundled by Vite, as are the document faces Poppins, Playfair Display, Lora, Bebas Neue, Caveat and Space Mono (`@fontsource/*`, OFL-1.1, D-049). Phosphor fill icons (`@phosphor-icons/core`, MIT) are a devDependency baked into gitignored `public/icons/` by `scripts/prepare-icons.mjs`. Both prepare scripts run before `npm run dev` and `npm run build`.
 - Renderer behind the `Renderer` interface for a later CanvasKit/Skia swap. No CanvasKit in Phase 1.
 
 ## Repository layout (target)
@@ -65,15 +67,15 @@ src/
   core/
     geometry.ts  document.ts  ratios.ts  palette.ts  snap.ts
     guides/{types,grid,thirds,golden,divisions,index}.ts
-    compositions.ts  fit.ts  relayout.ts  reratio.ts  sizes.ts
-    scene.ts  ops.ts  history.ts  ink.ts  images.ts  script.ts
-    shapes.ts  icons.ts  dial.ts  export.ts
+    compositions.ts  fit.ts  relayout.ts  reratio.ts  sizes.ts  flow.ts
+    scene.ts  ops.ts  history.ts  ink.ts  images.ts  script.ts  fonts.ts
+    shapes.ts  icons.ts  dial.ts  export.ts  arrange.ts  zip.ts
   app/
     store.ts  assets.ts  editor.ts  measure.ts  ui.ts  paper-icons.ts
     dial/
     canvas/{renderer,overlay,interaction,resize,tween}.ts
     tools/{toolbar,background,shortcuts}.ts
-    tools/panels/{shapes,icons,colour,layers,grid,ratio,keys,export}.ts
+    tools/panels/{shapes,icons,colour,fonts,arrange,layers,grid,ratio,keys,export}.ts
     sketch/
     export/
   main.ts
@@ -97,10 +99,10 @@ Canvas width is always 1000 units; height is `1000 * ratio.h / ratio.w`. Pixels 
 export type Point = { x: number; y: number };
 export type Size = { w: number; h: number };
 export type Rect = { x: number; y: number; w: number; h: number };
-export type Measure = (text: string, size: number, weight: 400 | 700, width: number) => string[];
+export type Measure = (text: string, size: number, weight: 400 | 700, width: number, font?: FontId) => string[];
 ```
 
-Core never measures text itself. Functions that need line breaks take an injected `Measure`; the app passes a cached canvas measurer, tests pass a fixed-width fake.
+Core never measures text itself. Functions that need line breaks take an injected `Measure` (with the node's face, absent = Space Grotesk); the app passes a cached canvas measurer, tests pass a fixed-width fake.
 
 ### Ratios
 
@@ -118,8 +120,9 @@ export type ColourRef = { role: Role } | { row: RowId; step: Step } | { hex: str
 export type Palette = { hue: number | null; dark: boolean; custom: string[]; accent?: string };
 export type Frame = { rect: Rect; rot: number; fontSize?: number; hidden?: boolean };
 export type Slot = 'image' | 'accent' | 'headline' | 'body';
-type Base = { id: string; locked?: boolean; slot?: Slot; frames: Record<string, Frame> };
-export type TextNode = Base & { kind: 'text'; text: string; weight: 400 | 700; align: 'start' | 'center' | 'end'; fill: ColourRef; fit?: boolean };
+type Base = { id: string; locked?: boolean; slot?: Slot; opacity?: number; name?: string; frames: Record<string, Frame> };
+export type FontId = 'grotesk' | 'poppins' | 'playfair' | 'lora' | 'bebas' | 'caveat' | 'mono';
+export type TextNode = Base & { kind: 'text'; text: string; weight: 400 | 700; align: 'start' | 'center' | 'end'; fill: ColourRef; fit?: boolean; font?: FontId };
 export type ShapeNode = Base & { kind: 'shape'; shape: string; fill: ColourRef; icon?: { set: string; name: string; d: string; licence: string } };
 export type ImageNode = Base & { kind: 'image'; asset: string | null; cutout?: boolean; focus?: Point };
 export type InkNode = Base & { kind: 'ink'; paths: [number, number][][]; stroke: number; fill: ColourRef; form?: 'line' | 'arrow' | 'rect' | 'ellipse' | 'tri' };
@@ -128,9 +131,10 @@ export type SizeSpec = { id: string; ratio: RatioId; guide: GuideId | null; comp
 export type KuraDoc = { version: 2; id: string; createdAt: string; palette: Palette; ground: ColourRef | null; sizes: SizeSpec[]; nodes: DocNode[] };
 ```
 
-- Content (text, fill, weight, align, shape, icon, asset, cutout, paths, stroke, lock) lives on the node. Geometry (rect, rotation, font size, hidden) lives in `frames[sizeId]`. Linked sizes (5w) follow from this: content edits show in every size, geometry stays local. Adding or deleting a node affects every size; `hidden` leaves a node out of one size. Array order is the one shared draw order.
+- Content (text, fill, weight, align, font, shape, icon, asset, cutout, focus, paths, stroke, lock, opacity, name) lives on the node. Geometry (rect, rotation, font size, hidden) lives in `frames[sizeId]`. Linked sizes (5w) follow from this: content edits show in every size, geometry stays local. Adding or deleting a node affects every size; `hidden` leaves a node out of one size. Array order is the one shared draw order.
 - Colours resolve through the palette. Dark mode maps row step `s` to `6 − s`; `{ hex }` never mirrors. A custom hue (5g) adds row `c{n}` at the seven lightness steps, with the step nearest the pasted hex replaced by it exactly.
-- `ground: null` means unfilled: the editor draws the palette ground and PNG export offers No ground (5z).
+- `ground: null` means unfilled: the editor draws the palette ground. PNG export offers No ground for any ground (5z, D-050).
+- `opacity` is 0–1, absent means opaque (D-052). `name` is a Layers name, trimmed, at most 80 characters (D-066). `font` absent means Space Grotesk; a single-weight face draws its one weight (D-049).
 - `asset: null` is an empty image frame. Assets are IndexedDB keys (SHA-256 of the bytes) holding original, working copy and optional cutout; `cutout` chooses which one shows (5o). The cover crop is derived from the frame and `focus` (default centre), never stored.
 - Never stored: effective font size, overflow and off-canvas flags, crop rects, physical alignment, text direction, guide anchors.
 - Icons are shape nodes with `shape: 'icon'` and the path inline in `icon.d` (100 × 100 box); every other `shape` is a key of the 41-shape library in `shapes.ts`.
@@ -155,7 +159,7 @@ Generators are pure and deterministic and include no canvas-edge lines. `name` i
 
 ### Layouts
 
-`typeScale(guide, canvas)` uses factor 1.5 (thirds), φ (golden) or √2 (divisions) from a body base. `layout({ canvas, guide, comp, measure, headline, body })` returns slot rects for image, accent, headline and body, ported from the prototype's `layoutFor` into unit space (it uses the first and last guide fractions). `starterNodes` turns a layout into slot-tagged nodes: headline and body text with placeholder copy, accent shape, empty image frame. `compositionFit` returns `{ ok: true }` or `{ ok: false, reason }` with a reason code the app words (5c). `relayout` moves slot-tagged nodes into a new layout's slots and re-ratios the rest (5f); a slot without a node stays empty. `reRatio` keeps edges that sit on a guide, edge or centre line on the same line id in the new geometry, scales other nodes about their centre, and flags anything off-canvas or overflowing instead of cropping (5v).
+`typeScale(guide, canvas)` uses factor 1.5 (thirds), φ (golden) or √2 (divisions) from a body base. `layout({ canvas, guide, comp, measure, headline, body })` returns slot rects for image, accent, headline and body, ported from the prototype's `layoutFor` into unit space (it uses the first and last guide fractions). Poster and stack give the headline an autofit room (`TextSlot.fit`, the box above the band, D-055); autofit never splits a word. `starterNodes` turns a layout into slot-tagged nodes: headline and body text with placeholder copy, accent shape, empty image frame; given a palette, text on the accent block takes the readable role (`textRoleOn`, D-056). `compositionFit` returns `{ ok: true }` or `{ ok: false, reason }` with a reason code the app words (5c). `relayout` moves slot-tagged nodes into a new layout's slots and re-ratios the rest (5f); a slot without a node stays empty; a headline moved into an autofit room autofits. `flowText` moves text stacked under a text block whose drawn height changed, in every size (D-046). `reRatioKept` maps untouched nodes from their origin frames so ratio round trips do not drift (D-054). `reRatio` keeps edges that sit on a guide, edge or centre line on the same line id in the new geometry, scales other nodes about their centre, and flags anything off-canvas or overflowing instead of cropping (5v).
 
 ### Snapping
 
@@ -195,7 +199,7 @@ export interface Renderer {
 }
 ```
 
-Both the canvas renderer and SVG export consume `buildScene(doc, sizeId, measure)` from `src/core/scene.ts`. The document canvas draws nodes and ground only; `placeholders` draws empty or missing image frames as slate washes in the editor, and exports leave them out. Overlay, guides, selection, snap lines, flags and handles live on a second canvas that reaches 64 px past the document on every side. Export renders offscreen at exact `pixels` with full-resolution originals, guaranteeing no guides or selection marks.
+Both the canvas renderer and SVG export consume `buildScene(doc, sizeId, measure)` from `src/core/scene.ts`; ops carry `opacity` below 1 and, for text whose paragraphs differ in direction, per-line `bidi` (D-064). The document canvas draws nodes and ground only; `placeholders` draws empty or missing image frames as slate washes in the editor, and exports leave them out. Overlay, guides, selection, snap lines, flags and handles live on a second canvas that reaches 64 px past the document on every side. Export renders offscreen at exact `pixels` with full-resolution originals, guaranteeing no guides or selection marks.
 
 ## Interface
 
@@ -203,7 +207,7 @@ Paper visual language, values copied from `docs/design/2026-10-10-dial/_ds/…/t
 
 ## Keyboard controls
 
-Mod is Command on Mac and Ctrl elsewhere. Keep D-026 bindings: Mod+D duplicate, Mod+B bold, Mod+Shift+L lock, Mod+Shift+E export, Mod+Enter finish text. Add Mod+C/X/V clipboard, Mod+A select all, Mod+Z undo, Mod+Shift+Z and Mod+Y redo, Mod+] / Mod+[ forward/backward, Mod+Shift+] / Mod+Shift+[ front/back. Tools: T text, R rectangle, O ellipse, S shapes, I image, P pen, E eraser, L lasso, C colour, G guides, ? shortcuts. Arrows move 1 unit; Shift+Arrow moves one grid cell when the grid is on, otherwise 10 units (5l); keyboard moves never snap. Delete/Backspace removes unlocked selection; Enter edits text; Escape disarms paint, then closes the panel, then leaves the tool, then deselects. Hold Alt while dragging to bypass snapping (5j); Shift constrains drag axis, corner aspect and rotation steps. Shortcuts never intercept typing controls, composition or native modifier combinations. On the dial: arrows turn/focus rings, Enter starts.
+Mod is Command on Mac and Ctrl elsewhere. Keep D-026 bindings: Mod+D duplicate, Mod+B bold, Mod+Shift+L lock, Mod+Shift+E export, Mod+Enter finish text. Add Mod+C/X/V clipboard, Mod+A select all, Mod+Z undo, Mod+Shift+Z and Mod+Y redo, Mod+] / Mod+[ forward/backward, Mod+Shift+] / Mod+Shift+[ front/back. Tools: T text, R rectangle, O ellipse, S shapes, I picks images (D-061), P pen, E eraser, L lasso, C colour, G guides, ? shortcuts. Arrows move 1 unit; Shift+Arrow moves one grid cell when the grid is on, otherwise 10 units (5l); keyboard moves never snap. Delete/Backspace removes unlocked selection; Enter edits text; Escape disarms paint, then closes the panel, then leaves the tool, then deselects. Hold Alt while dragging to bypass snapping (5j); Alt-click without a drag selects the block underneath (D-065); Shift constrains drag axis, corner aspect and rotation steps. Shortcuts never intercept typing controls, composition or native modifier combinations. On the dial: arrows turn/focus rings, Enter starts.
 
 ## Study (frozen)
 
