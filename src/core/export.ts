@@ -16,7 +16,7 @@ export function licences(doc: KuraDoc, sizeId: string): Licence[] {
   return out;
 }
 function op(o: SceneOp, image: (o: Extract<SceneOp, { kind: 'image' }>) => SvgImage | undefined): string {
-  const { rect: r } = o, open = `<g transform="translate(${n2(r.x + r.w / 2)} ${n2(r.y + r.h / 2)}) rotate(${n2(o.rot)}) translate(${n2(-r.w / 2)} ${n2(-r.h / 2)})">`;
+  const { rect: r } = o, open = `<g transform="translate(${n2(r.x + r.w / 2)} ${n2(r.y + r.h / 2)}) rotate(${n2(o.rot)}) translate(${n2(-r.w / 2)} ${n2(-r.h / 2)})"${o.opacity !== undefined ? ` opacity="${n2(o.opacity)}"` : ''}>`;
   if (o.kind === 'shape') return `${open}<path fill-rule="evenodd" fill="${o.fill}"${o.scale ? ` transform="scale(${n2(o.scale[0])} ${n2(o.scale[1])})"` : ''} d="${o.d}"/></g>`;
   if (o.kind === 'text') {
     const x = o.align === 'left' ? 0 : o.align === 'center' ? r.w / 2 : r.w, anchor = o.align === 'center' ? 'middle' : (o.align === 'left') === (o.dir === 'ltr') ? 'start' : 'end';
@@ -63,3 +63,12 @@ export function pdf(jpeg: Uint8Array, image: Size, page: Size, title = 'Kura8'):
 }
 /** Page size in points: print sizes use their paper size, screen sizes 0.75 pt per pixel. */
 export const pageSize = (pixels: Size, mm?: Size): Size => mm ? { w: mm.w / 25.4 * 72, h: mm.h / 25.4 * 72 } : { w: pixels.w * .75, h: pixels.h * .75 };
+/** A file-name stem from the design's headline (else its first visible text): ASCII words joined by hyphens, at most 40 characters; "kura8" when there is none. */
+export function nameStem(doc: KuraDoc, sizeId: string): string {
+  const texts = doc.nodes.filter(n => n.kind === 'text' && !n.frames[sizeId]?.hidden && n.text.trim());
+  const pick = texts.find(n => n.slot === 'headline') ?? texts[0], text = pick?.kind === 'text' ? pick.text : '';
+  const words = text.normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  let stem = '';
+  for (const w of words) { const next = stem ? `${stem}-${w}` : w; if (next.length > 40) break; stem = next; }
+  return stem || (words[0] ?? '').slice(0, 40) || 'kura8';
+}

@@ -6,7 +6,7 @@ import { canvasSize, ratioById, ratioNumbers } from '../core/ratios';
 import { resolve } from '../core/palette';
 import { defaultShapeSize, shapeLibrary, ICON_SHAPE } from '../core/shapes';
 import { LINE_HEIGHT, textBox, typeScale, crossing, type TypeScale } from '../core/fit';
-import { addNodes, duplicateNodes, nodeById, nudge, pasteNodes, removeNodes, reorder, setFill, setGround, setHidden, setLocked, updateNodes, type Order } from '../core/ops';
+import { addNodes, duplicateNodes, nodeById, nudge, pasteNodes, removeNodes, reorder, setFill, setFrames, setGround, setHidden, setLocked, updateNodes, type Order } from '../core/ops';
 import { reRatio, flagsFor } from '../core/reratio';
 import { flowText } from '../core/flow';
 import { drawnWeight } from '../core/fonts';
@@ -47,6 +47,7 @@ export class Editor {
   private addCount = 0;
   private bitmaps = new Map<string, ImageBitmap | null>();
   private loading = new Set<string>();
+  private generation = new Map<string, number>();
   readonly cutouts = new Set<string>();
   private missing = new Set<string>();
   private renderer: Canvas2DRenderer;
@@ -65,6 +66,7 @@ export class Editor {
     this.docCanvas = h('canvas', { className: 'doc', 'aria-label': 'Document' });
     this.overlay = h('canvas', { className: 'overlay', tabindex: 0, 'aria-label': 'Canvas: click to select, drag to move, double-click text to edit' });
     this.imageBar = h('div', { className: 'seg image-bar hidden' }, h('button', { type: 'button', 'data-act': 'pick', title: 'Replace the picture' }, 'Replace'), h('button', { type: 'button', 'data-act': 'move', title: 'Drag the picture inside its frame' }, 'Reposition'),
+      h('button', { type: 'button', 'data-act': 'fit', title: 'Fit the frame to the whole picture' }, 'Fit'),
       h('span', { className: 'cut' }, h('button', { type: 'button', 'data-cut': '0' }, 'Before'), h('button', { type: 'button', 'data-cut': '1' }, 'After')));
     this.stack = h('div', { className: 'canvas-stack' }, this.docCanvas, this.overlay, this.imageBar);
     this.info = h('div', { className: 'info' });
@@ -78,6 +80,7 @@ export class Editor {
       if (!b || n?.kind !== 'image') return;
       if (b.dataset.act === 'pick') { this.finishReposition(); this.pickImage(n.id); }
       else if (b.dataset.act === 'move') { if (this.store.ui.reposition) this.finishReposition(); else this.startReposition(n.id); }
+      else if (b.dataset.act === 'fit') this.fitFrame(n.id);
       else this.setCutout(b.dataset.cut === '1');
     });
     this.file.addEventListener('change', () => { const files = [...this.file.files ?? []]; this.file.value = ''; const target = this.fillTarget; this.fillTarget = null; void this.placeFiles(files, null, target); });
@@ -129,7 +132,10 @@ export class Editor {
     if (this.bitmaps.has(key)) return this.bitmaps.get(key);
     if (!this.loading.has(key)) {
       this.loading.add(key);
+      const generation = this.generation.get(asset) ?? 0;
       void assets.bitmap(asset, variant).then(b => {
+        // A load that started before the asset changed (a new cut-out) is stale: drop it and let the next draw ask again.
+        if ((this.generation.get(asset) ?? 0) !== generation) return;
         this.bitmaps.set(key, b); this.loading.delete(key);
         if (b && cutout) this.cutouts.add(asset);
         if (!b && !cutout && !this.missing.has(asset)) { this.missing.add(asset); toast('An image is missing from this browser’s storage', 2400); }
@@ -138,7 +144,7 @@ export class Editor {
     }
     return undefined;
   };
-  forgetBitmap(asset: string): void { for (const v of ['working', 'cutout'] as const) { const k = assets.bitmapKey(asset, v); this.bitmaps.delete(k); } this.missing.delete(asset); }
+  forgetBitmap(asset: string): void { for (const v of ['working', 'cutout'] as const) { const k = assets.bitmapKey(asset, v); this.bitmaps.delete(k); this.loading.delete(k); } this.missing.delete(asset); this.generation.set(asset, (this.generation.get(asset) ?? 0) + 1); }
   /** Closes decoded bitmaps of assets the document no longer uses; undo reloads them from IndexedDB when needed. */
   evictBitmaps(): void {
     const keep = new Set(this.doc.nodes.flatMap(n => n.kind === 'image' && n.asset ? [n.asset] : []));
@@ -194,13 +200,22 @@ export class Editor {
     const n = this.one(), ui = this.store.ui, show = n?.kind === 'image' && !n.locked && !this.display && !ui.tool && !ui.armed;
     this.imageBar.classList.toggle('hidden', !show);
     if (!show || n?.kind !== 'image') return;
-    const moving = ui.reposition === n.id, cut = !!n.asset && this.cutouts.has(n.asset) && !moving, [pick, move] = [...this.imageBar.querySelectorAll<HTMLButtonElement>('[data-act]')];
+    const moving = ui.reposition === n.id, cut = !!n.asset && this.cutouts.has(n.asset) && !moving, [pick, move, fit] = [...this.imageBar.querySelectorAll<HTMLButtonElement>('[data-act]')];
+    const natural = this.natural(n), r = this.frame(n).rect;
+    fit.classList.toggle('hidden', moving || !natural || Math.abs(Math.log((r.w / r.h) / (natural.w / natural.h))) < .01);
     pick.textContent = n.asset ? 'Replace' : 'Choose picture'; pick.classList.toggle('hidden', moving);
     move.textContent = moving ? 'Done' : 'Reposition'; move.classList.toggle('hidden', !n.asset); move.setAttribute('aria-pressed', String(moving));
     this.imageBar.querySelector('.cut')!.classList.toggle('hidden', !cut);
     const b = rotatedBounds(this.box(n), this.frame(n).rot);
     this.imageBar.style.left = `${(b.x + b.w / 2) * this.scale}px`; this.imageBar.style.top = `${Math.min(b.y + b.h, this.canvas().h) * this.scale}px`;
     this.imageBar.querySelectorAll<HTMLButtonElement>('[data-cut]').forEach(btn => btn.setAttribute('aria-pressed', String((btn.dataset.cut === '1') === !!n.cutout)));
+  }
+  /** Fit (D-048): the frame shrinks to the picture's proportions inside its current box, so the whole picture shows. */
+  fitFrame(id: string): void {
+    const n = nodeById(this.doc, id); if (n?.kind !== 'image' || n.locked) return;
+    const natural = this.natural(n), f = this.frame(n); if (!natural) return;
+    this.finishReposition();
+    this.commit(setFrames(updateNodes(this.doc, [id], x => ({ ...x, focus: CENTRE }) as ImageNode), this.sizeId, { [id]: { ...f, rect: containIn(f.rect, natural) } }), 'Fitted to the picture');
   }
   /** Reposition (D-048): dragging moves the picture inside its frame; the frame stays where it is. */
   startReposition(id: string): void {
@@ -265,9 +280,15 @@ export class Editor {
     if (!images.length) { if (files.length) toast('Choose a PNG, JPEG, WebP or GIF image'); return; }
     const hit = target ? nodeById(this.doc, target) : at ? this.hitTest(at) : undefined;
     for (const [i, file] of images.entries()) {
-      let stored: { key: string; natural: Size };
-      try { stored = await assets.putImage(file, this.maxExport()); } catch { toast('That image could not be read'); continue; }
-      if (i === 0 && hit?.kind === 'image' && !hit.locked) { this.commit(updateNodes(this.doc, [hit.id], n => ({ ...n, asset: stored.key, cutout: false, focus: CENTRE }) as ImageNode), 'Filled'); this.select([hit.id]); continue; }
+      let stored: { key: string; natural: Size }, clear = false;
+      try { stored = await assets.putImage(file, this.maxExport()); clear = await assets.hasTransparency(file); } catch { toast('That image could not be read'); continue; }
+      // A see-through picture (logo, sticker) dropped on a photo goes on top of it; onto an empty frame it fills the
+      // frame and the frame takes the picture's proportions, so a logo is never cropped (D-047).
+      if (i === 0 && hit?.kind === 'image' && !hit.locked && !(clear && hit.asset && !target)) {
+        const f = this.frame(hit), rect = clear ? containIn(f.rect, stored.natural) : f.rect;
+        this.commit(setFrames(updateNodes(this.doc, [hit.id], n => ({ ...n, asset: stored.key, cutout: false, focus: CENTRE }) as ImageNode), this.sizeId, { [hit.id]: { ...f, rect } }), 'Filled');
+        this.select([hit.id]); continue;
+      }
       // The nearest cell sets the size and place; the picture keeps its own proportions inside it, so logos and
       // photos are never cropped on arrival (D-047).
       const c = this.canvas(), p = at ?? { x: c.w / 2, y: c.h / 2 }, rect = containIn(nearestCell(p, this.cells(), c), stored.natural);
@@ -422,9 +443,9 @@ export class Editor {
     const before = this.doc, area = h('textarea', { className: 'text-editor', 'aria-label': 'Edit text', spellcheck: 'false', dir: 'auto' });
     area.value = node.text; this.textarea = area; this.stack.append(area);
     this.store.setUI({ editing: id, sel: [id], armed: null });
-    this.positionTextarea(); area.focus(); area.select();
+    this.positionTextarea(); area.focus({ preventScroll: true }); area.select();
     area.addEventListener('input', () => { const cur = nodeById(this.doc, id), prev = this.doc; if (cur?.kind === 'text') { this.store.set(flowText(prev, updateNodes(prev, [id], n => ({ ...n, text: area.value })), id, measure)); this.positionTextarea(); } });
-    area.addEventListener('keydown', e => { if (e.key === 'Escape' || e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); e.stopPropagation(); this.finishText(); this.overlay.focus(); } });
+    area.addEventListener('keydown', e => { if (e.key === 'Escape' || e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); e.stopPropagation(); this.finishText(); this.overlay.focus({ preventScroll: true }); } });
     area.addEventListener('blur', () => this.finishText());
     this.textBefore = before;
   }
@@ -465,7 +486,7 @@ export class Editor {
     requestAnimationFrame(tick);
   }
   /** Nodes whose rotated box meets a rect (marquee). */
-  within(m: Rect): string[] { return this.visible().filter(n => intersects(rotatedBounds(this.box(n), this.frame(n).rot), m)).map(n => n.id); }
+  within(m: Rect, skipLocked = false): string[] { return this.visible().filter(n => !(skipLocked && n.locked) && intersects(rotatedBounds(this.box(n), this.frame(n).rot), m)).map(n => n.id); }
   centreOf(n: DocNode): Point { return center(this.box(n)); }
 }
 export const title = (name: string): string => name.replace(/-/g, ' ').replace(/^./, c => c.toUpperCase());

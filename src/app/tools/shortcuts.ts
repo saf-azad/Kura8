@@ -8,8 +8,11 @@ export function primaryModifier(event: Pick<KeyboardEvent, 'metaKey' | 'ctrlKey'
 export function shortcutLabel(keys: string, mac: boolean): string {
   return keys.replace('Mod', mac ? '⌘' : 'Ctrl').replace('Shift', mac ? '⇧' : 'Shift');
 }
+/** Controls that take typing; sliders, switches and buttons do not, so shortcuts and Escape still work after using them. */
 export function isEditingTarget(target: EventTarget | null): boolean {
-  return target instanceof HTMLElement && !!target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])');
+  if (!(target instanceof HTMLElement)) return false;
+  if (target instanceof HTMLInputElement && ['range', 'checkbox', 'radio', 'button', 'color', 'submit', 'reset'].includes(target.type)) return false;
+  return !!target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])');
 }
 /** Arrow step (5l): one unit; with Shift one grid cell when the grid is on, otherwise ten units. */
 export const nudgeStep = (shift: boolean, grid: { on: boolean; size: number }): number => shift ? (grid.on ? grid.size : 10) : 1;

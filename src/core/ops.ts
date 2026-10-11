@@ -24,6 +24,11 @@ export function nudge(doc: KuraDoc, sizeId: string, ids: string[], dx: number, d
 export function setFill(doc: KuraDoc, ids: string[], fill: ColourRef): KuraDoc {
   return updateNodes(doc, ids, n => n.kind === 'image' ? n : { ...n, fill });
 }
+/** Opacity for any unlocked node (D-052); 1 or more clears it. */
+export function setOpacity(doc: KuraDoc, ids: string[], opacity: number): KuraDoc {
+  const value = Math.max(0, Math.min(1, opacity));
+  return updateNodes(doc, ids, n => { const next = { ...n }; if (value >= 1) delete next.opacity; else next.opacity = value; return next; });
+}
 export const setGround = (doc: KuraDoc, ground: ColourRef | null): KuraDoc => ({ ...doc, ground });
 /** Lock toggles always apply, so a locked node can be unlocked. */
 export function setLocked(doc: KuraDoc, ids: string[], locked: boolean): KuraDoc {

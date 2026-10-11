@@ -61,6 +61,8 @@ async function restoreAssets(): Promise<void> {
 }
 const editorRoot = h('div', { className: 'screen', style: 'position:absolute;inset:0' }), dialRoot = h('div', { className: 'screen', style: 'position:absolute;inset:0' });
 app.append(editorRoot, dialRoot);
+// The app never scrolls; focusing something near an edge must not shift the whole interface.
+app.addEventListener('scroll', () => { app.scrollTop = 0; app.scrollLeft = 0; });
 let editor: Editor | null = null, dial: { paint(): void; destroy(): void } | null = null;
 const settingsOf = (doc: KuraDoc, sizeId: string): Partial<DialSettings> => {
   const spec = doc.sizes.find(s => s.id === sizeId) ?? doc.sizes[0], p = doc.palette;

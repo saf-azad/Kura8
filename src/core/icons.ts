@@ -31,6 +31,13 @@ export const chunkOf = (name: string): string => { const c = name.charAt(0).toLo
 
 /** Everyday words → icon vocabulary (names and tags of the Phosphor set). A key finds its words and each word finds its key. */
 export const SYNONYMS: Record<string, string[]> = {
+  // Student-test additions (D-051): words marketing and event students searched for.
+  location: ['map pin', 'map trifold', 'navigation arrow'], venue: ['map pin', 'buildings'], place: ['map pin'], email: ['envelope', 'at'],
+  mail: ['envelope'], contact: ['envelope', 'phone', 'address book'], social: ['share network', 'chat circle', 'heart'], hashtag: ['hash'],
+  follow: ['user plus'], event: ['calendar', 'ticket'], date: ['calendar'], time: ['clock'], portfolio: ['briefcase', 'folder'],
+  resume: ['file text', 'identification card'], cv: ['file text', 'identification card'], idea: ['lightbulb'], announcement: ['megaphone'],
+  marketing: ['megaphone', 'chart line up', 'target'], analytics: ['chart bar', 'chart pie', 'chart line up'], engagement: ['heart', 'chat circle', 'share network'],
+  university: ['graduation cap', 'student', 'bank'], uni: ['graduation cap', 'student'],
   coffee: ['cup', 'mug', 'café', 'cafe', 'espresso', 'latte'], tea: ['cup', 'mug', 'tea bag'], cocktail: ['martini', 'champagne'], alcohol: ['wine', 'beer bottle', 'martini'],
   eat: ['fork knife', 'bowl food', 'hamburger'], cook: ['cooking pot', 'chef hat', 'knife'], kitchen: ['cooking pot', 'fork knife', 'knife'],
   burger: ['hamburger'], sweet: ['cake', 'cookie', 'ice cream'], love: ['heart', 'hand heart'], like: ['heart', 'thumbs up'],

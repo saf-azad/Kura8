@@ -3,8 +3,8 @@ import type { Editor } from '../../editor';
 import { h, iconButton, ICON, toast } from '../../ui';
 import { download, fileName, preview, render, summary, type ExportChoice, type Format } from '../../export';
 // The export sheet (M14): PNG, JPG, SVG or PDF; 1×–3× or 300 dpi with print sizes defaulting to 300 dpi (5x);
-// sizes over the canvas pixel limit are disabled; notes say what is left out (5y); PNG offers No ground while the
-// ground is unfilled (5z).
+// sizes over the canvas pixel limit are disabled; notes say what is left out (5y); PNG offers No ground (5z), also
+// over a painted ground (D-050).
 const FORMATS: [Format, string][] = [['png', 'PNG'], ['jpg', 'JPG'], ['svg', 'SVG'], ['pdf', 'PDF']];
 export function exportSheet(ed: Editor): HTMLElement {
   const canvas = h('canvas'), box = h('div', { className: 'preview' }, canvas);
@@ -18,7 +18,8 @@ export function exportSheet(ed: Editor): HTMLElement {
   const sheet = h('div', { className: 'sheet', hidden: true, role: 'dialog', 'aria-label': 'Export' }, h('div', { className: 'grabber' }),
     h('div', { className: 'body' }, box, h('div', { className: 'controls' }, h('header', {}, title, close), formatSeg, scaleSeg, sizeText, groundRow, notes, button)));
   let format: Format = 'png', scale: ExportScale | null = null, transparent = false, working = false, wasOpen = false;
-  const choice = (): ExportChoice => ({ format, scale: scale!, ground: !(format === 'png' && transparent && ed.doc.ground === null) });
+  // No ground is offered for every PNG, painted ground or not (D-050).
+  const choice = (): ExportChoice => ({ format, scale: scale!, ground: !(format === 'png' && transparent) });
   noGround.addEventListener('click', () => { transparent = !transparent; ed.invalidate(); });
   button.addEventListener('click', () => void go());
   sheet.addEventListener('keydown', e => { if (e.key === 'Enter' && !(e.target instanceof HTMLButtonElement && e.target !== button)) { e.preventDefault(); void go(); } });
@@ -38,13 +39,13 @@ export function exportSheet(ed: Editor): HTMLElement {
     sheet.hidden = !open; sheet.inert = !open;
     if (!open) { wasOpen = false; return; }
     const ratio = ed.spec().ratio, r = ratioById(ratio);
-    if (!wasOpen) { wasOpen = true; scale = r.mm ? { dpi: 300 } : { scale: 1 }; setTimeout(() => button.focus(), 0); }
+    if (!wasOpen) { wasOpen = true; scale = r.mm ? { dpi: 300 } : { scale: 1 }; setTimeout(() => button.focus({ preventScroll: true }), 0); }
     const options: [ExportScale, string][] = [...(r.mm ? [[{ dpi: 300 }, '300 dpi'] as [ExportScale, string]] : []), [{ scale: 1 }, '1×'], [{ scale: 2 }, '2×'], [{ scale: 3 }, '3×']];
     if (!scale || !withinPixelLimit(exportSize(ratio, scale))) scale = options.find(([o]) => withinPixelLimit(exportSize(ratio, o)))![0];
     const vector = format === 'svg', s = summary(ed.doc, ed.sizeId), unfilled = ed.doc.ground === null;
     const key = JSON.stringify([format, scale, transparent, ratio, s, unfilled, ed.doc.sizes.length]);
     title.textContent = ed.doc.sizes.length > 1 ? `Export ${r.label} ${ratioNumbers(ratio)}` : 'Export';
-    const clear = format === 'png' && transparent && unfilled;
+    const clear = format === 'png' && transparent;
     box.classList.toggle('checker', clear);
     preview(ed.doc, ed.sizeId, canvas, clear, ed.image);
     if (key === built) return;
@@ -59,7 +60,7 @@ export function exportSheet(ed: Editor): HTMLElement {
     scaleSeg.classList.toggle('faded', vector);
     const px = exportSize(ratio, scale);
     sizeText.textContent = vector ? `${exportSize(ratio, { scale: 1 }).w} × ${exportSize(ratio, { scale: 1 }).h}, vector` : format === 'pdf' && r.mm ? `${r.name} page · ${'dpi' in scale ? '300 dpi · ' : ''}${px.w} × ${px.h} px` : `${px.w} × ${px.h} px`;
-    groundRow.classList.toggle('hidden', format !== 'png' || !unfilled);
+    groundRow.classList.toggle('hidden', format !== 'png');
     noGround.setAttribute('aria-checked', String(transparent));
     const lines: string[] = [];
     if (s.hidden) lines.push(`${s.hidden} hidden object${s.hidden > 1 ? 's' : ''} not included`);

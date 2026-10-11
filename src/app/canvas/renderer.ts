@@ -17,6 +17,7 @@ const path2d = (d: string) => { let p = paths.get(d); if (!p) { p = new Path2D(d
 export function drawOp(ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, o: SceneOp, opts: RenderOptions): void {
   const { rect: r } = o;
   ctx.save();
+  if (o.opacity !== undefined) ctx.globalAlpha = o.opacity;
   ctx.translate(r.x + r.w / 2, r.y + r.h / 2); if (o.rot) ctx.rotate(o.rot * Math.PI / 180); ctx.translate(-r.w / 2, -r.h / 2);
   if (o.kind === 'shape') { ctx.fillStyle = o.fill; if (o.scale) ctx.scale(o.scale[0], o.scale[1]); ctx.fill(path2d(o.d), 'evenodd'); }
   else if (o.kind === 'text') {

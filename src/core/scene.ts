@@ -9,11 +9,12 @@ import { drawnWeight } from './fonts';
 import { CENTRE } from './images';
 // The draw list both the canvas renderer and SVG export consume: colours resolved, text wrapped, alignment made
 // physical, paths in each node's local box. Every op draws in a box of rect.w × rect.h rotated `rot` degrees about the rect centre.
-export type SceneOp =
+/** `opacity` is present only below 1 (D-052). */
+export type SceneOp = { opacity?: number } & (
   | { kind: 'shape'; id: string; rect: Rect; rot: number; fill: string; d: string; scale?: [number, number] }
   | { kind: 'text'; id: string; rect: Rect; rot: number; fill: string; size: number; weight: 400 | 700; align: 'left' | 'center' | 'right'; dir: 'ltr' | 'rtl'; font: string; lines: string[]; lineHeight: number }
   | { kind: 'image'; id: string; rect: Rect; rot: number; asset: string | null; cutout: boolean; focus: Point }
-  | { kind: 'ink'; id: string; rect: Rect; rot: number; fill: string; stroke: number; paths: [number, number][][] };
+  | { kind: 'ink'; id: string; rect: Rect; rot: number; fill: string; stroke: number; paths: [number, number][][] });
 /** `filled` is false when the ground was never filled (5z); `hidden` counts nodes hidden in this size (5y); `empty` counts empty image frames. */
 export type Scene = { size: Size; ground: string; filled: boolean; ops: SceneOp[]; hidden: number; empty: number };
 export function buildScene(doc: KuraDoc, sizeId: string, measure: Measure): Scene {
@@ -23,7 +24,7 @@ export function buildScene(doc: KuraDoc, sizeId: string, measure: Measure): Scen
   for (const n of doc.nodes) {
     const f = n.frames[spec.id];
     if (f.hidden) { hidden++; continue; }
-    const { rect, rot } = f;
+    const { rect, rot } = f, at = ops.length;
     if (n.kind === 'shape') {
       const outline = n.shape === ICON_SHAPE && n.icon ? { d: n.icon.d, scale: [rect.w / 100, rect.h / 100] as [number, number] } : shapeOutline(shapeLibrary[n.shape] ?? shapeLibrary.rect, rect.w, rect.h);
       ops.push({ kind: 'shape', id: n.id, rect, rot, fill: resolve(n.fill, p), ...outline });
@@ -34,6 +35,7 @@ export function buildScene(doc: KuraDoc, sizeId: string, measure: Measure): Scen
       if (!n.asset) empty++;
       ops.push({ kind: 'image', id: n.id, rect, rot, asset: n.asset, cutout: !!n.cutout, focus: n.focus ?? CENTRE });
     } else ops.push({ kind: 'ink', id: n.id, rect, rot, fill: resolve(n.fill, p), stroke: n.stroke, paths: n.paths.map(path => path.map(([u, v]): [number, number] => [u * rect.w, v * rect.h])) });
+    if (n.opacity !== undefined && n.opacity < 1) ops[at].opacity = n.opacity;
   }
   return { size, ground: resolve(doc.ground ?? { role: 'ground' }, p), filled: doc.ground !== null, ops, hidden, empty };
 }

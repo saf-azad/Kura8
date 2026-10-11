@@ -1,4 +1,6 @@
-import type { ColourRef, RowId, Step } from '../../../core/document';
+import type { ColourRef, DocNode, Palette, RowId, Step } from '../../../core/document';
+import { center, containsRotated } from '../../../core/geometry';
+import { setOpacity } from '../../../core/ops';
 import { addCustom, contrast, hexToHsv, hsvToHex, hueSwatch, HUES, passingShade, rows, resolve } from '../../../core/palette';
 import type { Editor } from '../../editor';
 import { h, toast } from '../../ui';
@@ -18,10 +20,16 @@ export function colourPanel(ed: Editor): HTMLElement {
   const addHue = h('button', { type: 'button', className: 'pill', title: 'Add as hue', style: 'height:32px' }, '+ Add as hue');
   const hexRow = h('div', { style: 'display:flex;gap:8px;align-items:center' }, hex, addHue);
   const contrastBox = h('div', { className: 'contrast hidden' });
+  // Opacity of the selection (D-052), coalesced into one undo step while dragging.
+  const opacity = h('input', { type: 'range', min: 5, max: 100, step: 5, 'aria-label': 'Opacity', title: 'Opacity', style: 'flex:1' }), opacityValue = h('span', { style: 'width:38px;text-align:right' });
+  const opacityRow = h('div', { className: 'row', style: 'font-size:12px;gap:10px' }, h('span', { className: 'muted' }, 'Opacity'), opacity, opacityValue);
+  opacity.addEventListener('input', () => { const ids = ed.selected().filter(n => !n.locked).map(n => n.id); if (ids.length) ed.store.commit(setOpacity(ed.doc, ids, Number(opacity.value) / 100), { key: 'opacity' }); });
+  // Arrow keys step the slider rather than nudging the selection; Escape still closes the panel.
+  opacity.addEventListener('keydown', e => { if (e.key.startsWith('Arrow')) e.stopPropagation(); });
   const light = h('button', { type: 'button', title: 'Light ground', style: 'background:#ECF0F3' }), dark = h('button', { type: 'button', title: 'Dark ground', style: 'background:#000' });
   const hint = h('div', { className: 'muted' });
   const panel = h('div', { className: 'panel colour-panel', hidden: true, role: 'dialog', 'aria-label': 'Colour' },
-    h('div', { className: 'roles' }, ...roleButtons), shades, hues, sv, hueBar, hexRow, contrastBox, h('div', { className: 'grounds' }, hint, h('div', { className: 'pair' }, light, dark)));
+    h('div', { className: 'roles' }, ...roleButtons), shades, hues, sv, hueBar, hexRow, opacityRow, contrastBox, h('div', { className: 'grounds' }, hint, h('div', { className: 'pair' }, light, dark)));
   let pick = { h: 210, s: 60, v: 70 }, editingHex = false, sliding = false, focusValue = '', built = '';
   const current = (): ColourRef => { const one = ed.one(); return one && one.kind !== 'image' ? one.fill : ed.store.ui.armed ?? ed.store.ui.swatch; };
   const drag = (el: HTMLElement, kind: 'sv' | 'h') => el.addEventListener('pointerdown', e => {
@@ -66,6 +74,16 @@ export function colourPanel(ed: Editor): HTMLElement {
     b.addEventListener('pointerup', end(true)); b.addEventListener('pointerleave', end(false));
   };
   ground(light, false); ground(dark, true);
+  const backdrop = (t: DocNode, p: Palette): string | null => {
+    const nodes = ed.doc.nodes, c = center(ed.box(t));
+    for (let i = nodes.indexOf(t) - 1; i >= 0; i--) {
+      const n = nodes[i], f = ed.frame(n);
+      if (f.hidden || !containsRotated(ed.box(n), f.rot, c)) continue;
+      if (n.kind === 'image') { if (n.asset) return null; continue; }
+      if (n.kind === 'shape' && !n.icon && (n.opacity ?? 1) >= 1) return resolve(n.fill, p);
+    }
+    return resolve(ed.doc.ground ?? { role: 'ground' }, p);
+  };
   ed.chrome.push({ update() {
     const ui = ed.store.ui, open = ui.panel === 'colour';
     panel.hidden = !open; panel.inert = !open;
@@ -96,10 +114,14 @@ export function colourPanel(ed: Editor): HTMLElement {
     sv.style.background = `linear-gradient(to top,#000,transparent),linear-gradient(to right,#fff,${hsvToHex(pick.h, 100, 100)})`;
     const svDot = sv.firstElementChild as HTMLElement; svDot.style.left = `${pick.s}%`; svDot.style.top = `${100 - pick.v}%`; svDot.style.background = value;
     (hueBar.firstElementChild as HTMLElement).style.left = `${pick.h / 3.59}%`;
-    // 5h: text below 4.5:1 against the ground shows its ratio and the nearest passing shade from the same row.
-    const text = ed.selected().find(n => n.kind === 'text');
-    const bg = resolve(ed.doc.ground ?? { role: 'ground' }, p);
-    if (text?.kind === 'text') {
+    const sel = ed.selected(), first = sel[0];
+    opacityRow.classList.toggle('hidden', !sel.length);
+    if (first && document.activeElement !== opacity) opacity.value = String(Math.round((first.opacity ?? 1) * 100));
+    opacityValue.textContent = `${opacity.value}%`;
+    // 5h: text below 4.5:1 against what is behind it (the topmost solid block under its centre, else the ground) shows
+    // its ratio and the nearest passing shade; over a picture the check is left to the eye (D-053).
+    const text = sel.find(n => n.kind === 'text'), bg = text ? backdrop(text, p) : null;
+    if (text?.kind === 'text' && bg) {
       const ratio = contrast(resolve(text.fill, p), bg), fix = passingShade(text.fill, bg, p);
       contrastBox.classList.toggle('hidden', ratio >= 4.5);
       if (ratio < 4.5) {

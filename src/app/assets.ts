@@ -42,6 +42,17 @@ export async function putImage(file: Blob, maxExport: number, key?: string): Pro
     return { key: id, natural };
   } finally { bitmap.close(); }
 }
+/** Whether a picture has see-through pixels (a logo or sticker), judged on a 64 × 64 copy; JPEGs never do. */
+export async function hasTransparency(file: Blob): Promise<boolean> {
+  if (file.type === 'image/jpeg') return false;
+  try {
+    const b = await createImageBitmap(file, { resizeWidth: 64, resizeHeight: 64 }), c = new OffscreenCanvas(64, 64), x = c.getContext('2d')!;
+    x.drawImage(b, 0, 0); b.close();
+    const data = x.getImageData(0, 0, 64, 64).data;
+    for (let i = 3; i < data.length; i += 4) if (data[i] < 250) return true;
+  } catch { /* undecodable: treat as opaque */ }
+  return false;
+}
 export async function setCutout(key: string, cutout: Blob): Promise<void> {
   const record = await getRecord(key);
   if (!record) throw new Error('Image missing');

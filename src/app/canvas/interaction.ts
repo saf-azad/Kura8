@@ -18,7 +18,7 @@ type Drag =
   | { kind: 'move'; ids: string[]; start: Point; before: KuraDoc; last?: KuraDoc; frames: Record<string, Frame>; box: Rect; rot: number; moved: boolean; held?: { x?: string; y?: string } }
   | { kind: 'resize'; id: string; handle: Handle; before: KuraDoc; last?: KuraDoc; frame: Frame; box: Rect; size: number; moved: boolean }
   | { kind: 'rotate'; id: string; c: Point; a0: number; r0: number; before: KuraDoc; last?: KuraDoc; held: number | null; moved: boolean }
-  | { kind: 'marquee'; start: Point; base: string[] }
+  | { kind: 'marquee'; start: Point; base: string[]; skipLocked?: boolean }
   | { kind: 'pan'; id: string; start: Point; focus: Point; moved: boolean };
 const MIN = 20;
 const CURSORS: Record<string, string> = { n: 'ns-resize', s: 'ns-resize', e: 'ew-resize', w: 'ew-resize', nw: 'nwse-resize', se: 'nwse-resize', ne: 'nesw-resize', sw: 'nesw-resize', rotate: 'grab' };
@@ -69,6 +69,11 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
       ed.store.setUI({ sel: base, panel: keepPanel });
       drag = { kind: 'marquee', start: p, base }; el.setPointerCapture(e.pointerId); return;
     }
+    // A press on a locked block selects it; dragging from it draws a marquee over what sits on it (a locked background photo).
+    if (hit.locked && !e.shiftKey) {
+      ed.store.setUI({ sel: [hit.id], panel: keepPanel });
+      drag = { kind: 'marquee', start: p, base: [], skipLocked: true }; el.setPointerCapture(e.pointerId); return;
+    }
     let sel = ui.sel;
     if (e.shiftKey) sel = sel.includes(hit.id) ? sel.filter(x => x !== hit.id) : [...sel, hit.id];
     else if (!sel.includes(hit.id)) sel = [hit.id];
@@ -94,7 +99,7 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
     if (drag.kind === 'marquee') {
       const m = { x: Math.min(p.x, drag.start.x), y: Math.min(p.y, drag.start.y), w: Math.abs(p.x - drag.start.x), h: Math.abs(p.y - drag.start.y) };
       if (m.w * ed.scale < 2 && m.h * ed.scale < 2) return;
-      ed.live = { ...emptyLive(), marquee: m }; ed.store.setUI({ sel: [...new Set([...drag.base, ...ed.within(m)])] }); return;
+      ed.live = { ...emptyLive(), marquee: m }; ed.store.setUI({ sel: [...new Set([...drag.base, ...ed.within(m, drag.skipLocked)])] }); return;
     }
     if (drag.kind === 'move') {
       let dx = p.x - drag.start.x, dy = p.y - drag.start.y;

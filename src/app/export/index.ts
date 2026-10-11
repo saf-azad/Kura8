@@ -2,7 +2,7 @@ import type { KuraDoc } from '../../core/document';
 import type { Size } from '../../core/geometry';
 import { buildScene, type SceneOp } from '../../core/scene';
 import { exportSize, ratioById, type ExportScale } from '../../core/ratios';
-import { svg, pdf, pageSize, licences } from '../../core/export';
+import { svg, pdf, pageSize, licences, nameStem } from '../../core/export';
 import { scriptOf } from '../../core/script';
 import { measure, loadFont } from '../measure';
 import { FONT_FILES } from './fonts';
@@ -25,7 +25,7 @@ export function summary(doc: KuraDoc, sizeId: string): { hidden: number; empty: 
 }
 export function fileName(doc: KuraDoc, sizeId: string, c: ExportChoice): string {
   const ratio = doc.sizes.find(s => s.id === sizeId)!.ratio, suffix = 'dpi' in c.scale ? `-${c.scale.dpi}dpi` : c.scale.scale > 1 ? `@${c.scale.scale}x` : '';
-  return `kura8-${ratio}${c.format === 'svg' ? '' : suffix}.${c.format}`;
+  return `${nameStem(doc, sizeId)}-${ratio}${c.format === 'svg' ? '' : suffix}${c.format === 'png' && !c.ground ? '-transparent' : ''}.${c.format}`;
 }
 /** Full-resolution bitmaps for the visible image ops, decoded no larger than they will be drawn. */
 async function originals(ops: SceneOp[], pixelsPerUnit: number): Promise<Map<string, ImageBitmap>> {
