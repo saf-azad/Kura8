@@ -33,9 +33,11 @@ export function installShortcuts(ed: Editor): void {
     if (primaryModifier(e, mac)) {
       const command = modCommand(e);
       if (!command) return;
+      // Copy and cut also let the browser's copy event fire, which writes the text to the system clipboard.
+      if (command === 'copy' || command === 'cut') { if (!e.repeat) { if (command === 'copy') ed.copy(); else ed.cut(); } return; }
       e.preventDefault();
       if (e.repeat && command !== 'undo' && command !== 'redo') return;
-      ({ copy: () => ed.copy(), cut: () => ed.cut(), duplicate: () => ed.duplicate(), selectAll: () => ed.selectAll(), undo: () => ed.undo(), redo: () => ed.redo(),
+      ({ duplicate: () => ed.duplicate(), selectAll: () => ed.selectAll(), undo: () => ed.undo(), redo: () => ed.redo(),
         forward: () => ed.reorder('forward'), backward: () => ed.reorder('backward'), front: () => ed.reorder('front'), back: () => ed.reorder('back'),
         lock: () => ed.toggleLock(), bold: () => ed.toggleBold(), export: () => ed.openPanel('export') })[command]();
       return;
@@ -43,6 +45,7 @@ export function installShortcuts(ed: Editor): void {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     const arrows: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
     if (arrows[e.key]) { if (!ui.sel.length) return; e.preventDefault(); const s = nudgeStep(e.shiftKey, ui.grid); ed.nudge(arrows[e.key][0] * s, arrows[e.key][1] * s); return; }
+    if (ui.reposition && (e.key === 'Escape' || e.key === 'Enter')) { e.preventDefault(); ed.finishReposition(); return; }
     if (e.key === 'Escape') {
       e.preventDefault();
       if (ui.armed) ed.store.setUI({ armed: null });
@@ -59,11 +62,21 @@ export function installShortcuts(ed: Editor): void {
       p: () => ed.setTool(ui.tool === 'pen' ? null : 'pen'), e: () => ed.setTool('erase'), l: () => ed.setTool('lasso'), c: () => ed.openPanel('colour'), g: () => ed.setGuides(!ui.guides) } as Record<string, () => void>)[e.key.toLowerCase()];
     if (run) { e.preventDefault(); run(); }
   });
-  // Paste: images from the system clipboard go to the nearest cell; otherwise Kura8's own clipboard.
+  // Copy and cut write the copied text (or layer names) to the system clipboard, so text can go to other apps and a
+  // later paste can tell Kura8's own copy from text copied elsewhere.
+  const write = (e: ClipboardEvent) => {
+    if (ed.store.ui.screen !== 'editor' || isEditingTarget(e.target) || !ed.clip.length || !e.clipboardData) return;
+    e.preventDefault(); ed.clipText = ed.clipboardText(); e.clipboardData.setData('text/plain', ed.clipText);
+  };
+  document.addEventListener('copy', write); document.addEventListener('cut', write);
+  // Paste: images from the system clipboard go to the nearest cell; text copied in another app becomes a text block;
+  // otherwise Kura8's own clipboard.
   document.addEventListener('paste', e => {
     if (ed.store.ui.screen !== 'editor' || isEditingTarget(e.target)) return;
-    const files = [...e.clipboardData?.files ?? []].filter(f => f.type.startsWith('image/'));
+    const files = [...e.clipboardData?.files ?? []].filter(f => f.type.startsWith('image/')), text = e.clipboardData?.getData('text/plain') ?? '';
     e.preventDefault();
-    if (files.length) void ed.placeFiles(files, null); else ed.paste();
+    if (files.length) void ed.placeFiles(files, null);
+    else if (text.trim() && (!ed.clip.length || ed.clipText !== null && text !== ed.clipText)) ed.addPastedText(text);
+    else ed.paste();
   });
 }

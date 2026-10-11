@@ -8,8 +8,9 @@ import { defaultShapeSize, shapeLibrary, ICON_SHAPE } from '../core/shapes';
 import { LINE_HEIGHT, textBox, typeScale, crossing, type TypeScale } from '../core/fit';
 import { addNodes, duplicateNodes, nodeById, nudge, pasteNodes, removeNodes, reorder, setFill, setGround, setHidden, setLocked, updateNodes, type Order } from '../core/ops';
 import { reRatio, flagsFor } from '../core/reratio';
+import { flowText } from '../core/flow';
 import { addSize, removeSize } from '../core/sizes';
-import { nearestCell, containIn, CENTRE } from '../core/images';
+import { nearestCell, containIn, CENTRE, fullImageRect, panFocus } from '../core/images';
 import { direction, fontStack, physicalAlign } from '../core/script';
 import { exportSize } from '../core/ratios';
 import type { SnapHit, SnapLine } from '../core/snap';
@@ -54,24 +55,35 @@ export class Editor {
   private fillTarget: string | null = null;
   textarea: HTMLTextAreaElement | null = null;
   private textBefore: KuraDoc | null = null;
-  readonly beforeAfter: HTMLDivElement;
+  /** On-image controls: choose or replace the picture, reposition it, and Before/After for a cut-out (5o). */
+  readonly imageBar: HTMLDivElement;
+  private repositionBefore: KuraDoc | null = null;
   readonly info: HTMLDivElement;
   constructor(root: HTMLElement, store: Store) {
     this.root = root; this.store = store;
     this.docCanvas = h('canvas', { className: 'doc', 'aria-label': 'Document' });
     this.overlay = h('canvas', { className: 'overlay', tabindex: 0, 'aria-label': 'Canvas: click to select, drag to move, double-click text to edit' });
-    this.beforeAfter = h('div', { className: 'seg before-after hidden' }, h('button', { type: 'button', 'data-cut': '0' }, 'Before'), h('button', { type: 'button', 'data-cut': '1' }, 'After'));
-    this.stack = h('div', { className: 'canvas-stack' }, this.docCanvas, this.overlay, this.beforeAfter);
+    this.imageBar = h('div', { className: 'seg image-bar hidden' }, h('button', { type: 'button', 'data-act': 'pick', title: 'Replace the picture' }, 'Replace'), h('button', { type: 'button', 'data-act': 'move', title: 'Drag the picture inside its frame' }, 'Reposition'),
+      h('span', { className: 'cut' }, h('button', { type: 'button', 'data-cut': '0' }, 'Before'), h('button', { type: 'button', 'data-cut': '1' }, 'After')));
+    this.stack = h('div', { className: 'canvas-stack' }, this.docCanvas, this.overlay, this.imageBar);
     this.info = h('div', { className: 'info' });
     this.file = h('input', { type: 'file', accept: 'image/png,image/jpeg,image/webp,image/gif', multiple: true, className: 'hidden' });
     const stage = h('div', { className: 'stage' }, this.stack);
     root.append(stage, this.info, this.file);
     stage.addEventListener('pointerdown', e => { if (e.target !== stage) return; this.finishText(); this.store.setUI({ sel: [], panel: null }); });
     this.renderer = new Canvas2DRenderer(this.docCanvas);
-    this.beforeAfter.addEventListener('click', e => { const b = (e.target as Element).closest('button'); if (b) this.setCutout(b.dataset.cut === '1'); });
+    this.imageBar.addEventListener('click', e => {
+      const b = (e.target as Element).closest('button'), n = this.one();
+      if (!b || n?.kind !== 'image') return;
+      if (b.dataset.act === 'pick') { this.finishReposition(); this.pickImage(n.id); }
+      else if (b.dataset.act === 'move') { if (this.store.ui.reposition) this.finishReposition(); else this.startReposition(n.id); }
+      else this.setCutout(b.dataset.cut === '1');
+    });
     this.file.addEventListener('change', () => { const files = [...this.file.files ?? []]; this.file.value = ''; const target = this.fillTarget; this.fillTarget = null; void this.placeFiles(files, null, target); });
     new ResizeObserver(() => this.fit()).observe(root);
     let evict = 0;
+    // Selecting something else ends a reposition.
+    store.on(() => { const r = store.ui.reposition; if (r && (store.ui.sel.length !== 1 || store.ui.sel[0] !== r)) this.finishReposition(); });
     store.on(c => { this.invalidate(); if (c.doc) { clearTimeout(evict); evict = window.setTimeout(() => { if (this.store.doc) this.evictBitmaps(); }, 2000); } });
     this.fit();
   }
@@ -96,7 +108,7 @@ export class Editor {
   boxes(): Box[] {
     const sel = this.selected().filter(n => !this.frame(n).hidden && n.id !== this.store.ui.editing), single = sel.length === 1 && !this.store.ui.armed && !this.store.ui.tool;
     return sel.map(n => {
-      const handles: HandleSet = !single ? 'none' : n.kind === 'image' ? 'corners' : n.kind === 'text' ? (n.fit ? 'fit' : 'text') : 'all';
+      const handles: HandleSet = !single || n.id === this.store.ui.reposition ? 'none' : n.kind === 'image' ? 'corners' : n.kind === 'text' ? (n.fit ? 'fit' : 'text') : 'all';
       return { id: n.id, rect: this.box(n), rot: this.frame(n).rot, handles, locked: !!n.locked };
     });
   }
@@ -157,10 +169,17 @@ export class Editor {
       flags: this.doc.nodes.filter(n => flagged.has(n.id) && !this.frame(n).hidden).map(n => ({ rect: this.box(n), rot: this.frame(n).rot })), crossings,
       sketch: { ...this.live.sketch, stroke: this.inkWidth(), ink: this.colour({ role: 'ink' }) },
       scan: scan ? { rect: this.box(scan), rot: this.frame(scan).rot, t: ((performance.now() - this.scan!.t0) % 900) / 900 } : null,
+      reposition: this.repositionView(),
     });
     if (this.scan) this.invalidate();
-    this.updateBeforeAfter(); this.updateInfo();
+    this.updateImageBar(); this.updateInfo();
     for (const c of this.chrome) c.update();
+  }
+  private repositionView(): { rect: Rect; rot: number; full: Rect; bitmap: ImageBitmap | null | undefined } | null {
+    const id = this.store.ui.reposition, n = id ? nodeById(this.doc, id) : undefined;
+    if (n?.kind !== 'image' || !n.asset) return null;
+    const f = this.frame(n), bitmap = this.image(n.asset, !!n.cutout), natural = this.natural(n);
+    return natural ? { rect: f.rect, rot: f.rot, full: fullImageRect(natural, f.rect, n.focus ?? CENTRE), bitmap } : null;
   }
   inkWidth(): number { const c = this.canvas(); return Math.max(2, Math.min(c.w, c.h) * .005); }
   private updateInfo(): void {
@@ -170,13 +189,37 @@ export class Editor {
     const b = one && this.box(one);
     this.info.replaceChildren(h('span', {}, one ? layerName(one) : `${sel.length} selected`), h('span', { className: 'muted' }, b ? `${Math.round(b.w)} × ${Math.round(b.h)}` : ''));
   }
-  private updateBeforeAfter(): void {
-    const n = this.one(), show = n?.kind === 'image' && !!n.asset && this.cutouts.has(n.asset) && !this.display && !this.store.ui.tool;
-    this.beforeAfter.classList.toggle('hidden', !show);
+  private updateImageBar(): void {
+    const n = this.one(), ui = this.store.ui, show = n?.kind === 'image' && !n.locked && !this.display && !ui.tool && !ui.armed;
+    this.imageBar.classList.toggle('hidden', !show);
     if (!show || n?.kind !== 'image') return;
+    const moving = ui.reposition === n.id, cut = !!n.asset && this.cutouts.has(n.asset) && !moving, [pick, move] = [...this.imageBar.querySelectorAll<HTMLButtonElement>('[data-act]')];
+    pick.textContent = n.asset ? 'Replace' : 'Choose picture'; pick.classList.toggle('hidden', moving);
+    move.textContent = moving ? 'Done' : 'Reposition'; move.classList.toggle('hidden', !n.asset); move.setAttribute('aria-pressed', String(moving));
+    this.imageBar.querySelector('.cut')!.classList.toggle('hidden', !cut);
     const b = rotatedBounds(this.box(n), this.frame(n).rot);
-    this.beforeAfter.style.left = `${(b.x + b.w / 2) * this.scale}px`; this.beforeAfter.style.top = `${(b.y + b.h) * this.scale}px`;
-    this.beforeAfter.querySelectorAll('button').forEach(btn => btn.setAttribute('aria-pressed', String((btn.dataset.cut === '1') === !!n.cutout)));
+    this.imageBar.style.left = `${(b.x + b.w / 2) * this.scale}px`; this.imageBar.style.top = `${Math.min(b.y + b.h, this.canvas().h) * this.scale}px`;
+    this.imageBar.querySelectorAll<HTMLButtonElement>('[data-cut]').forEach(btn => btn.setAttribute('aria-pressed', String((btn.dataset.cut === '1') === !!n.cutout)));
+  }
+  /** Reposition (D-048): dragging moves the picture inside its frame; the frame stays where it is. */
+  startReposition(id: string): void {
+    const n = nodeById(this.doc, id);
+    if (n?.kind !== 'image' || !n.asset || n.locked) return;
+    this.finishText(); this.repositionBefore = this.doc; this.store.setUI({ reposition: id, sel: [id], panel: null });
+  }
+  finishReposition(): void {
+    const before = this.repositionBefore; this.repositionBefore = null;
+    if (!this.store.ui.reposition) return;
+    this.store.setUI({ reposition: null });
+    if (before && before !== this.doc) this.store.commit(this.doc, { before });
+  }
+  /** The picture's natural proportions (its working copy) when it is loaded. */
+  natural(n: ImageNode): Size | null { const b = n.asset ? this.image(n.asset, !!n.cutout) : null; return b ? { w: b.width, h: b.height } : null; }
+  panPicture(id: string, focus0: Point, delta: Point): void {
+    const n = nodeById(this.doc, id); if (n?.kind !== 'image') return;
+    const natural = this.natural(n), f = this.frame(n); if (!natural) return;
+    const a = -f.rot * Math.PI / 180, local = { x: delta.x * Math.cos(a) - delta.y * Math.sin(a), y: delta.x * Math.sin(a) + delta.y * Math.cos(a) };
+    this.store.set(updateNodes(this.doc, [id], x => ({ ...x, focus: panFocus(natural, f.rect, focus0, local) }) as ImageNode));
   }
   // editing actions
   commit(doc: KuraDoc, message?: string, key?: string): void { this.store.commit(doc, { key }); if (message) toast(message); }
@@ -224,8 +267,9 @@ export class Editor {
       let stored: { key: string; natural: Size };
       try { stored = await assets.putImage(file, this.maxExport()); } catch { toast('That image could not be read'); continue; }
       if (i === 0 && hit?.kind === 'image' && !hit.locked) { this.commit(updateNodes(this.doc, [hit.id], n => ({ ...n, asset: stored.key, cutout: false, focus: CENTRE }) as ImageNode), 'Filled'); this.select([hit.id]); continue; }
-      const c = this.canvas(), p = at ?? { x: c.w / 2, y: c.h / 2 }, cells = this.cells();
-      const rect = cells.length ? nearestCell(p, cells, c) : containIn(nearestCell(p, [], c), stored.natural);
+      // The nearest cell sets the size and place; the picture keeps its own proportions inside it, so logos and
+      // photos are never cropped on arrival (D-047).
+      const c = this.canvas(), p = at ?? { x: c.w / 2, y: c.h / 2 }, rect = containIn(nearestCell(p, this.cells(), c), stored.natural);
       if (i > 0) { rect.x += 20 * i; rect.y += 20 * i; }
       this.add([{ id: newId(), kind: 'image', asset: stored.key, frames: this.framesFor(rect) }], 'Image');
     }
@@ -240,7 +284,21 @@ export class Editor {
     if (!r.ids.length) return;
     this.commit(r.doc, 'Duplicated'); this.select(r.ids);
   }
-  copy(message: string | null = 'Copied'): void { const s = this.selected(); if (!s.length) return; this.clip = structuredClone(s); this.pasteCount = 0; if (message) toast(message); }
+  /** Plain text the last copy wrote to the system clipboard; null when the browser gave no copy event to write it. */
+  clipText: string | null = null;
+  copy(message: string | null = 'Copied'): void { const s = this.selected(); if (!s.length) return; this.clip = structuredClone(s); this.clipText = null; this.pasteCount = 0; if (message) toast(message); }
+  /** What a copy puts on the system clipboard: the text of the copied blocks, else their layer names. */
+  clipboardText(): string { const text = this.clip.flatMap(n => n.kind === 'text' ? [n.text] : []); return (text.length ? text : this.clip.map(layerName)).join('\n\n'); }
+  /** Text pasted from another app becomes a text block: one line at headline size, longer copy at body size. */
+  addPastedText(raw: string): void {
+    const text = raw.replace(/\r\n?/g, '\n').replace(/\t/g, ' ').trim();
+    if (!text) return;
+    const c = this.canvas(), scale = this.typeScale(), long = text.length > 40 || text.includes('\n'), size = long ? scale.body : scale.headline, w = c.w * (long ? .6 : .5);
+    const node: TextNode = { id: newId(), kind: 'text', text, weight: long ? 400 : 700, align: 'start', fill: { role: 'ink' }, frames: {} };
+    const rect = this.centred(w, size * LINE_HEIGHT), frames = this.framesFor(rect, { fontSize: size });
+    for (const id of Object.keys(frames)) frames[id].rect.h = textBox(node, frames[id], measure, this.typeScale()).rect.h;
+    this.add([{ ...node, frames }], 'Pasted text');
+  }
   cut(): void { if (!this.selected().length) return; this.copy(null); this.remove(); toast('Cut'); }
   paste(): void {
     if (!this.clip.length) { toast('Nothing to paste'); return; }
@@ -277,7 +335,12 @@ export class Editor {
     this.commit(setFill(this.doc, [node.id], armed));
   }
   setPalette(patch: Partial<Palette>, message?: string): void { this.commit({ ...this.doc, palette: { ...this.doc.palette, ...patch } }, message); }
-  editOne(fn: (n: DocNode) => DocNode, key?: string): void { const n = this.one(); if (n && !n.locked) this.store.commit(updateNodes(this.doc, [n.id], fn), { key }); }
+  /** Edits the one selected node; text that changes height moves the text stacked under it (D-046). */
+  editOne(fn: (n: DocNode) => DocNode, key?: string): void {
+    const n = this.one(); if (!n || n.locked) return;
+    const next = updateNodes(this.doc, [n.id], fn);
+    this.store.commit(n.kind === 'text' ? flowText(this.doc, next, n.id, measure) : next, { key });
+  }
   fontStep(dir: 1 | -1): void {
     const n = this.one(); if (n?.kind !== 'text') return;
     const f = this.frame(n), size = textBox(n, f, measure, this.typeScale()).size, next = Math.max(6, size + dir * Math.max(2, Math.round(size * .1)));
@@ -294,8 +357,8 @@ export class Editor {
       return { ...n, fit: true, frames: { ...n.frames, [this.sizeId]: { ...f, rect: { ...f.rect, h: b.h } } } };
     });
   }
-  undo(): void { if (this.store.undo()) toast('Undo'); else toast('Nothing to undo'); }
-  redo(): void { if (this.store.redo()) toast('Redo'); else toast('Nothing to redo'); }
+  undo(): void { this.finishReposition(); if (this.store.undo()) toast('Undo'); else toast('Nothing to undo'); }
+  redo(): void { this.finishReposition(); if (this.store.redo()) toast('Redo'); else toast('Nothing to redo'); }
   // sizes and ratio (5v, 5w)
   changeRatio(ratio: RatioId): void {
     if (ratio === this.spec().ratio) return;
@@ -317,7 +380,7 @@ export class Editor {
   }
   setGuides(on: boolean): void { this.store.setUI({ guides: on }); toast(on ? 'Guides on' : 'Guides off'); }
   openPanel(panel: PanelId | null): void { this.store.setUI({ panel: this.store.ui.panel === panel ? null : panel }); }
-  setTool(tool: Tool | null): void { this.finishText(); this.live = emptyLive(); this.store.setUI({ tool, panel: null, armed: null, sel: tool ? [] : this.store.ui.sel }); }
+  setTool(tool: Tool | null): void { this.finishText(); this.finishReposition(); this.live = emptyLive(); this.store.setUI({ tool, panel: null, armed: null, sel: tool ? [] : this.store.ui.sel }); }
   // background removal (5o)
   async removeBackground(): Promise<void> {
     const n = this.one();
@@ -349,7 +412,7 @@ export class Editor {
     area.value = node.text; this.textarea = area; this.stack.append(area);
     this.store.setUI({ editing: id, sel: [id], armed: null });
     this.positionTextarea(); area.focus(); area.select();
-    area.addEventListener('input', () => { const cur = nodeById(this.doc, id); if (cur?.kind === 'text') { this.store.set(updateNodes(this.doc, [id], n => ({ ...n, text: area.value }))); this.positionTextarea(); } });
+    area.addEventListener('input', () => { const cur = nodeById(this.doc, id), prev = this.doc; if (cur?.kind === 'text') { this.store.set(flowText(prev, updateNodes(prev, [id], n => ({ ...n, text: area.value })), id, measure)); this.positionTextarea(); } });
     area.addEventListener('keydown', e => { if (e.key === 'Escape' || e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); e.stopPropagation(); this.finishText(); this.overlay.focus(); } });
     area.addEventListener('blur', () => this.finishText());
     this.textBefore = before;

@@ -12,6 +12,7 @@ export type UI = {
   guides: boolean; grid: { on: boolean; size: number }; help: boolean;
   /** Swatch armed for paint (5e); null when tapping ground deselects. */ armed: ColourRef | null;
   swatch: ColourRef; row: RowId; editing: string | null; flags: Flag[]; removing: string | null; previewDark: boolean | null; ratioMode: 'change' | 'add';
+  /** The image whose picture is being dragged inside its frame (D-048). */ reposition: string | null;
 };
 export type Change = { doc?: boolean; ui?: boolean };
 const KEYS = { doc: 'kura8:doc', dial: 'kura8:dial', prefs: 'kura8:prefs', lifted: 'kura8:lifted' };
@@ -42,7 +43,7 @@ export class Store {
     this.dial = { ...defaultDial(), ...read<DialSettings>(KEYS.dial) };
     const prefs = read<Partial<UI>>(KEYS.prefs) ?? {};
     this.ui = { screen: doc ? 'editor' : 'dial', size: doc?.sizes[0].id ?? 'main', sel: [], panel: null, tool: null, guides: prefs.guides ?? true, grid: prefs.grid ?? { on: false, size: 40 }, help: false,
-      armed: null, swatch: { role: 'accent' }, row: 'accent', editing: null, flags: [], removing: null, previewDark: null, ratioMode: 'change' };
+      armed: null, swatch: { role: 'accent' }, row: 'accent', editing: null, flags: [], removing: null, previewDark: null, ratioMode: 'change', reposition: null };
   }
   on(fn: (c: Change) => void): () => void { this.listeners.add(fn); return () => this.listeners.delete(fn); }
   emit(c: Change): void { for (const fn of this.listeners) fn(c); }

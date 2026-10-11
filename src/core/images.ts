@@ -25,3 +25,14 @@ export function containIn(box: Rect, natural: Size): Rect {
   const k = Math.min(box.w / natural.w, box.h / natural.h), w = natural.w * k, h = natural.h * k;
   return { x: box.x + (box.w - w) / 2, y: box.y + (box.h - h) / 2, w, h };
 }
+/** Where the whole picture lies, frame-local, when `frame` shows its cover crop: drawn faintly while repositioning. */
+export function fullImageRect(natural: Size, frame: Size, focus: Point = CENTRE): Rect {
+  const crop = coverCrop(natural, frame, focus), k = frame.w / crop.w;
+  return { x: 0 - crop.x * k, y: 0 - crop.y * k, w: natural.w * k, h: natural.h * k };
+}
+/** Reposition (D-048): the focus after the picture is dragged `delta` frame-local units inside its frame, kept where the crop stays inside the picture. */
+export function panFocus(natural: Size, frame: Size, focus: Point, delta: Point): Point {
+  const crop = coverCrop(natural, frame, focus), k = frame.w / crop.w;
+  const axis = (start: number, span: number, total: number, d: number) => { const half = span / 2 / total; return Math.max(half, Math.min(1 - half, (start + span / 2) / total - d / k / total)); };
+  return { x: axis(crop.x, crop.w, natural.w, delta.x), y: axis(crop.y, crop.h, natural.h, delta.y) };
+}

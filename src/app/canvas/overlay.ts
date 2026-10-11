@@ -13,6 +13,7 @@ export type OverlayState = {
   boxes: Box[]; marquee: Rect | null; flags: { rect: Rect; rot: number }[]; crossings: { x: number; w: number; y: number }[];
   sketch: { live?: Point[]; stroke: number; ink: string; lasso?: Point[]; eraser?: Point | null };
   scan: { rect: Rect; rot: number; t: number } | null;
+  /** Repositioning a picture: the whole picture (frame-local) drawn faintly around its frame. */ reposition?: { rect: Rect; rot: number; full: Rect; bitmap: ImageBitmap | null | undefined } | null;
 };
 export const HANDLE_PX = 12, ROTATE_PX = 44;
 /** The overlay reaches this far past the canvas on every side, so handles and knobs at the edges stay visible and grabbable. */
@@ -71,6 +72,15 @@ export function drawOverlay(canvas: HTMLCanvasElement, s: OverlayState): void {
   }
   for (const c of s.crossings) { ctx.setLineDash([3 * px, 3 * px]); ctx.beginPath(); ctx.moveTo(c.x - 10 * px, c.y); ctx.lineTo(c.x + c.w + 10 * px, c.y); ctx.stroke(); ctx.setLineDash([]); ctx.beginPath(); ctx.moveTo(c.x - 10 * px, c.y - 6 * px); ctx.lineTo(c.x - 10 * px, c.y + 6 * px); ctx.stroke(); }
   if (s.scan) { const { rect: r } = s.scan, c = center(r); ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(s.scan.rot * Math.PI / 180); ctx.fillStyle = '#000'; ctx.fillRect(-r.w / 2, -r.h / 2 + r.h * s.scan.t - px, r.w, 2 * px); ctx.restore(); }
+  if (s.reposition) {
+    const { rect: r, rot, full, bitmap } = s.reposition, c = center(r);
+    ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(rot * Math.PI / 180); ctx.translate(-r.w / 2, -r.h / 2);
+    ctx.save(); ctx.beginPath(); ctx.rect(full.x, full.y, full.w, full.h); ctx.rect(0, 0, r.w, r.h); ctx.clip('evenodd');
+    if (bitmap) { ctx.globalAlpha = .4; ctx.drawImage(bitmap, full.x, full.y, full.w, full.h); ctx.globalAlpha = 1; }
+    ctx.restore();
+    ctx.strokeStyle = '#000'; ctx.lineWidth = px; ctx.setLineDash([4 * px, 3 * px]); ctx.strokeRect(full.x, full.y, full.w, full.h); ctx.setLineDash([]);
+    ctx.lineWidth = 2 * px; ctx.strokeRect(0, 0, r.w, r.h); ctx.restore();
+  }
   for (const b of s.boxes) {
     const p = corners(b.rect, b.rot);
     ctx.strokeStyle = '#000'; ctx.lineWidth = 2 * px; ctx.setLineDash(b.locked ? [5 * px, 4 * px] : []);

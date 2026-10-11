@@ -71,8 +71,9 @@ button.wordmark{transition:color var(--fast)}button.wordmark:hover{color:var(--s
 .canvas-stack canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .canvas-stack canvas.overlay{touch-action:none;outline:none;inset:-64px;width:calc(100% + 128px);height:calc(100% + 128px);z-index:2}
 .text-editor{position:absolute;z-index:4;background:transparent;border:0;outline:0;padding:0;margin:0;resize:none;overflow:hidden;white-space:pre-wrap;user-select:text;transform-origin:50% 50%}
-.before-after{position:absolute;z-index:5;transform:translate(-50%,8px);background:var(--paper)}
-.before-after button{height:28px;padding:0 12px}
+.image-bar{position:absolute;z-index:5;transform:translate(-50%,8px);background:var(--paper)}
+.image-bar button{height:28px;padding:0 12px}
+.image-bar .cut{display:inline-flex;gap:5px;padding-left:5px;border-left:var(--stroke) solid var(--slate)}
 .info{position:absolute;left:90px;bottom:44px;font-size:12px;display:flex;gap:10px;pointer-events:none;transition:opacity var(--fast)}
 .shortcut-hint{position:absolute;right:40px;bottom:36px;display:flex;align-items:center;gap:8px;font-size:12px}
 .toast{position:fixed;left:50%;bottom:36px;transform:translateX(-50%);height:36px;padding:0 18px;border-radius:var(--r-pill);background:var(--ink);color:var(--white);display:flex;align-items:center;font-size:13px;pointer-events:none;opacity:0;transition:opacity var(--fast);z-index:30;white-space:nowrap}
