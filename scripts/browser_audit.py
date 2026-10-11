@@ -427,6 +427,8 @@ def s_5f(app):
 @step('5g a pasted hex becomes a custom hue for this file')
 def s_5g(app):
     app.start(SQUARE); p = app.page; acc = find(app.doc(), slot='accent')[0]; app.select(acc); p.keyboard.press('c')
+    # Panels open on the next animation frame; typing before then lands in an inert field.
+    p.locator('.colour-panel:not([hidden])').wait_for()
     hexf = p.locator('.colour-panel input.field'); hexf.fill('#9CABC2'); p.wait_for_timeout(100)
     p.locator('.colour-panel button', has_text='+ Add as hue').click(); d = app.doc()
     check(d['palette']['custom'] == ['#9cabc2'], f'custom {d["palette"]["custom"]}')
@@ -437,6 +439,7 @@ def s_5g(app):
 @step('5h text below 4.5:1 shows the ratio and offers the nearest passing shade')
 def s_5h(app):
     app.start(SQUARE); p = app.page; head = find(app.doc(), slot='headline')[0]; app.select(head); p.keyboard.press('c')
+    p.locator('.colour-panel:not([hidden])').wait_for()
     p.locator('.colour-panel .roles button', has_text='Ground').click(); p.wait_for_timeout(150)
     box = p.locator('.colour-panel .contrast'); check(box.is_visible() and 'fails' in box.inner_text(), 'no contrast warning')
     box.locator('button', has_text='use').click(); f = find(app.doc(), slot='headline')[0]['fill']
@@ -462,9 +465,9 @@ def s_5q(app):
     app.start(SQUARE); p = app.page; head = find(app.doc(), slot='headline')[0]; app.select(head)
     p.locator('.toolbar button[data-tip="Autofit"], .toolbar button[title="Autofit"]').click()
     check(find(app.doc(), slot='headline')[0].get('fit') is True, 'fit not on')
-    size0 = int(p.locator('.toolbar .readout[data-tip="Font size"], .toolbar .readout[title="Font size"]').inner_text())
+    size0 = int(p.locator('.toolbar input[aria-label="Font size"]').input_value())
     p.evaluate('document.activeElement.blur()'); p.keyboard.press('Enter'); p.keyboard.press('Control+a'); p.keyboard.type('Annual neighbourhood street festival and night market'); p.keyboard.press('Control+Enter'); p.wait_for_timeout(200)
-    size1 = int(p.locator('.toolbar .readout[data-tip="Font size"], .toolbar .readout[title="Font size"]').inner_text())
+    size1 = int(p.locator('.toolbar input[aria-label="Font size"]').input_value())
     check(size1 < size0, f'autofit did not step down: {size0} → {size1}')
     p.keyboard.press('Escape'); app.select(find(app.doc(), slot='headline')[0]); p.locator('.toolbar button[aria-label="Larger"]').click()
     check(find(app.doc(), slot='headline')[0].get('fit') is None, 'manual size change kept autofit on')
@@ -631,7 +634,7 @@ def s_5y(app):
     app.close_panels()
 
 
-@step('5z PNG offers No ground while the ground is unfilled, with real transparency')
+@step('5z PNG offers No ground, also over a painted ground (D-050), with real transparency')
 def s_5z(app):
     app.start(SQUARE); p = app.page; p.keyboard.press('Control+Shift+E'); p.wait_for_timeout(300)
     p.locator('.sheet .seg[aria-label="Format"] button', has_text='PNG').click()
@@ -641,8 +644,8 @@ def s_5z(app):
     p.locator('.sheet .seg[aria-label="Format"] button', has_text='JPG').click(); p.wait_for_timeout(200); check(not p.locator('.sheet button[aria-label="No ground"]').is_visible(), 'No ground offered for JPG')
     app.close_panels(); p.keyboard.press('c'); p.locator('.colour-panel .shades button').nth(2).click(); app.click_unit(990, 990); p.keyboard.press('Escape'); p.keyboard.press('Escape')
     p.keyboard.press('Control+Shift+E'); p.wait_for_timeout(300); p.locator('.sheet .seg[aria-label="Format"] button', has_text='PNG').click(); p.wait_for_timeout(200)
-    check(not p.locator('.sheet button[aria-label="No ground"]').is_visible(), 'No ground offered after filling the ground')
-    app.close_panels()
+    check(p.locator('.sheet button[aria-label="No ground"]').is_visible(), 'No ground not offered after filling the ground')
+    app.close_panels(); img = Image.open(app.export('png', '1×', no_ground=True)); check(img.getpixel((1075, 1075))[3] == 0, 'painted ground not left out')
 
 
 @step('sketch: pen hold-to-clean makes a rectangle, plain strokes stay ink, scribble deletes, eraser, lasso')
