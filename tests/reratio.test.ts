@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { reRatio, reRatioFrames, reRatioKept, anchorLines, flagsFor, boxOf } from '../src/core/reratio';
+import { reRatio, reRatioFrames, reRatioKept, anchorLines, flagsFor, boxOf, letterBounds } from '../src/core/reratio';
 import { relayout } from '../src/core/relayout';
 import { addSize, removeSize, closestSize } from '../src/core/sizes';
 import { layout, starterNodes } from '../src/core/compositions';
@@ -38,6 +38,17 @@ describe('re-ratio (5v)', () => {
     expect(flags).toEqual([{ id: 'off', kind: 'off-canvas' }, { id: 't', kind: 'off-canvas' }, { id: 't', kind: 'overflow' }]);
     expect(flagsFor(d.nodes[0], frame(0, -10, 5, 5, { rot: 0 }), fakeMeasure, { w: 1000, h: 1000 }, null)).toEqual([{ id: 'off', kind: 'off-canvas' }]);
     expect(boxOf(d.nodes[0], d.nodes[0].frames.main, fakeMeasure, { w: 1000, h: 1000 }, null)).toEqual(d.nodes[0].frames.main.rect);
+  });
+  it('flags text by its letters, not by an empty stretch of its box past the edge (D-077)', () => {
+    // fakeMeasure: 0.6 em a character; "Opal" at 40 is 96 wide in a 300-wide box starting at 800.
+    const t = textNode('t', frame(800, 0, 300, 46, { fontSize: 40 }), 'Opal'), canvas = { w: 1000, h: 1000 };
+    expect(flagsFor(t, t.frames.main, fakeMeasure, canvas, null)).toEqual([]);
+    expect(letterBounds(t, t.frames.main, fakeMeasure, canvas, null)).toMatchObject({ x: 800, y: 0, h: 46 });
+    expect(letterBounds({ ...t, align: 'end' }, t.frames.main, fakeMeasure, canvas, null).x).toBeCloseTo(1100 - letterBounds(t, t.frames.main, fakeMeasure, canvas, null).w, 5);
+    expect(flagsFor({ ...t, align: 'end' }, t.frames.main, fakeMeasure, canvas, null)).toEqual([{ id: 't', kind: 'off-canvas' }]);
+    expect(flagsFor({ ...t, align: 'center' }, { ...t.frames.main, rect: { ...t.frames.main.rect, x: 760 } }, fakeMeasure, canvas, null)).toEqual([]);
+    const turned = { ...t.frames.main, rot: 90, rect: { ...t.frames.main.rect, x: 700 } }, b = letterBounds(t, turned, fakeMeasure, canvas, null);
+    expect(b.w).toBeCloseTo(46, 5); expect(b.h).toBeLessThan(100);
   });
   it('treats rotated nodes as free and changes the guide when asked', () => {
     const d = doc([rectNode('r', frame(0, 0, 100, 100, { rot: 30 }))]);
@@ -110,6 +121,12 @@ describe('change ratio without drift (D-054)', () => {
     expect(r.doc.nodes[1].frames.main).toEqual(reRatio(moved, 'main', { ratio: 'square' }, fakeMeasure).doc.nodes[1].frames.main);
     expect(r.origin.new.ratio).toBe('story');
     expect(reRatioKept(r.doc, 'main', { ratio: 'story' }, fakeMeasure, r.origin).doc.nodes[1].frames.main).toEqual(frame(10, 10, 80, 80));
+  });
+  it('treats retyped text whose height followed its lines as untouched (D-077)', () => {
+    const d = start(); let r = reRatioKept(d, 'main', { ratio: 'cover' }, fakeMeasure);
+    const retyped = { ...r.doc, nodes: r.doc.nodes.map(n => n.id === 't' ? { ...n, text: 'Hi', frames: { main: { ...n.frames.main, rect: { ...n.frames.main.rect, h: 3 } } } } : n) };
+    r = reRatioKept(retyped, 'main', { ratio: 'square' }, fakeMeasure, r.origin);
+    expect(r.doc.nodes[2].frames.main).toEqual(d.nodes[2].frames.main);
   });
   it('honours a guide change', () => {
     const r = reRatioKept(start(), 'main', { ratio: 'square', guide: 'golden' }, fakeMeasure);

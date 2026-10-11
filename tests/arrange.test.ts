@@ -16,6 +16,13 @@ it('spreads three or more blocks to equal gaps, keeping the outermost two', () =
   expect(distribute([a, b, c], 'y')).toEqual({ a: { dx: 0, dy: 0 }, c: { dx: 0, dy: 10 }, b: { dx: 0, dy: 0 } });
   expect(distribute([a, b], 'x')).toEqual({});
 });
+it('spaces evenly around a pinned (locked) block, which stays put (D-077)', () => {
+  const box = (id: string, x: number) => ({ id, rect: { x, y: 0, w: 100, h: 100 } });
+  // Ends at 0 and 900; the locked block at 300 splits the stretch: 0–300 holds one block, 300–900 two.
+  const m = distribute([box('a', 0), box('b', 120), box('lock', 300), box('c', 420), box('d', 520), box('e', 900)], 'x', ['lock']);
+  expect(m.lock).toEqual({ dx: 0, dy: 0 }); expect(m.b.dx).toBeCloseTo(30); expect(m.c.dx).toBeCloseTo(80); expect(m.d.dx).toBeCloseTo(180); expect(m.e.dx).toBe(0);
+  expect(distribute([box('lock', 0), box('b', 120), box('c', 900)], 'x', ['lock']).b.dx).toBeCloseTo(330);
+});
 it('aligns to key blocks (locked ones) when given', () => {
   expect(align([a, b], 'hcenter', canvas, [{ x: 0, y: 0, w: 334, h: 500 }])).toEqual({ a: { dx: 17, dy: 0 }, b: { dx: -333, dy: 0 } });
 });

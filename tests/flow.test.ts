@@ -1,5 +1,5 @@
 import { it, expect } from 'vitest';
-import { flowText, hugText, oneLineWidth } from '../src/core/flow';
+import { flowText, hugText, oneLineWidth, roomFor, wholeWordSize } from '../src/core/flow';
 import { updateNodes } from '../src/core/ops';
 import type { KuraDoc, TextNode } from '../src/core/document';
 import { doc, frame, rectNode, textNode, fakeMeasure, charMeasure } from './helpers';
@@ -59,7 +59,8 @@ it('keeps one-line text on one line when its size or face changes (D-070)', () =
   const centred = updateNodes(hug, ['n'], n => ({ ...n, align: 'center', frames: { main: { ...n.frames.main, rect: { ...n.frames.main.rect, x: 400 } } } }));
   const c = w(hugText(centred, grow(centred, 150), 'n', charMeasure)); expect(c.x + c.w / 2).toBeCloseTo(400 + 153 / 2, 5);
   expect(w(hugText(hug, updateNodes(grow(hug, 150), ['n'], n => ({ ...n, align: 'center' })), 'n', charMeasure)).x).toBe(0);
-  const huge = grow(hug, 400); expect(w(hugText(hug, huge, 'n', charMeasure))).toMatchObject({ x: 0, w: 1000 });
+  // The aligned edge stays put: past the canvas edge the text wraps rather than sliding back over its neighbours (D-077).
+  const huge = grow(hug, 400); expect(w(hugText(hug, huge, 'n', charMeasure))).toMatchObject({ x: 100, w: 900 });
   const two = updateNodes(hug, ['n'], n => ({ ...n, text: 'a\nb' }));
   expect(hugText(two, grow(two, 150), 'n', charMeasure)).toEqual(grow(two, 150));
   expect(hugText(hug, hug, 'missing', charMeasure)).toBe(hug);
@@ -75,4 +76,55 @@ it('follows the lines of autofit text, not its room, so the band under a poster 
   const d = doc([textNode('h', frame(0, 0, 300, 600, { fontSize: 50 }), 'Hello', { fit: true } as Partial<TextNode>), textNode('b', frame(0, 700, 300, 23, { fontSize: 20 }), 'Body')]);
   const unfit = updateNodes(d, ['h'], n => { const t = { ...n, frames: { main: { ...n.frames.main, fontSize: 40 } } } as TextNode; delete t.fit; return t; });
   expect(flowText(d, unfit, 'h', fakeMeasure).nodes[1].frames.main.rect.y).toBe(700);
+});
+it('keeps the text under an autofit room where it is while the room holds or autofit ends (D-077)', () => {
+  // Room 0–600 at 200 (one 230-tall line), body on the band 50 under the room: inside one line of the letters.
+  const d = doc([textNode('h', frame(0, 0, 1000, 600, { fontSize: 200 }), 'Hi', { fit: true } as Partial<TextNode>), textNode('b', frame(0, 650, 300, 23, { fontSize: 20 }), 'Body')]);
+  const typed = updateNodes(d, ['h'], n => ({ ...n, text: 'Open Studio Night' }));
+  expect(flowText(d, typed, 'h', fakeMeasure).nodes[1].frames.main.rect.y).toBe(650);
+  const smaller = updateNodes(d, ['h'], n => { const t = { ...n, frames: { main: { ...n.frames.main, fontSize: 150 } } } as TextNode; delete t.fit; return t; });
+  expect(flowText(d, smaller, 'h', fakeMeasure).nodes[1].frames.main.rect.y).toBe(650);
+});
+it('leaves a footer under two columns with the longer column when the other shrinks (D-077)', () => {
+  // Columns of two lines (46 tall at 20), a footer 10 under both; the right column drops to one line.
+  const d = doc([textNode('l', frame(0, 0, 150, 46, { fontSize: 20 }), 'Doors open at 7PM'), textNode('r', frame(200, 0, 150, 46, { fontSize: 20 }), 'Free entry for everyone'),
+    textNode('f', frame(0, 56, 350, 23, { fontSize: 20 }), 'Footer')]);
+  const short = updateNodes(d, ['r'], n => ({ ...n, text: 'Free' }));
+  expect(flowText(d, short, 'r', fakeMeasure).nodes[2].frames.main.rect.y).toBe(56);
+  const long = updateNodes(d, ['r'], n => ({ ...n, text: 'Free entry for everyone in the building' }));
+  expect(flowText(d, long, 'r', fakeMeasure).nodes[2].frames.main.rect.y).toBe(56 + 46);
+  expect(flowText(d, updateNodes(d, ['l'], n => ({ ...n, text: 'Doors' })), 'l', fakeMeasure).nodes[2].frames.main.rect.y).toBe(56);
+});
+it('lets a hugging label follow retyped text, and widens a wide box only to save a word (D-077)', () => {
+  const hug = doc([textNode('n', frame(100, 0, 294, 69, { fontSize: 60 }), 'Open now')]), w = (d: KuraDoc) => d.nodes[0].frames.main.rect;
+  const retype = (d: KuraDoc, text: string) => updateNodes(d, ['n'], n => ({ ...n, text }));
+  expect(w(hugText(hug, retype(hug, 'Open now until late'), 'n', charMeasure)).w).toBeCloseTo(19 * 36 * 1.02, 0);
+  expect(w(hugText(hug, retype(hug, 'Open'), 'n', charMeasure)).w).toBeCloseTo(4 * 36 * 1.02, 0);
+  // A column box (a split layout's headline) wraps between words instead of growing across the picture.
+  const column = doc([textNode('n', frame(378, 0, 570, 69, { fontSize: 60 }), 'Marcus')]);
+  expect(w(hugText(column, retype(column, 'Marcus Lee Digital Marketing'), 'n', charMeasure)).w).toBe(570);
+  expect(w(hugText(column, retype(column, 'Communications'), 'n', charMeasure)).w).toBe(570);
+  expect(w(hugText(column, retype(column, 'Communicationsandmarketing'), 'n', charMeasure))).toMatchObject({ x: 378, w: 622 });
+});
+it('grows a right-aligned label to the left and a turned label from its aligned edge (D-077)', () => {
+  const right = doc([textNode('n', frame(700, 0, 92, 57.5, { fontSize: 50 }), '+142', { align: 'end' } as Partial<TextNode>)]);
+  const big = updateNodes(right, ['n'], n => ({ ...n, frames: { main: { ...n.frames.main, fontSize: 100 } } }));
+  const r = hugText(right, big, 'n', charMeasure).nodes[0].frames.main.rect; expect(r.x + r.w).toBeCloseTo(792, 5);
+  const turned = doc([textNode('n', frame(100, 300, 153, 57.5, { fontSize: 50, rot: -8 }), '+142%')]);
+  const grown = updateNodes(turned, ['n'], n => ({ ...n, frames: { main: { ...n.frames.main, fontSize: 150 } } }));
+  const t = hugText(turned, grown, 'n', charMeasure).nodes[0].frames.main.rect, rad = -8 * Math.PI / 180;
+  const leftMid = (q: { x: number; y: number; w: number; h: number }) => ({ x: q.x + q.w / 2 - Math.cos(rad) * q.w / 2, y: q.y + q.h / 2 - Math.sin(rad) * q.w / 2 });
+  expect(t.w).toBeCloseTo(450 * 1.02, 0);
+  expect(leftMid(t).x).toBeCloseTo(leftMid(turned.nodes[0].frames.main.rect).x, 5); expect(leftMid(t).y).toBeCloseTo(leftMid(turned.nodes[0].frames.main.rect).y, 5);
+});
+it('finds the largest size that keeps every word whole, and the room a block may grow into (D-077)', () => {
+  // charMeasure: 0.6 em a character, so "Summer" fills 1000 at 277.8.
+  expect(wholeWordSize('Summer', 200, 1000, 700, charMeasure)).toBe(200);
+  expect(wholeWordSize('Summer', 400, 1000, 700, charMeasure)).toBe(277.5);
+  expect(wholeWordSize('Summer sale', 400, 1000, 700, charMeasure)).toBe(277.5);
+  const t = textNode('n', frame(300, 0, 200, 50), 'Hi'), canvas = { w: 1000, h: 1000 };
+  expect(roomFor(t, t.frames.main, canvas)).toBe(700);
+  expect(roomFor({ ...t, align: 'end' }, t.frames.main, canvas)).toBe(500);
+  expect(roomFor({ ...t, align: 'center' }, t.frames.main, canvas)).toBe(800);
+  expect(roomFor(t, { ...t.frames.main, rot: 10 }, canvas)).toBe(1000);
 });

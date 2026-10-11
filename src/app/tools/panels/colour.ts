@@ -1,5 +1,5 @@
 import type { ColourRef, DocNode, Palette, RowId, Step } from '../../../core/document';
-import { center, containsRotated } from '../../../core/geometry';
+import { containsRotated, type Point } from '../../../core/geometry';
 import { setOpacity } from '../../../core/ops';
 import { addCustom, contrast, hexToHsv, hsvToHex, hueSwatch, HUES, passingShade, rows, resolve } from '../../../core/palette';
 import type { Editor } from '../../editor';
@@ -18,7 +18,9 @@ export function colourPanel(ed: Editor): HTMLElement {
   const sv = h('div', { className: 'sv', title: 'Drag to pick any colour' }, h('i')), hueBar = h('div', { className: 'hue-bar', title: 'Drag to change hue' }, h('i'));
   const hex = h('input', { className: 'field', 'aria-label': 'Hex colour', spellcheck: 'false', maxlength: 7 });
   const addHue = h('button', { type: 'button', className: 'pill', title: 'Add as hue', style: 'height:32px' }, '+ Add as hue');
-  const hexRow = h('div', { style: 'display:flex;gap:8px;align-items:center' }, hex, addHue);
+  // A typed brand colour can become the accent role itself, so the accent block and everything in Accent follow (D-077).
+  const asAccent = h('button', { type: 'button', className: 'pill', title: 'Set as accent', style: 'height:32px' }, 'Set as accent');
+  const hexRow = h('div', { style: 'display:flex;gap:8px;align-items:center;flex-wrap:wrap' }, hex, addHue, asAccent);
   const contrastBox = h('div', { className: 'contrast hidden' });
   // Opacity of the selection (D-052), coalesced into one undo step while dragging.
   const opacity = h('input', { type: 'range', min: 5, max: 100, step: 5, 'aria-label': 'Opacity', title: 'Opacity', style: 'flex:1' }), opacityValue = h('span', { style: 'width:38px;text-align:right' });
@@ -30,8 +32,10 @@ export function colourPanel(ed: Editor): HTMLElement {
   opacity.addEventListener('keydown', e => { if (e.key.startsWith('Arrow')) e.stopPropagation(); });
   const light = h('button', { type: 'button', title: 'Light ground', style: 'background:#ECF0F3' }), dark = h('button', { type: 'button', title: 'Dark ground', style: 'background:#000' });
   const hint = h('div', { className: 'muted' });
+  // With nothing selected, the current colour fills the ground in one tap instead of arming paint (D-077).
+  const fillGround = h('button', { type: 'button', className: 'pill', title: 'Fill the ground with this colour', style: 'height:28px;font-size:12px' }, 'Fill ground');
   const panel = h('div', { className: 'panel colour-panel', hidden: true, role: 'dialog', 'aria-label': 'Colour' },
-    h('div', { className: 'roles' }, ...roleButtons), shades, hues, sv, hueBar, hexRow, opacityRow, contrastBox, h('div', { className: 'grounds' }, hint, h('div', { className: 'pair' }, light, dark)));
+    h('div', { className: 'roles' }, ...roleButtons), shades, hues, sv, hueBar, hexRow, opacityRow, contrastBox, h('div', { className: 'grounds' }, hint, fillGround, h('div', { className: 'pair' }, light, dark)));
   let pick = { h: 210, s: 60, v: 70 }, editingHex = false, sliding = false, focusValue = '', built = '';
   const current = (): ColourRef => { const one = ed.one(); return one && one.kind !== 'image' ? one.fill : ed.store.ui.armed ?? ed.store.ui.swatch; };
   const drag = (el: HTMLElement, kind: 'sv' | 'h') => el.addEventListener('pointerdown', e => {
@@ -64,6 +68,13 @@ export function colourPanel(ed: Editor): HTMLElement {
     if (palette !== ed.doc.palette) ed.setPalette({ custom: palette.custom }, 'Added as a hue');
     editingHex = false; hex.blur(); ed.store.setUI({ row: ref.row }); ed.applySwatch(ref);
   });
+  asAccent.addEventListener('pointerdown', e => e.preventDefault());
+  asAccent.addEventListener('click', () => {
+    const v = typed() ?? (('hex' in current()) ? (current() as { hex: string }).hex : null);
+    if (!v) return;
+    editingHex = false; hex.blur(); ed.setPalette({ accent: v }, 'Accent set');
+  });
+  fillGround.addEventListener('click', () => { const ref = typed() ? { hex: typed()! } : current(); editingHex = false; hex.blur(); ed.fillGround(ref); });
   // 5i: tap a ground to switch; hold it to preview the other ground and let go to return.
   const ground = (b: HTMLElement, isDark: boolean) => {
     let t0 = 0;
@@ -76,8 +87,8 @@ export function colourPanel(ed: Editor): HTMLElement {
     b.addEventListener('pointerup', end(true)); b.addEventListener('pointerleave', end(false));
   };
   ground(light, false); ground(dark, true);
-  const backdrop = (t: DocNode, p: Palette): string | null => {
-    const nodes = ed.doc.nodes, c = center(t.kind === 'text' ? ed.extent(t) : ed.box(t));
+  const backdrop = (t: DocNode, p: Palette, c: Point): string | null => {
+    const nodes = ed.doc.nodes;
     for (let i = nodes.indexOf(t) - 1; i >= 0; i--) {
       const n = nodes[i], f = ed.frame(n);
       if (f.hidden || !containsRotated(ed.box(n), f.rot, c)) continue;
@@ -113,6 +124,9 @@ export function colourPanel(ed: Editor): HTMLElement {
     if (!editingHex && !sliding) pick = { ...hexToHsv(value), h: hexToHsv(value).s ? hexToHsv(value).h : pick.h };
     const inRows = Object.values(all).some(r => r.includes(typed() ?? value));
     addHue.classList.toggle('hidden', inRows);
+    const candidate = typed() ?? ('hex' in ref ? ref.hex : null);
+    asAccent.classList.toggle('hidden', !candidate || candidate.toLowerCase() === resolve({ role: 'accent' }, p).toLowerCase());
+    fillGround.classList.toggle('hidden', !!ed.selected().length);
     sv.style.background = `linear-gradient(to top,#000,transparent),linear-gradient(to right,#fff,${hsvToHex(pick.h, 100, 100)})`;
     const svDot = sv.firstElementChild as HTMLElement; svDot.style.left = `${pick.s}%`; svDot.style.top = `${100 - pick.v}%`; svDot.style.background = value;
     (hueBar.firstElementChild as HTMLElement).style.left = `${pick.h / 3.59}%`;
@@ -122,9 +136,19 @@ export function colourPanel(ed: Editor): HTMLElement {
     opacityValue.textContent = `${opacity.value}%`;
     // 5h: text below 4.5:1 against what is behind it (the topmost solid block under its centre, else the ground) shows
     // its ratio and the nearest passing shade; over a picture the check is left to the eye (D-053).
-    const text = sel.find(n => n.kind === 'text'), bg = text ? backdrop(text, p) : null;
-    if (text?.kind === 'text' && bg) {
-      const ratio = contrast(resolve(text.fill, p), bg), fix = passingShade(text.fill, bg, p);
+    // Every selected text block is checked at nine points over its lines, so a second line running onto a dark block
+    // counts, and the worst one is shown (D-077).
+    let worst: { text: DocNode & { kind: 'text' }; bg: string; ratio: number } | null = null;
+    for (const t of sel) {
+      if (t.kind !== 'text') continue;
+      const e = ed.extent(t);
+      for (const fx of [.15, .5, .85]) for (const fy of [.2, .5, .8]) {
+        const bg = backdrop(t, p, { x: e.x + e.w * fx, y: e.y + e.h * fy }), ratio = bg ? contrast(resolve(t.fill, p), bg) : Infinity;
+        if (bg && (!worst || ratio < worst.ratio)) worst = { text: t, bg, ratio };
+      }
+    }
+    if (worst) {
+      const { text, bg, ratio } = worst, fix = passingShade(text.fill, bg, p);
       contrastBox.classList.toggle('hidden', ratio >= 4.5);
       if (ratio < 4.5) {
         const use = h('button', { type: 'button', title: 'Use the nearest passing shade' }, 'use');

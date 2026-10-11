@@ -7,6 +7,7 @@ import { textBox } from '../../core/fit';
 import { fontById } from '../../core/fonts';
 import { direction, physicalAlign } from '../../core/script';
 import { measure } from '../measure';
+import { letterOf } from './shortcuts';
 // The Paper toolbar (top centre) and the corner controls (guides, sizes and ratio, layers, grid). Controls that do
 // not apply fade to 23 %. Panels hang 12 px below the control that owns them.
 export type Panels = { shapes: HTMLElement; colour: HTMLElement; fonts: HTMLElement; arrange: HTMLElement; layers: HTMLElement; grid: HTMLElement; ratio: HTMLElement };
@@ -23,18 +24,29 @@ export function toolbar(ed: Editor, panels: Panels): HTMLElement {
   const colour = h('button', { type: 'button', className: 'swatch-button', title: 'Colour (C)', 'aria-label': 'Colour' }, chip, hex);
   colour.addEventListener('click', () => ed.openPanel('colour'));
   // Readouts take a typed value: Enter or leaving applies it, Escape restores (D-060).
-  const readout = (title: string, apply: (v: number) => void) => {
+  // A decimal comma counts as a point ("12,5"), and the field shows what was applied, clamped or turned (D-077).
+  const readout = (title: string, apply: (v: number) => string | null) => {
     const el = h('input', { className: 'readout', title, 'aria-label': title, inputmode: 'decimal', spellcheck: 'false', size: 4 });
     let shown = '';
     // Enter applies and keeps the field focused with its value selected, so a corrective Backspace edits the number.
-    const commit = () => { if (el.value === shown) return; const v = parseFloat(el.value.replace(/[\u2212\u2013\u2014]/g, '-').replace(/[^0-9.\-]/g, '')); if (Number.isFinite(v)) { apply(v); shown = el.value; } else el.value = shown; };
+    const commit = () => {
+      if (el.value === shown) return;
+      const v = parseFloat(el.value.replace(/[\u2212\u2013\u2014]/g, '-').replace(/^([^,.]*),(\d*)$/, '$1.$2').replace(/[^0-9.\-]/g, ''));
+      const applied = Number.isFinite(v) ? apply(v) : null;
+      el.value = applied ?? shown; shown = el.value;
+    };
     el.addEventListener('focus', () => { shown = el.value; el.select(); });
-    el.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); commit(); requestAnimationFrame(() => el.select()); } else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); el.value = shown; el.blur(); } });
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); commit(); requestAnimationFrame(() => el.select()); }
+      else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); el.value = shown; el.blur(); }
+      // Mod+Z in the field undoes the last change to the design rather than the field's typing.
+      else if ((e.metaKey || e.ctrlKey) && !e.altKey && letterOf(e) === 'z') { e.preventDefault(); e.stopPropagation(); el.value = shown; el.blur(); if (e.shiftKey) ed.redo(); else ed.undo(); }
+    });
     el.addEventListener('blur', commit);
     return el;
   };
-  const angle = readout('Angle', v => ed.setAngle(v));
-  const size = readout('Font size', v => ed.setFontSize(v));
+  const angle = readout('Angle', v => { const r = ed.setAngle(v); return r === null ? null : `${Math.round(r)}°`; });
+  const size = readout('Font size', v => { const r = ed.setFontSize(v); return r === null ? null : String(Math.round(r * 10) / 10); });
   const smaller = iconButton('Smaller', ICON.minus, () => ed.fontStep(-1), 'btn small'), larger = iconButton('Larger', ICON.plus, () => ed.fontStep(1), 'btn small');
   const bold = h('button', { type: 'button', className: 'btn', title: `Bold (${MOD} B)`, style: 'font-weight:700;font-size:16px' }, 'B');
   bold.addEventListener('click', () => ed.toggleBold());
@@ -70,7 +82,8 @@ export function toolbar(ed: Editor, panels: Panels): HTMLElement {
     for (const b of [face, smaller, larger, bold, align, fit]) b.disabled = !isText || !!one?.locked;
     const def = fontById(one?.kind === 'text' ? one.font : undefined);
     face.style.fontFamily = `"${def.family}", ${def.fallback}`; face.title = isText ? `Typeface: ${def.name}` : 'Typeface'; pressed(face, u.panel === 'fonts', 'aria-expanded');
-    if (isText && def.weights.length < 2) bold.disabled = true;
+    // Bold applies to the selected faces that have a bold, as Mod+B does; it fades only when none does.
+    if (isText && !ed.texts().some(n => fontById(n.font).weights.length > 1)) bold.disabled = true;
     panels.fonts.style.left = `${face.offsetLeft}px`;
     if (document.activeElement !== size) size.value = one?.kind === 'text' ? String(Math.round(textBox(one, ed.frame(one), measure, ed.typeScale()).size)) : '—';
     size.disabled = !isText || !!one?.locked;

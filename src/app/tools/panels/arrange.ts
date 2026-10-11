@@ -33,7 +33,7 @@ export function arrangePanel(ed: Editor): HTMLElement {
     if (!open) return;
     const sel = ed.selected(), n = sel.filter(x => !x.locked).length;
     title.textContent = sel.some(x => x.locked) && n ? 'Align to the locked block' : n > 1 ? 'Align to each other' : 'Align to the canvas';
-    buttons.forEach((b, i) => { b.disabled = !n || i >= 6 && n < 3; b.classList.toggle('faded', b.disabled); });
+    buttons.forEach((b, i) => { b.disabled = !n || i >= 6 && sel.filter(x => !ed.frame(x).hidden).length < 3; b.classList.toggle('faded', b.disabled); });
     order.forEach(b => { b.disabled = !n; b.classList.toggle('faded', !n); });
   } });
   return panel;

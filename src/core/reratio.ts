@@ -1,9 +1,12 @@
 import { rotatedBounds, type Measure, type Rect, type Size } from './geometry';
-import type { DocNode, Frame, KuraDoc, RatioId, SizeSpec } from './document';
+import type { DocNode, Frame, KuraDoc, RatioId, SizeSpec, TextNode } from './document';
 import type { GuideId } from './guides/types';
 import { canvasSize } from './ratios';
 import { guideById } from './guides';
-import { textBox, typeScale } from './fit';
+import { textBox, textHeight, typeScale } from './fit';
+import { oneLineWidth } from './flow';
+import { drawnWeight } from './fonts';
+import { direction, physicalAlign } from './script';
 // Re-ratio (5v): an edge that sits on a guide line, a canvas edge or the centre line keeps that line id in the new
 // geometry; everything else scales about its centre. Anything off the canvas or overflowing is flagged, never cropped.
 export type Flag = { id: string; kind: 'off-canvas' | 'overflow' };
@@ -45,10 +48,24 @@ export function reRatioFrames(doc: KuraDoc, from: SizeSpec, to: { ratio: RatioId
   }
   return { frames, flags };
 }
+/** Where a text block's letters reach: each line's width on the side its alignment puts it, turned with the box (D-077). */
+export function letterBounds(node: TextNode, frame: Frame, measure: Measure, canvas: Size, guide: GuideId | null): Rect {
+  const b = textBox(node, frame, measure, typeScale(guide, canvas)), weight = drawnWeight(node.font, node.weight);
+  const w = Math.min(b.rect.w, Math.max(0, ...b.lines.map(l => oneLineWidth(l, b.size, weight, measure, node.font, b.rect.w))));
+  const side = physicalAlign(node.align, direction(node.text)), x = side === 'left' ? b.rect.x : side === 'center' ? b.rect.x + (b.rect.w - w) / 2 : b.rect.x + b.rect.w - w;
+  const r = { x, y: b.rect.y, w, h: Math.min(b.rect.h, textHeight(b.lines.length, b.size)) };
+  if (!frame.rot) return r;
+  const c = { x: b.rect.x + b.rect.w / 2, y: b.rect.y + b.rect.h / 2 }, t = frame.rot * Math.PI / 180, cos = Math.cos(t), sin = Math.sin(t);
+  const pts = [[r.x, r.y], [r.x + r.w, r.y], [r.x, r.y + r.h], [r.x + r.w, r.y + r.h]].map(([px, py]) => ({ x: c.x + (px - c.x) * cos - (py - c.y) * sin, y: c.y + (px - c.x) * sin + (py - c.y) * cos }));
+  const xs = pts.map(p => p.x), ys = pts.map(p => p.y);
+  return { x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys) };
+}
+const outside = (b: Rect, canvas: Size) => b.x < -TOLERANCE || b.y < -TOLERANCE || b.x + b.w > canvas.w + TOLERANCE || b.y + b.h > canvas.h + TOLERANCE;
 export function flagsFor(node: DocNode, frame: Frame, measure: Measure, canvas: Size, guide: GuideId | null): Flag[] {
   if (frame.hidden) return [];
+  // Text is off the canvas only when its letters are: an empty stretch of its box past the edge is not flagged (D-077).
   const out: Flag[] = [], b = rotatedBounds(boxOf(node, frame, measure, canvas, guide), frame.rot);
-  if (b.x < -TOLERANCE || b.y < -TOLERANCE || b.x + b.w > canvas.w + TOLERANCE || b.y + b.h > canvas.h + TOLERANCE) out.push({ id: node.id, kind: 'off-canvas' });
+  if (outside(b, canvas) && (node.kind !== 'text' || outside(letterBounds(node, frame, measure, canvas, guide), canvas))) out.push({ id: node.id, kind: 'off-canvas' });
   if (node.kind === 'text' && node.fit && textBox(node, frame, measure, typeScale(guide, canvas)).overflow) out.push({ id: node.id, kind: 'overflow' });
   return out;
 }
@@ -72,11 +89,13 @@ export function reRatioKept(doc: KuraDoc, sizeId: string, to: { ratio: RatioId; 
   const from = doc.sizes.find(s => s.id === sizeId)!, guide = to.guide === undefined ? from.guide : to.guide;
   // Untouched since the last change: map from the origin. Only moved (same size, angle and type size): map from the
   // origin moved by the same share of the canvas, so a nudge does not cost the original size (D-076).
-  const c0 = canvasSize(from.ratio), still = (f: Frame) => JSON.stringify({ ...f, rect: { ...f.rect, x: 0, y: 0 } });
+  // A text block's height follows its lines, so retyping it (two lines to one) is not a geometry edit (D-077).
+  const c0 = canvasSize(from.ratio), shape = (n: DocNode, f: Frame) => n.kind === 'text' && !n.fit ? { ...f, rect: { ...f.rect, h: 0 } } : f;
+  const key = (n: DocNode, f: Frame) => JSON.stringify(shape(n, f)), still = (n: DocNode, f: Frame) => { const g = shape(n, f); return JSON.stringify({ ...g, rect: { ...g.rect, x: 0, y: 0 } }); };
   const start = (n: DocNode) => {
     const o = origin[n.id], f = n.frames[sizeId];
-    if (o && JSON.stringify(o.last) === JSON.stringify(f)) return o;
-    if (o && still(o.last) === still(f)) {
+    if (o && key(n, o.last) === key(n, f)) return o;
+    if (o && still(n, o.last) === still(n, f)) {
       const co = canvasSize(o.ratio), r = o.frame.rect, dx = (f.rect.x - o.last.rect.x) * co.w / c0.w, dy = (f.rect.y - o.last.rect.y) * co.h / c0.h;
       return { ...o, frame: { ...o.frame, rect: { ...r, x: r.x + dx, y: r.y + dy } } };
     }

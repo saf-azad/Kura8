@@ -15,7 +15,7 @@ import '@fontsource/space-mono/700.css';
 import './style.css';
 import { createDocument, type KuraDoc } from './core/document';
 import { canvasSize } from './core/ratios';
-import { layout, starterNodes, STARTER } from './core/compositions';
+import { keepReadable, layout, starterNodes, STARTER } from './core/compositions';
 import { relayout } from './core/relayout';
 import { Store, loadDocument, loadPrevious, keepPrevious, DOC_KEY, newDocumentId, newId, type DialSettings } from './app/store';
 import { migrate } from './core/document';
@@ -155,7 +155,7 @@ function go(): void {
   const palette = { ...before.palette, hue: s.hue, dark: s.dark, ...(s.accent ? { accent: s.accent } : {}) };
   if (!s.accent) delete palette.accent;
   const out = same ? { doc: before, flags: [] } : relayout({ ...before, palette }, spec.id, { ratio: s.ratio, guide: s.guide, comp: s.comp }, measure);
-  const next = { ...out.doc, palette };
+  const next = keepReadable({ ...out.doc, palette });
   store.setUI({ screen: 'editor', size: spec.id });
   route();
   if (next !== before && JSON.stringify(next) !== JSON.stringify(before)) {

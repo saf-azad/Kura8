@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { layout, starterNodes, compositionFit, slotRect, textRoleOn, STARTER } from '../src/core/compositions';
-import { compIds, guideIds, ratioIds, validateDocument } from '../src/core/document';
+import { layout, starterNodes, compositionFit, slotRect, textRoleOn, keepReadable, STARTER } from '../src/core/compositions';
+import { compIds, guideIds, ratioIds, validateDocument, type DocNode, type KuraDoc, type Palette, type TextNode } from '../src/core/document';
 import { canvasSize } from '../src/core/ratios';
 import { fractionsOf } from '../src/core/guides';
 import { fitText, splitsWord, typeScale } from '../src/core/fit';
@@ -93,5 +93,23 @@ describe('readable band text for every hue (D-076)', () => {
     expect(fails).toEqual([]);
     expect(textRoleOn(slots, slots.body.rect, { hue: 120, dark: false, custom: [] })).toEqual({ hex: '#000000' });
     expect(textRoleOn(slots, slots.body.rect, { hue: 150, dark: false, custom: [] })).toEqual({ hex: '#ffffff' });
+  });
+});
+describe('band text stays readable when the palette changes in the editor (D-077)', () => {
+  const slots = layout({ canvas: canvasSize('square'), guide: 'golden', comp: 'poster', measure: fakeMeasure, headline: 'H', body: 'B' });
+  const start = (p: Palette): KuraDoc => ({ version: 2, id: 'd', createdAt: '', palette: p, ground: null, sizes: [{ id: 'main', ratio: 'square', guide: 'golden', comp: 'poster' }], nodes: starterNodes(slots, { sizeId: 'main', newId: ids(), palette: p }) });
+  const reads = (d: KuraDoc) => { const b = d.nodes.find(n => n.slot === 'body')!; return contrast(resolve((b as TextNode).fill, d.palette), resolve({ role: 'accent' }, d.palette)); };
+  it('recolours automatic band text that would fail and leaves the rest', () => {
+    for (const [from, to] of [[{ hue: 0, dark: false }, { hue: 0, dark: true }], [{ hue: 0, dark: false }, { hue: 60, dark: false }], [{ hue: 90, dark: false }, { hue: 300, dark: false }]] as const) {
+      const d = start({ ...from, custom: [] }), next = { ...d, palette: { ...d.palette, ...to } };
+      expect(reads(keepReadable(next))).toBeGreaterThanOrEqual(4.5);
+    }
+    const d = start({ hue: 0, dark: false, custom: [] });
+    expect(keepReadable(d)).toBe(d);
+    const chosen = { ...d, palette: { ...d.palette, dark: true }, nodes: d.nodes.map(n => n.slot === 'body' ? { ...n, fill: { row: 'base', step: 3 } } as DocNode : n) };
+    expect(keepReadable(chosen)).toBe(chosen);
+    // The headline sits on the ground, not the band: it keeps ink.
+    const dark = keepReadable({ ...d, palette: { ...d.palette, dark: true } });
+    expect(dark.nodes.find(n => n.slot === 'headline')).toMatchObject({ fill: { role: 'ink' } });
   });
 });

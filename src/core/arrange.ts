@@ -19,14 +19,18 @@ export function align(boxes: { id: string; rect: Rect }[], mode: AlignMode, canv
   }
   return out;
 }
-export function distribute(boxes: { id: string; rect: Rect }[], mode: DistributeMode): Record<string, Move> {
+export function distribute(boxes: { id: string; rect: Rect }[], mode: DistributeMode, pinned: string[] = []): Record<string, Move> {
   const out: Record<string, Move> = {};
   if (boxes.length < 3) return out;
   const pos = (r: Rect) => mode === 'x' ? r.x : r.y, len = (r: Rect) => mode === 'x' ? r.w : r.h;
   const sorted = [...boxes].sort((a, b) => pos(a.rect) + len(a.rect) / 2 - (pos(b.rect) + len(b.rect) / 2));
-  const first = sorted[0].rect, last = sorted[sorted.length - 1].rect;
-  const gap = (pos(last) + len(last) - pos(first) - sorted.reduce((s, b) => s + len(b.rect), 0)) / (sorted.length - 1);
-  let at = pos(first);
-  for (const { id, rect } of sorted) { const d = at - pos(rect); out[id] = mode === 'x' ? { dx: d, dy: 0 } : { dx: 0, dy: d }; at += len(rect) + gap; }
+  // The ends and pinned (locked) blocks stay; the blocks between each pair of them share that stretch evenly (D-077).
+  const pins = sorted.map((b, i) => i === 0 || i === sorted.length - 1 || pinned.includes(b.id) ? i : -1).filter(i => i >= 0);
+  for (let k = 0; k + 1 < pins.length; k++) {
+    const part = sorted.slice(pins[k], pins[k + 1] + 1), first = part[0].rect, last = part[part.length - 1].rect;
+    const gap = (pos(last) + len(last) - pos(first) - part.reduce((s, b) => s + len(b.rect), 0)) / (part.length - 1);
+    let at = pos(first);
+    for (const { id, rect } of part) { const d = at - pos(rect); out[id] = mode === 'x' ? { dx: d, dy: 0 } : { dx: 0, dy: d }; at += len(rect) + gap; }
+  }
   return out;
 }

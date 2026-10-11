@@ -40,7 +40,6 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
     return null;
   };
   el.addEventListener('pointerdown', e => {
-    if (performance.now() < ed.ignorePointerUntil) { e.preventDefault(); return; }
     if (e.button !== 0 || drag) return;
     const p = ed.toUnits(e), ui = ed.store.ui;
     el.focus({ preventScroll: true });
@@ -171,7 +170,8 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
     if (!d) return;
     if (d.kind === 'marquee' || d.kind === 'pan') { ed.invalidate(); return; }
     if (d.last && ed.doc !== d.last) { ed.invalidate(); return; }
-    if (d.moved && ed.doc !== d.before) ed.store.commit(ed.doc, { before: d.before });
+    // Text moved, resized or turned past the canvas edge is flagged at once, not only in Export (D-077).
+    if (d.moved && ed.doc !== d.before) { ed.store.commit(ed.doc, { before: d.before }); ed.flagText(ed.store.ui.sel); }
     else if (d.kind === 'move' && d.cycle) ed.select([d.cycle]);
     else if (d.kind === 'move' && d.release) ed.select(ed.store.ui.sel.filter(x => x !== d.release));
     else if (d.kind === 'move' && !e.shiftKey && ed.store.ui.sel.length > 1) { const hit = ed.hitTest(ed.toUnits(e)); if (hit) ed.select([hit.id]); }
@@ -180,10 +180,7 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
   el.addEventListener('pointerup', finish);
   el.addEventListener('pointercancel', finish);
   el.addEventListener('pointerleave', () => { if (ed.store.ui.tool) sketch.leave(); });
-  // The canvas takes focus on mousedown; right after Start that would close the headline editor (D-062).
-  el.addEventListener('mousedown', e => { if (performance.now() < ed.ignorePointerUntil) e.preventDefault(); });
   el.addEventListener('dblclick', e => {
-    if (performance.now() < ed.ignorePointerUntil) return;
     if (ed.store.ui.tool || ed.store.ui.armed) return;
     const n: DocNode | undefined = ed.hitTest(ed.toUnits(e));
     if (ed.store.ui.reposition) { ed.finishReposition(); return; }

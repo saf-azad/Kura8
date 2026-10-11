@@ -52,8 +52,9 @@ export function setHidden(doc: KuraDoc, sizeId: string, ids: string[], hidden: b
 }
 export type Order = 'front' | 'back' | 'forward' | 'backward';
 /** Z-order is the shared array order: front/back move the selection to the ends, forward/backward swap one step past an unselected neighbour. */
+/** Stacking order for the unlocked blocks among `ids`; a locked block keeps its place (D-077). */
 export function reorder(doc: KuraDoc, ids: string[], mode: Order): KuraDoc {
-  const pick = has(ids);
+  const locked = new Set(doc.nodes.filter(n => n.locked).map(n => n.id)), pick = has(ids.filter(id => !locked.has(id)));
   let a = [...doc.nodes];
   if (mode === 'front') a = [...a.filter(n => !pick(n)), ...a.filter(pick)];
   else if (mode === 'back') a = [...a.filter(pick), ...a.filter(n => !pick(n))];

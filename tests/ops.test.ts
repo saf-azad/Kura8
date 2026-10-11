@@ -32,6 +32,9 @@ it('reorders by the shared array order', () => {
   expect(order(reorder(d, ['a'], 'front'))).toBe('bcia'); expect(order(reorder(d, ['i'], 'back'))).toBe('iabc');
   expect(order(reorder(d, ['a'], 'forward'))).toBe('baci'); expect(order(reorder(d, ['i'], 'forward'))).toBe('abci');
   expect(order(reorder(d, ['c'], 'backward'))).toBe('acbi'); expect(order(reorder(d, ['a', 'b'], 'backward'))).toBe('abci');
+  // A locked block keeps its place (D-077); the unlocked ones beside it still move.
+  const locked = setLocked(d, ['a'], true);
+  expect(order(reorder(locked, ['a'], 'front'))).toBe('abci'); expect(order(reorder(locked, ['a', 'c'], 'front'))).toBe('abic');
 });
 it('duplicates and pastes unlocked, untagged copies offset in every size', () => {
   const d = { ...base(), sizes: [...base().sizes, { id: 's2', ratio: 'story' as const, guide: null, comp: null }] };
