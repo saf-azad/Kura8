@@ -114,7 +114,17 @@ Follow-ups, each session-sized:
 - [ ] Safwat answers the open questions below; apply the answers (copy, labels, export widths).
 - [ ] Push the `study-v1` tag once Safwat agrees.
 - [ ] Test on Safari and Firefox (the audit covers Chromium only): IndexedDB in private mode, `OffscreenCanvas.convertToBlob`, canvas `direction`, `roundRect`.
-- [ ] A focus-point control for image crops (the document already stores `focus`).
+- [x] A focus-point control for image crops (the document already stores `focus`): Reposition and Fit (D-048).
+
+Student-test loop (D-045), session-sized:
+
+- [x] Loop 1: harness (Playwright persona sessions with screenshots, exports and the saved document) and four cohorts, 55 personas: social campaigns, print and events, portfolio and personal brand, power users. Fixed or added everything in D-046–D-068.
+- [x] Social formats Grid 3:4, Pin 2:3, Link 1.91:1, Cover 4:1 (D-069); merge to `main`.
+- [ ] Loop 2: three cohorts against the loop-2 build (verification of the 25 loop-1 fixes, 12 fresh portfolio jobs, adversarial tests of the new features). Triage their reports and fix what they find; re-loop.
+- [ ] Starter type hierarchy is weak on short canvases: banner and cover headlines start at 25 units over 20-unit body text, landscape cover with Quarters at 28 over 28 (`layout`'s `H × .075` headline cap). Tune within the type scale.
+- [ ] Text tool: students expected a smaller, regular-weight text box near free space rather than a bold headline-size box at the canvas centre.
+- [ ] Sketch tips live only in the opt-in help bar; scribble-to-delete surprised a student (the toast now names what went and offers Undo).
+- [ ] Two-tab adoption replaces an in-progress text edit in the other tab; consider a quieter merge.
 
 ### Study (frozen at `study-v1`)
 
@@ -142,6 +152,12 @@ Follow-ups, each session-sized:
 - Pushing the `study-v1` tag to GitHub needs your OK.
 - A4 at 1× exports 1240 px wide (150 dpi) with 300 dpi as its default; keep that ladder?
 
+- Student tests (D-045) were blocked by four Phase 1 exclusions; decide whether any enter scope:
+  - **More than one design.** Carousels, a second portfolio piece and "start over" all hit the one-document rule. New is now one Undo away even after reload (D-057), but a student making five pieces must export and start over each time. Options: a small shelf of recent designs in IndexedDB, or pages inside a document.
+  - **Zoom.** On a 1024 × 490 window an A4 canvas is 224 px wide and story body text renders near 12 px; fine editing is hard on small laptops.
+  - **Groups.** Students duplicated label + number pairs and kept realigning them; Arrange helps, but there is no Mod+G.
+  - **Vector PDF / bleed** for print shops.
+- Labels for the four new ratios (D-069) are defaults: Grid 3:4, Pin 2:3, Link 1.91:1, Cover 4:1. Keep, or prefer other words?
 - Study (applies to `study-v1`): participants per condition, raters, scale and margin for the thesis holding.
 - Whether study needs undo. It remains out of scope. Run a pilot of two or three people without it and decide from behaviour.
 - Approve the concrete fictional exhibition content pack before recruiting participants; it is identical in both modes.
@@ -157,10 +173,16 @@ Follow-ups, each session-sized:
 - Cross-origin isolation headers would allow multithreaded WASM inference for background removal where WebGPU is unavailable.
 - A smaller CPU model for background removal needs static quantisation; revisit BiRefNet_lite when ORT's WebGPU EP splits wide Concat nodes.
 - Autosave failures now show a toast; quota behaviour with many large images is untested beyond the audit.
+- HEIC decoding (iPhone photos) needs a decoder; libheif is LGPL, so Kura8 only explains how to save as JPEG (D-059).
+- Vector PDF, bleed and crop marks for print shops (PDF stays one raster page).
 
 ## Browser audit
 
 Run `npm run build`, start `npm run preview -- --port 4173`, then `python3 scripts/browser_audit.py` (optional base URL argument; `ONLY=<step function name>` runs one step; `CHROMIUM=/path` picks the browser, otherwise `/opt/pw-browsers/chromium-*` or Playwright's own). Requires Python Playwright and Pillow, which are audit tools, not app dependencies. Each run uses a fresh browser context, writes screenshots of failures, downloads and `report.json` under ignored `private/browser-audit/`, and exits non-zero on any failed step, app console error or off-origin request. The 2026-10-10 run passed 43/43 steps in about seven minutes, including a real background removal (WASM, no WebGPU in headless Chromium).
+
+## Student-test loop
+
+`scripts/usertest/kura.py` drives the built app as a student would (dial, toolbar by accessible names, canvas in unit space, file picker, drops, pasted text, export downloads) and records screenshots, the saved document, toasts, console errors and off-origin requests under ignored `private/usertest/runs/`. `scripts/usertest/PRIMER.md` is the brief each simulated cohort reads. Serve a frozen copy of `dist/` on its own port so rebuilding does not disturb a run. Loop 1 (2026-10-10) ran four cohorts, 55 personas, across 1024–2560 px windows, Mac and Windows shortcuts and dpr 1–2; every session had no app console errors and no off-origin requests. Findings and fixes are D-046–D-068.
 
 The sections below record Phase 0 work; their audits run from a checkout of `study-v1`.
 

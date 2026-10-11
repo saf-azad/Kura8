@@ -83,6 +83,7 @@ src/
 scripts/
   prepare-model.mjs  onnx-fp16.mjs  prepare-icons.mjs
   browser_audit.py   Phase 1 audit (M15); the Phase 0 audits live at study-v1
+  usertest/          student-session harness and primer for user-test loops (D-045)
 public/                generated, gitignored: ort/ models/ icons/
 tests/                 mirrors core, plus useful app tests
 ```
