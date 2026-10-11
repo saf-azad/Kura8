@@ -241,3 +241,10 @@ it('lets a label leave a small block when its copy would run off the canvas bott
   const r = hugText(block, updateNodes(block, ['l'], n => ({ ...n, text: words })), 'l', charMeasure).nodes[1].frames.main.rect;
   expect(r.w).toBeGreaterThan(334);
 });
+it('lets a label pass a block beside it when keeping clear would wrap it off the canvas bottom (D-086)', () => {
+  const block = rectNode('b', frame(666, 666, 334, 334));
+  const start = doc([block, textNode('t', frame(360, 620, 117, 48, { fontSize: 42 }), 'Note')]);
+  const words = 'Free entry for students with a valid UNSW ID card at the door';
+  const r = hugText(start, updateNodes(start, ['t'], n => ({ ...n, text: `${words} ${words}` })), 't', charMeasure).nodes[1].frames.main.rect;
+  expect(r.x + r.w).toBeGreaterThan(666);
+});

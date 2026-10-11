@@ -126,3 +126,19 @@ task is seriously blocked by one of them (we log those for the product owner).
   - A photo dropped on a full-canvas background is added, not swapped in.
   - Picking several pictures is one Undo.
 - **SVG export** draws circle pictures correctly and embeds Hindi in Poppins.
+
+## New in loop 7 (from loop-6 findings)
+- **Text tool (T).**
+  - Click where the text should go after pressing T; the label moves there and you keep typing. T then Escape removes the untouched label.
+  - A label grows from its aligned edge, stays clear of photos and blocks beside it, and wraps.
+  - A paragraph pasted into a new label moves it to free room.
+- **Sizes.**
+  - Larger and typed sizes stop at the room for layout headlines, and at the canvas for labels, on every press.
+  - A hand-set size on an autofit headline affects only the size you are in.
+- **Moving.** Lines, thin rules and small labels move when dragged by their body. Handles are caught from outside the box.
+- **Align centres** keeps the largest block still and brings the others onto it.
+- **Pictures.**
+  - A batch of pictures tiles the free guide cells without overlapping.
+  - Small files get a "may look soft" note.
+  - Layers names pictures after their files.
+- **Text.** Hyphenated words break after the hyphen. Text never flows past the canvas bottom.

@@ -152,7 +152,7 @@ export function hugText(before: KuraDoc, after: KuraDoc, id: string, measure: Me
     const m = inset(b);
     let lo = b.x + m, hi = b.x + b.w - m;
     // Blocks beside it on its first line (a photo column, the accent block, other text) bound it too, unless that leaves
-    // no room for its longest word (D-086).
+    // no room for its longest word or would wrap it off the canvas bottom (D-086).
     if (free && !f0.rot) {
       const gap = layoutPad(canvas) / 2;
       let l = lo, h = hi;
@@ -164,7 +164,7 @@ export function hugText(before: KuraDoc, after: KuraDoc, id: string, measure: Me
         if (r.x + r.w <= g.x + EPS) l = Math.max(l, r.x + r.w + gap);
         else if (r.x >= g.x + g.w - EPS) h = Math.min(h, r.x - gap);
       }
-      if (h - l >= longest) { lo = l; hi = h; }
+      if (h - l >= longest && g.y + textHeight(measure(now.text, s1, w1, Math.max(1, h - Math.max(l, g.x)), now.font).length, s1) <= canvas.h) { lo = l; hi = h; }
     }
     const span = hi - lo, gx = g.x + g.w / 2;
     // It grows from its aligned edge and wraps there when that side has at least half its bounds; a label near the far
