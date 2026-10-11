@@ -67,6 +67,10 @@ export class Editor {
   ignorePointerUntil = 0;
   /** A block the Text tool just added: while it is first typed it pushes no other text, which was not stacked under it (D-083). */
   private fresh: string | null = null;
+  /** True while a click places a just-added label: the editor's blur is not a finish (D-086). */
+  private placing = false;
+  /** The just-added label was put where the person clicked: it stays there (D-086). */
+  private placed = false;
   /** A repeated Enter or Space from Start or Go is ignored until then, or until another key is typed. */
   ignoreKeysUntil = 0;
   private textBefore: KuraDoc | null = null;
@@ -351,13 +355,16 @@ export class Editor {
    */
   addText(): void {
     const node: TextNode = { id: newId(), kind: 'text', text: 'Text', weight: 400, align: 'start', fill: { role: 'ink' }, frames: {} };
+    // One step above body, but in a short size (Header, Banner) never above what its layout gives a headline (D-085).
+    const step = (c: Size, ts: TypeScale) => Math.max(ts.body, Math.min(ts.steps[2], c.h * .06)), c0 = this.canvas(), here = step(c0, this.typeScale());
     for (const s of this.doc.sizes) {
-      // One step above body, but in a short size (Header, Banner) never above what its layout gives a headline (D-085).
-      const c = canvasSize(s.ratio), ts = typeScale(s.guide, c), size = Math.max(ts.body, Math.min(ts.steps[2], c.h * .06)), w = textWidth(node.text, size, 400) * 1.02, h = textHeight(1, size);
+      // Another linked size scales it as Change ratio would scale text from this one, so it never outsizes text there (D-086).
+      const c = canvasSize(s.ratio), ts = typeScale(s.guide, c), k = Math.min(c.w / c0.w, c.h / c0.h), grow = k >= 1 ? Math.max(1, ts.body / this.typeScale().body) : k;
+      const size = s.id === this.sizeId ? here : Math.max(ts.body * .75, Math.min(step(c, ts), here * grow)), w = textWidth(node.text, size, 400) * 1.02, h = textHeight(1, size);
       const at = freeSpot({ size: { w: Math.min(c.w * .4, w * 4), h }, canvas: c, cells: this.cells(s.id), ...this.occupied(s.id), pad: Math.min(c.w, c.h) * .045 });
       node.frames[s.id] = { rect: { x: at.x, y: at.y, w, h }, rot: 0, fontSize: size };
     }
-    this.add([node]); this.editText(node.id); this.fresh = node.id;
+    this.add([node]); this.editText(node.id); this.fresh = node.id; this.placed = false;
   }
   addShape(key: string): void {
     const def = shapeLibrary[key], s = defaultShapeSize(def.ar, this.canvas()), swatch = this.store.ui.swatch, rect = this.centred(s.w, s.h);
@@ -401,7 +408,9 @@ export class Editor {
     const images = files.filter(f => kind(f));
     if (!images.length) { if (files.length) toast('Choose a PNG, JPEG, WebP, GIF or SVG image', 2200); return; }
     let hit = target ? nodeById(this.doc, target) : at ? this.hitTest(at) : undefined;
-    const added: { key: string; natural: Size }[] = [], skipped: string[] = [];
+    const added: { key: string; natural: Size; name: string }[] = [], skipped: string[] = [];
+    // A picture is named after its file in Layers, so a mood board's rows tell apart (D-086).
+    const stem = (f: File) => f.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim().slice(0, 80);
     // A drop on a background picture (Fill canvas) adds a picture instead of swapping the background; Replace swaps it (D-083).
     if (!target && hit?.kind === 'image' && hit.asset && this.doc.nodes[0]?.id === hit.id && this.isBackground(hit)) hit = undefined;
     if (!target && hit?.locked && (hit.kind === 'image' || hit.kind === 'shape' && hit.shape === 'circle')) skipped.push('the frame under it is locked');
@@ -431,8 +440,10 @@ export class Editor {
       if (ring) {
         // An oval circle shape gives a round picture centred in it, in every size (D-085).
         const frames = Object.fromEntries(Object.entries(ring.frames).map(([k, f]) => { const side = Math.min(f.rect.w, f.rect.h); return [k, { ...f, rect: { x: f.rect.x + (f.rect.w - side) / 2, y: f.rect.y + (f.rect.h - side) / 2, w: side, h: side } }]; }));
-        const img: ImageNode = { id: newId(), kind: 'image', asset: stored.key, mask: 'circle', frames, ...(ring.opacity !== undefined ? { opacity: ring.opacity } : {}) };
+        const img: ImageNode = { id: newId(), kind: 'image', asset: stored.key, mask: 'circle', frames, ...(stem(original) ? { name: stem(original) } : {}), ...(ring.opacity !== undefined ? { opacity: ring.opacity } : {}) };
         const id = ring.id; ring = null; fills.length = 0;
+        // More pictures dropped with it share the circle as round tiles, as in a circle frame (D-086).
+        if (images.length > 1) shared = img;
         put({ ...this.doc, nodes: this.doc.nodes.map(n => n.id === id ? img : n) }, 'Filled the circle'); this.select([img.id]); continue;
       }
       const into = fills.length ? nodeById(this.doc, fills.shift()!) : undefined;
@@ -440,11 +451,11 @@ export class Editor {
         if (!into.asset && !shared && images.length > 1) shared = into;
         const f = this.frame(into), rect = clear ? containIn(f.rect, stored.natural) : f.rect;
         filled++;
-        put(setFrames(updateNodes(this.doc, [into.id], n => ({ ...n, asset: stored.key, cutout: false, focus: CENTRE }) as ImageNode), this.sizeId, { [into.id]: { ...f, rect } }), 'Filled');
+        put(setFrames(updateNodes(this.doc, [into.id], n => ({ ...n, asset: stored.key, cutout: false, focus: CENTRE, ...(!n.name && stem(original) ? { name: stem(original) } : {}) }) as ImageNode), this.sizeId, { [into.id]: { ...f, rect } }), 'Filled');
         this.select([into.id]); continue;
       }
       if (!target) fills.length = 0;
-      added.push(stored);
+      added.push({ ...stored, name: stem(original) });
     }
     // Skipped files are named in the closing toast, so a batch never hides them (D-074).
     const note = skipped.length ? ` · skipped ${skipped.join('; ')}` : '';
@@ -464,7 +475,7 @@ export class Editor {
         });
       }
       const doc = { ...this.doc, nodes: this.doc.nodes.map(n => n.id === shared!.id ? { ...n, frames: { ...n.frames, ...frames[n.id] } } : n) };
-      const nodes: DocNode[] = added.map((a, i) => ({ id: ids[i], kind: 'image', asset: a.key, frames: frames[ids[i]], ...(round ? { mask: 'circle' as const } : {}), ...(shared!.opacity !== undefined ? { opacity: shared!.opacity } : {}) }));
+      const nodes: DocNode[] = added.map((a, i) => ({ id: ids[i], kind: 'image', asset: a.key, frames: frames[ids[i]], ...(a.name ? { name: a.name } : {}), ...(round ? { mask: 'circle' as const } : {}), ...(shared!.opacity !== undefined ? { opacity: shared!.opacity } : {}) }));
       const at = doc.nodes.findIndex(n => n.id === shared!.id) + 1;
       put({ ...doc, nodes: [...doc.nodes.slice(0, at), ...nodes, ...doc.nodes.slice(at)] }, `${n} pictures share the frame${note}`);
       this.store.setUI({ sel: [shared.id, ...ids], armed: null }); return;
@@ -473,8 +484,11 @@ export class Editor {
     // inside them, and go under the text (D-047, D-058). One undo step for the batch.
     const c = this.canvas(), p = at ?? { x: c.w / 2, y: c.h / 2 }, taken = this.taken();
     const boxes = spreadCells(p, this.cells(), taken, added.length, c, !!at);
-    const nodes: DocNode[] = added.map((a, i) => ({ id: newId(), kind: 'image', asset: a.key, frames: this.framesFor(containIn(boxes[i], a.natural)) }));
-    put(addUnderText(this.doc, nodes)); toast(`${nodes.length > 1 ? `${nodes.length} images` : 'Image'}${note}`, note ? 3600 : 1300);
+    const nodes: DocNode[] = added.map((a, i) => ({ id: newId(), kind: 'image', asset: a.key, frames: this.framesFor(containIn(boxes[i], a.natural)), ...(a.name ? { name: a.name } : {}) }));
+    // A small file drawn much larger than its pixels (a 240 px logo across a slide) is said to look soft (D-086).
+    const px = exportSize(this.spec().ratio, { scale: 1 }).w / c.w, soft = added.filter((a, i) => containIn(boxes[i], a.natural).w * px > a.natural.w * 1.5).length;
+    const small = soft ? ` · ${soft === 1 && added.length === 1 ? 'it is' : soft === 1 ? 'one is' : `${soft} are`} small and may look soft` : '';
+    put(addUnderText(this.doc, nodes)); toast(`${nodes.length > 1 ? `${nodes.length} images` : 'Image'}${small}${note}`, note || small ? 3600 : 1300);
     this.store.setUI({ sel: nodes.map(n => n.id), armed: null });
   }
   remove(): void {
@@ -493,8 +507,8 @@ export class Editor {
     return this.doc.nodes.filter(n => n.frames[sizeId] && !n.frames[sizeId].hidden).map(n => rotatedBounds(n.kind === 'text' ? this.extent(n, sizeId) : n.frames[sizeId].rect, n.frames[sizeId].rot));
   }
   /** What occupies a size, text apart from pictures and blocks, for placing pasted copy and icons (D-081). */
-  occupied(sizeId = this.sizeId): { taken: Rect[]; text: Rect[] } {
-    const shown = this.doc.nodes.filter(n => n.frames[sizeId] && !n.frames[sizeId].hidden), bounds = (n: DocNode) => rotatedBounds(n.kind === 'text' ? this.extent(n, sizeId) : n.frames[sizeId].rect, n.frames[sizeId].rot);
+  occupied(sizeId = this.sizeId, skip?: string): { taken: Rect[]; text: Rect[] } {
+    const shown = this.doc.nodes.filter(n => n.id !== skip && n.frames[sizeId] && !n.frames[sizeId].hidden), bounds = (n: DocNode) => rotatedBounds(n.kind === 'text' ? this.extent(n, sizeId) : n.frames[sizeId].rect, n.frames[sizeId].rot);
     return { taken: shown.filter(n => n.kind !== 'text').map(bounds), text: shown.filter(n => n.kind === 'text').map(bounds) };
   }
   /** Where a text block's letters are: its lines' height and widest line, on the side its alignment puts them. */
@@ -598,15 +612,16 @@ export class Editor {
     return updateNodes(doc, [id], x => ({ ...x, frames: { ...x.frames, [this.sizeId]: { ...x.frames[this.sizeId], fontSize: size } } }) as TextNode);
   }
   /**
-   * Where a text block's bottom may grow to in the active size: above the first unturned picture or shape below it
-   * (the poster band), else the canvas bottom, less the layout margin; never above where it already reaches (D-085).
+   * Where a text block's bottom may grow to in the active size: for layout text, above the first unturned picture or
+   * shape below it (the poster band); else the canvas bottom; less the layout margin (D-085). A free label is bounded by
+   * the canvas only, so a label just above a block can still grow (D-086).
    */
   private bottomLimit(doc: KuraDoc, n: TextNode): number {
     const s = this.spec(doc), c = canvasSize(s.ratio), pad = layoutPad(c), b = textBox(n, n.frames[s.id], measure, typeScale(s.guide, c)).rect;
     let limit = c.h - pad;
     for (const o of doc.nodes) {
       const f = o.frames[s.id];
-      if (o.id === n.id || o.kind === 'text' || o.kind === 'ink' || !f || f.hidden || f.rot) continue;
+      if (!n.slot || o.id === n.id || o.kind === 'text' || o.kind === 'ink' || !f || f.hidden || f.rot) continue;
       const r = f.rect;
       if (r.x < b.x + b.w && b.x < r.x + r.w && r.y >= b.y + b.h - 1e-6) limit = Math.min(limit, r.y - pad);
     }
@@ -712,12 +727,15 @@ export class Editor {
     const bounds = (n: DocNode) => rotatedBounds(this.box(n), this.frame(n).rot), boxes = sel.map(n => ({ id: n.id, rect: bounds(n) }));
     if (mode.startsWith('spread') && shown.length < 3) { toast('Select three or more to space evenly'); return; }
     // Locked blocks in the selection stay put: the others line up with them (D-072) and space evenly around them (D-077).
-    const key = shown.filter(n => n.locked).map(bounds);
+    // With none, centring several blocks keeps the largest still and brings the others onto it (an icon onto a circle, D-086).
+    const locked = shown.filter(n => n.locked).map(bounds), area = (n: DocNode) => { const r = bounds(n); return r.w * r.h; };
+    const largest = (mode === 'hcenter' || mode === 'vcenter') && !locked.length && sel.length > 1 ? [...sel].sort((a, b) => area(b) - area(a))[0] : null;
+    const key = largest ? [bounds(largest)] : locked;
     const moves = mode === 'spread-x' || mode === 'spread-y' ? distribute(shown.map(n => ({ id: n.id, rect: bounds(n) })), mode === 'spread-x' ? 'x' : 'y', shown.filter(n => n.locked).map(n => n.id)) : align(boxes, mode, { x: 0, y: 0, ...this.canvas() }, key);
     // Nothing to move is said, not recorded as a step (D-083).
     if (sel.every(n => { const m = moves[n.id]; return !m || Math.abs(m.dx) < 1e-6 && Math.abs(m.dy) < 1e-6; })) { toast(mode.startsWith('spread') ? 'Already evenly spaced' : 'Already aligned'); return; }
     const frames = Object.fromEntries(sel.map(n => { const f = this.frame(n), m = moves[n.id] ?? { dx: 0, dy: 0 }; return [n.id, { ...f, rect: { ...f.rect, x: f.rect.x + m.dx, y: f.rect.y + m.dy } }]; }));
-    this.commit(setFrames(this.doc, this.sizeId, frames), mode.startsWith('spread') ? 'Spaced evenly' : key.length ? 'Aligned to the locked block' : sel.length === 1 ? 'Aligned to the canvas' : 'Aligned');
+    this.commit(setFrames(this.doc, this.sizeId, frames), mode.startsWith('spread') ? 'Spaced evenly' : largest ? 'Centred on the largest block' : key.length ? 'Aligned to the locked block' : sel.length === 1 ? 'Aligned to the canvas' : 'Aligned');
   }
   /** Same width or height (D-077): the selection takes the locked block's size, else the first one picked; text takes widths only; pictures match exactly and re-cover their frames, so equal tiles are possible (D-081). */
   matchSize(mode: 'w' | 'h'): void {
@@ -774,6 +792,8 @@ export class Editor {
     if (!record) { toast('Image missing'); return; }
     if (record.cutout) { this.cutouts.add(asset); this.setCutout(true); return; }
     this.scan = { id: n.id, t0: performance.now() }; this.store.setUI({ removing: n.id });
+    // It runs on this computer and can take up to a minute; say so while the scan line runs (D-086).
+    toast('Removing the background on this computer · up to a minute', 4000);
     try {
       const blob = await runRemoval(record.working);
       await assets.setCutout(asset, blob); this.forgetBitmap(asset); this.cutouts.add(asset);
@@ -812,7 +832,7 @@ export class Editor {
       if (mod && letterOf(e) === 'z' && !e.shiftKey && area.value === node.text) { e.preventDefault(); e.stopPropagation(); this.finishText(); this.undo(); return; }
       if (mod && letterOf(e) === 'b') { e.preventDefault(); e.stopPropagation(); const cur = nodeById(this.doc, id); if (cur?.kind === 'text' && fontById(cur.font).weights.length < 2) { toast(`${fontById(cur.font).name} has one weight`); return; } if (cur?.kind === 'text') { this.store.set(updateNodes(this.doc, [id], n => ({ ...n, weight: (n as TextNode).weight === 700 ? 400 : 700 }) as TextNode)); this.positionTextarea(); } return; }
       if (e.key === 'Escape' || e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); e.stopPropagation(); this.finishText(); this.overlay.focus({ preventScroll: true }); } });
-    area.addEventListener('blur', () => this.finishText());
+    area.addEventListener('blur', () => { if (!this.placing) this.finishText(); });
     this.textBefore = before;
   }
   positionTextarea(): void {
@@ -848,11 +868,46 @@ export class Editor {
       }
       this.store.commit(merged, { before: before ?? undefined }); toast(empty ? 'Updated from another tab' : 'Updated from another tab · your text is kept', 2400); return;
     }
+    // A label added and left untouched (T, then Escape) goes again, as if never added (D-086).
+    if (fresh && before && node.text === 'Text') { this.store.undo(); this.select([]); return; }
     if (!node.text.trim()) { this.store.commit(removeNodes(this.doc, [node.id]), { before: before ?? undefined }); this.select([]); return; }
     const f = this.frame(node), b = this.box(node);
-    const synced = node.fit ? this.doc : updateNodes(this.doc, [node.id], n => ({ ...n, frames: { ...n.frames, [this.sizeId]: { ...f, rect: { ...f.rect, h: b.h } } } }));
+    let synced = node.fit ? this.doc : updateNodes(this.doc, [node.id], n => ({ ...n, frames: { ...n.frames, [this.sizeId]: { ...f, rect: { ...f.rect, h: b.h } } } }));
+    if (fresh && !this.placed) synced = this.settle(synced, node.id);
+    this.placed = false;
     if (before && JSON.stringify(nodeById(before, node.id)) !== JSON.stringify(nodeById(synced, node.id))) this.store.commit(synced, { before: fresh ? null : before }); else this.store.set(synced);
     this.flagAllText();
+  }
+  /**
+   * A just-added label that its first typing grew over other blocks (a pasted paragraph over the headline) moves, in each
+   * size, to the spot its new size covers least, when that covers less (D-086).
+   */
+  private settle(doc: KuraDoc, id: string): KuraDoc {
+    const n = nodeById(doc, id); if (n?.kind !== 'text') return doc;
+    let out = doc, moved = false;
+    const overlap = (a: Rect, t: Rect) => Math.max(0, Math.min(a.x + a.w, t.x + t.w) - Math.max(a.x, t.x)) * Math.max(0, Math.min(a.y + a.h, t.y + t.h) - Math.max(a.y, t.y));
+    const cover = (r: Rect, o: { taken: Rect[]; text: Rect[] }) => o.taken.reduce((a, t) => a + overlap(r, t), 0) + 10 * o.text.reduce((a, t) => a + overlap(r, t), 0);
+    for (const s of doc.sizes) {
+      const f = n.frames[s.id]; if (!f || f.hidden || f.rot) continue;
+      const c = canvasSize(s.ratio), r = textBox(n, f, measure, typeScale(s.guide, c)).rect, o = this.occupied(s.id, id);
+      const now = cover(r, o) + (r.y + r.h > c.h ? r.w * (r.y + r.h - c.h) * 10 : 0);
+      if (now < 1) continue;
+      const at = freeSpot({ size: { w: r.w, h: r.h }, canvas: c, cells: this.cells(s.id), ...o, pad: layoutPad(c) }), there = { ...r, x: at.x, y: at.y };
+      if (cover(there, o) < now) { out = setFrames(out, s.id, { [id]: { ...f, rect: { ...f.rect, x: at.x, y: at.y } } }); moved ||= s.id === this.sizeId; }
+    }
+    if (moved) toast('Moved where it has room');
+    return out;
+  }
+  /** T, then a click on the canvas: the label just added moves to the click and stays in editing (Canva habit, D-086). */
+  placeFresh(p: Point): boolean {
+    const id = this.store.ui.editing, area = this.textarea;
+    if (!area || !id || id !== this.fresh || area.value !== 'Text') return false;
+    const n = nodeById(this.doc, id); if (n?.kind !== 'text') return false;
+    const f = this.frame(n), c = this.canvas();
+    this.store.set(setFrames(this.doc, this.sizeId, { [id]: { ...f, rect: { ...f.rect, x: Math.max(0, Math.min(p.x, c.w - f.rect.w)), y: Math.max(0, Math.min(p.y, c.h - f.rect.h)) } } }));
+    this.placing = true; this.placed = true; this.positionTextarea();
+    requestAnimationFrame(() => { area.focus({ preventScroll: true }); area.select(); this.placing = false; });
+    return true;
   }
   // 5d: on the first open ever, blocks lift 2px one after another, once.
   lift(): void {

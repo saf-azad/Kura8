@@ -1,5 +1,5 @@
 import type { DocNode, Frame, KuraDoc } from '../../core/document';
-import { center, containsRotated, rotatedBounds, unionRect, norm, type Point, type Rect } from '../../core/geometry';
+import { center, containsRotated, rotatedBounds, rotatePoint, unionRect, norm, type Point, type Rect } from '../../core/geometry';
 import { CENTRE } from '../../core/images';
 import { resizeLocal } from './resize';
 import { snap, snapAngle, snapLines, type Handle, type SnapLine } from '../../core/snap';
@@ -37,12 +37,18 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
       ...ed.anchors().flatMap(a => a.kind === 'line' ? [{ id: a.id, axis: a.axis, at: a.at, tier: 0 as const }] : []), ...extra];
   };
   const handleAt = (p: Point): { id: string; handle: Handle | 'rotate' } | null => {
-    for (const box of ed.boxes()) for (const { handle, at } of handlePoints(box, ed.scale)) if (Math.hypot(at.x - p.x, at.y - p.y) <= (HANDLE_PX / 2 + 4) * px()) return { id: box.id, handle };
+    for (const box of ed.boxes()) {
+      // A press well inside a small box (a short label, a thin rule) moves it; its handles are caught from outside (D-086).
+      const r = box.rect, q = rotatePoint(p, center(r), -box.rot), m = 3 * px();
+      const inner = Math.min(r.w, r.h) * ed.scale < 48 && q.x > r.x + m && q.x < r.x + r.w - m && q.y > r.y + m && q.y < r.y + r.h - m;
+      for (const { handle, at } of handlePoints(box, ed.scale)) if (!(inner && handle !== 'rotate') && Math.hypot(at.x - p.x, at.y - p.y) <= (HANDLE_PX / 2 + 4) * px()) return { id: box.id, handle };
+    }
     return null;
   };
   el.addEventListener('pointerdown', e => {
     if (e.button !== 0 || drag) return;
     const p = ed.toUnits(e), ui = ed.store.ui;
+    if (ed.placeFresh(p)) { e.preventDefault(); return; }
     el.focus({ preventScroll: true });
     if (ed.textarea) ed.finishText();
     if (ui.tool && sketch.down(e, p)) { el.setPointerCapture(e.pointerId); return; }

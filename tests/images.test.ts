@@ -32,9 +32,10 @@ it('spreads several new pictures over the emptiest cells, the drop cell first (D
   const canvas = { w: 900, h: 300 }, cells = [0, 300, 600].map(x => ({ x, y: 0, w: 300, h: 300 })), taken = [{ x: 0, y: 0, w: 300, h: 300 }];
   expect(spreadCells({ x: 50, y: 50 }, cells, taken, 2, canvas, true)).toEqual([cells[0], cells[1]]);
   expect(spreadCells({ x: 450, y: 150 }, cells, taken, 3, canvas, false)).toEqual([cells[1], cells[2], cells[0]]);
-  expect(spreadCells({ x: 450, y: 150 }, cells, [], 4, canvas, false)[3]).toEqual({ x: 320, y: 0, w: 300, h: 300 });
-  expect(spreadCells({ x: 0, y: 0 }, [{ x: 600, y: 0, w: 300, h: 300 }], [], 2, canvas, false)[1]).toEqual({ x: 600, y: 0, w: 300, h: 300 });
-  expect(spreadCells({ x: 0, y: 0 }, [], taken, 2, canvas, true)).toEqual([{ x: 225, y: 75, w: 450, h: 150 }, { x: 245, y: 95, w: 450, h: 150 }]);
+  // A batch larger than the cells splits them into tiles, so no two pictures overlap (D-086).
+  expect(spreadCells({ x: 450, y: 150 }, cells, [], 4, canvas, false)[3]).toEqual(tiles(cells[0], 2, 12)[1]);
+  expect(spreadCells({ x: 0, y: 0 }, [{ x: 600, y: 0, w: 300, h: 300 }], [], 2, canvas, false)).toEqual(tiles({ x: 600, y: 0, w: 300, h: 300 }, 2, 12));
+  expect(spreadCells({ x: 0, y: 0 }, [], taken, 2, canvas, true)).toEqual(tiles({ x: 225, y: 75, w: 450, h: 150 }, 2, 6));
 });
 describe('a free spot for pasted copy and icons (D-077)', () => {
   const canvas = { w: 900, h: 900 }, cells = [0, 1, 2].flatMap(r => [0, 1, 2].map(c => ({ x: c * 300, y: r * 300, w: 300, h: 300 })));

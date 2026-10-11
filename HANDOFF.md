@@ -112,6 +112,36 @@ Append-only. New entries supersede named old entries; do not edit history. Forma
   - **Circle and drops.** Circle with locked or hidden pictures in the selection applies to the rest. A photo dropped on an oval circle shape gives a round picture.
   - **Hex field.** It ignores zero-width characters.
   - Why: loop 6 cohort S (64 sessions).
+- **D-086** 2026-10-11 fable — Loop 6 cohorts Q and R.
+  - **Text-tool labels and neighbours.** A free label is also bounded by the blocks beside it on its first line (a photo column, the accent block, other text), unless that leaves no room for its longest word. A block too narrow for that word, or one the wrapped copy would run off the canvas bottom from, gives way to the canvas.
+  - **Placing new labels.**
+    - A just-added label that its first typing grew over other blocks moves, in each size, to the spot its new size covers least ("Moved where it has room"). A pasted paragraph no longer lands on the headline.
+    - T, then a click on the canvas, puts the label where the person clicked and keeps typing; such a label stays where it was put.
+    - T, then Escape, removes the untouched label.
+  - **Sizes.**
+    - In other linked sizes a new label scales as Change ratio would scale text, so it never outsizes the text there.
+    - The "block below" limit on Larger and typed sizes applies to layout text only; a free label is bounded by the canvas (supersedes part of D-085).
+  - **Text measuring.**
+    - One character measures as wide as its glyph (`oneLineWidth`), not zero.
+    - The measurer breaks a hyphenated word after a hyphen first, and `splitsWord` does not count that as a broken word.
+    - Text flow never pushes text past the canvas bottom.
+  - **Handles.**
+    - A thin box has no edge handles across its thickness.
+    - A press well inside a small box (under 48 px) moves it.
+    - Lines, rules and short labels move by their body.
+  - **Arranging and pictures.**
+    - Centring several blocks keeps the largest still ("Centred on the largest block"); locked blocks still win.
+    - A batch of pictures larger than the guide cells splits the cells into tiles, so new pictures never overlap; small files drawn much larger than their pixels are said to look soft.
+    - Pictures are named after their files in Layers.
+    - Several photos dropped on a circle shape share it as round tiles.
+  - **Panels.**
+    - The Shapes panel takes its height from the toolbar, so it stops above the help button.
+    - Its search field stays at the top while results scroll into view.
+  - **Feedback and margins.**
+    - Background removal says it runs on this computer and can take up to a minute.
+    - Left-aligned text at a Header's thin left margin takes the new size's layout margin on Change ratio and linked sizes.
+    - Start ignores a second click for 1.5 s.
+  - Why: loop 6 cohorts Q (46 sessions, 19 of 25 loop-5 items fixed, 6 partly) and R (12 fresh jobs, 31 sessions).
 
 ## Next steps
 
@@ -230,6 +260,10 @@ Student-test loop (D-045), session-sized:
 - The contrast "use" button checks the active size only; a label on a dark block in one size can sit on bare ground in another (loop 6).
 - With Help on at 175–200 % zoom the help box can cover the bottom of panels and keeps the last hovered control's text (loop 6).
 - A label turned 90° near the canvas bottom grows off the canvas (flagged) (loop 6).
+- Text over a dark photo keeps automatic ink and the contrast line is hidden there (D-053); T labels now often land on photos (loop 6).
+- Every export in a countdown series takes its name from the headline, so "3", "2", "1" all save as the same name (loop 6).
+- The Link split layout's two-line subtitle can reach the accent block; the Link cover layout's two-line headline plus two-line body runs off the bottom (flagged) (loop 6).
+- Remove background shows a scan line and a toast, with no progress percentage (loop 6).
 
 ## Browser audit
 

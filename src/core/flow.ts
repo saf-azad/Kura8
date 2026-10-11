@@ -5,6 +5,7 @@ import { LINE_HEIGHT, splitsWord, textBox, textHeight, typeScale, type TextBox }
 import { drawnWeight } from './fonts';
 import { direction, physicalAlign } from './script';
 import { nudge } from './ops';
+import { layoutPad } from './compositions';
 // Stacked text follows (D-046): when an edit changes a text block's drawn height, unlocked text blocks that sat just
 // under it move by the same amount, and the blocks under those follow in turn. "Just under" means unrotated, sharing
 // some width, with a top no further below the old bottom than one line of the block above (or than the growth). Applied in every size,
@@ -63,7 +64,10 @@ export function flowText(before: KuraDoc, after: KuraDoc, id: string, measure: M
         stack.delete(nid); moving.push(nid); queue.push(below);
       }
     }
-    if (moving.length) doc = nudge(doc, spec.id, moving, 0, dy);
+    // Text is never pushed past the canvas bottom: a stack that would leave the canvas stops at its edge (D-086).
+    const canvas = canvasSize(spec.ratio), lowest = Math.max(...moving.map(m => { const n = doc.nodes.find(x => x.id === m) as TextNode; return held(n, textBox(n, n.frames[spec.id], measure, scale)).rect; }).map(r => r.y + r.h));
+    const step = dy > 0 && moving.length ? Math.max(0, Math.min(dy, canvas.h - lowest)) : dy;
+    if (moving.length && Math.abs(step) > EPS) doc = nudge(doc, spec.id, moving, 0, step);
   }
   return doc;
 }
@@ -85,6 +89,9 @@ export function unfit(doc: KuraDoc, id: string, measure: Measure, except?: strin
 }
 /** The narrowest width that keeps a text on one line (a word wider than the line counts as wrapping). */
 export function oneLineWidth(text: string, size: number, weight: 400 | 700, measure: Measure, font?: TextNode['font'], max = 8000): number {
+  // One character never wraps, so its width is half the narrowest line that keeps it doubled (D-086).
+  const t = text.trim();
+  if ([...t].length === 1) return oneLineWidth(t + t, size, weight, measure, font, max) / 2;
   let lo = 0, hi = max;
   if (measure(text, size, weight, hi, font).length > 1) return hi;
   while (hi - lo > .25) { const mid = (lo + hi) / 2; if (measure(text, size, weight, mid, font).length === 1 && !splitsWord(text, measure(text, size, weight, mid, font))) hi = mid; else lo = mid; }
@@ -139,8 +146,27 @@ export function hugText(before: KuraDoc, after: KuraDoc, id: string, measure: Me
     const on = free && !f0.rot ? sitsOn(before, id, spec.id, g, true) : null;
     const longest = free ? Math.max(0, ...now.text.split(/\s+/).filter(Boolean).sort((p, q) => q.length - p.length).slice(0, 3).map(word => oneLineWidth(word, s1, w1, measure, now.font))) * 1.02 : 0;
     let b = on ? before.nodes.find(n => n.id === on)!.frames[spec.id]?.rect ?? whole : whole;
-    if (b !== whole && longest > b.w - 2 * inset(b)) b = whole;
-    const m = inset(b), lo = b.x + m, hi = b.x + b.w - m, span = hi - lo, gx = g.x + g.w / 2;
+    // A block too narrow for its longest word, or one its copy wrapped in would run off the canvas bottom from, gives way
+    // to the canvas (D-086).
+    if (b !== whole && (longest > b.w - 2 * inset(b) || g.y + textHeight(measure(now.text, s1, w1, Math.max(1, b.x + b.w - inset(b) - g.x), now.font).length, s1) > canvas.h)) b = whole;
+    const m = inset(b);
+    let lo = b.x + m, hi = b.x + b.w - m;
+    // Blocks beside it on its first line (a photo column, the accent block, other text) bound it too, unless that leaves
+    // no room for its longest word (D-086).
+    if (free && !f0.rot) {
+      const gap = layoutPad(canvas) / 2;
+      let l = lo, h = hi;
+      for (const o of before.nodes) {
+        const of = o.frames[spec.id];
+        if (o.id === id || o.id === on || o.kind === 'ink' || !of || of.hidden || of.rot) continue;
+        const r = o.kind === 'text' ? textBox(o, of, measure, typeScale(spec.guide, canvas)).rect : of.rect;
+        if (r.y >= g.y + g.h - EPS || r.y + r.h <= g.y + EPS) continue;
+        if (r.x + r.w <= g.x + EPS) l = Math.max(l, r.x + r.w + gap);
+        else if (r.x >= g.x + g.w - EPS) h = Math.min(h, r.x - gap);
+      }
+      if (h - l >= longest) { lo = l; hi = h; }
+    }
+    const span = hi - lo, gx = g.x + g.w / 2;
     // It grows from its aligned edge and wraps there when that side has at least half its bounds; a label near the far
     // edge slides back instead to keep one line, or wraps at three fifths of its bounds, never narrower than its longest word.
     const aligned = Math.max(0, side === 'left' ? hi - Math.max(lo, g.x) : side === 'right' ? Math.min(hi, g.x + g.w) - lo : 2 * Math.min(gx - lo, hi - gx));

@@ -87,6 +87,11 @@ describe('re-ratio (5v)', () => {
     // The Header's thin margin becomes the Post's layout margin (45).
     expect(r.x + r.w).toBeCloseTo(1000 - 45, 6); expect(r.x).toBeCloseTo(345, 6);
   });
+  it('gives text at a Header’s thin left margin the Post’s layout margin (D-086)', () => {
+    const d = doc([textNode('t', frame(11.25, 150, 900, 20, { fontSize: 15 }), 'Careers fair 2026 meet forty employers')], size({ ratio: 'cover' }));
+    const r = reRatio(d, 'main', { ratio: 'square' }, fakeMeasure).doc.nodes[0].frames.main.rect;
+    expect(r.x).toBeCloseTo(45, 6); expect(r.x + r.w).toBeLessThanOrEqual(955 + 1e-6);
+  });
   it('treats rotated nodes as free and changes the guide when asked', () => {
     const d = doc([rectNode('r', frame(0, 0, 100, 100, { rot: 30 }))]);
     const out = reRatioFrames(d, d.sizes[0], { ratio: 'landscape', guide: null }, fakeMeasure);

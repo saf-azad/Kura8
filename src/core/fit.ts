@@ -15,7 +15,8 @@ const EPS = 1e-6;
 /** Whether wrapping broke a word across lines (a word wider than the line). Text in scripts written without spaces wraps anywhere and never counts. */
 export function splitsWord(text: string, lines: string[]): boolean {
   if (/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Thai}]/u.test(text)) return false;
-  const flat = (s: string) => s.replace(/\s+/g, ' ').trim();
+  // A break after a hyphen ("late-" / "afternoon") is not a broken word (D-086).
+  const flat = (s: string) => s.replace(/\s+/g, ' ').trim().replace(/- /g, '-');
   return flat(lines.join(' ')) !== flat(text);
 }
 /** Autofit (5q): from `size`, step down the type scale until the text fits `height` without breaking a word (D-055), stopping at body size; past that it overflows and the block grows. */

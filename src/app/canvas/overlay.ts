@@ -27,7 +27,10 @@ export function handlePoints(box: Box, scale: number): { handle: Handle | 'rotat
   // Near the top of the canvas the knob would sit under the toolbar: it hangs below the box instead.
   let knob = rotatePoint({ x: c.x, y: r.y - ROTATE_PX / scale }, c, rot);
   if (knob.y * scale < -20) knob = rotatePoint({ x: c.x, y: r.y + r.h + ROTATE_PX / scale }, c, rot);
-  return [...LETTERS[box.handles].map(handle => ({ handle, at: pos[handle] })), { handle: 'rotate' as const, at: knob }];
+  // A thin box (a line, a rule) has no edge handles across its thickness: they would sit on its body (D-086).
+  const thinH = r.h * scale < 24, thinW = r.w * scale < 24;
+  const letters = LETTERS[box.handles].filter(h => !(thinH && (h === 'n' || h === 's')) && !(thinW && (h === 'e' || h === 'w')));
+  return [...letters.map(handle => ({ handle, at: pos[handle] })), { handle: 'rotate' as const, at: knob }];
 }
 export function drawOverlay(canvas: HTMLCanvasElement, s: OverlayState): void {
   const dpr = window.devicePixelRatio || 1, w = Math.round((s.size.w * s.scale + 2 * MARGIN) * dpr), h = Math.round((s.size.h * s.scale + 2 * MARGIN) * dpr);

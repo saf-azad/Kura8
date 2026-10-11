@@ -50,6 +50,11 @@ export function reRatioFrames(doc: KuraDoc, from: SizeSpec, to: { ratio: RatioId
     const side = node.kind === 'text' ? physicalAlign(node.align, direction(node.text)) : 'center';
     const free = side === 'left' ? box.x / c0.w * c1.w : side === 'right' ? (box.x + box.w) / c0.w * c1.w - w : cx - w / 2;
     next.rect = { x: L !== null ? L : Rr !== null ? Rr - w : free, y: T !== null ? T : B !== null ? B - h : cy - h / 2, w, h };
+    // Left-aligned text at a thin left margin (a Header's) takes the new size's layout margin, like its right one (D-086).
+    if (node.kind === 'text' && !f.rot && L === null && side === 'left') {
+      const pad0 = layoutPad(c0), lm = Math.max(box.x / c0.w * c1.w, Math.min(Math.max(0, box.x), pad0) / pad0 * layoutPad(c1));
+      if (next.rect.x < lm - 1e-6) next.rect = { ...next.rect, x: lm };
+    }
     // Text that grew (wide to tall) stops at its right margin rather than running off the canvas; a margin up to the
     // layout's becomes the new size's layout margin, so a Header's thin margin is not carried into a Post (D-083).
     if (node.kind === 'text' && !f.rot) {

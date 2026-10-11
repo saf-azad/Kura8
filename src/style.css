@@ -99,7 +99,7 @@ input.readout{width:58px;text-align:center;font:inherit;font-size:13px;backgroun
 .help-box[hidden]{display:flex!important;opacity:0;transform:translateY(8px)}
 .help-box b{font-size:13px;font-weight:400}.help-box span{font-size:12px;opacity:.6;line-height:1.4}
 /* shape library */
-.shapes-panel{width:392px;overflow:auto}.shape-grid button{overflow:hidden}
+.shapes-panel{width:392px;overflow:auto}.shapes-panel>.search{position:sticky;top:-15px;z-index:1;box-shadow:0 -15px 0 var(--paper)}.shape-grid button{overflow:hidden}
 .shape-grid{display:grid;grid-template-columns:repeat(8,40px);gap:5px}
 .shape-grid button{width:40px;height:40px;border-radius:var(--r-sm);display:grid;place-items:center;transition:background var(--fast)}
 .shape-grid button:hover{background:var(--slate-a35)}.shape-grid button:active{transform:scale(.94)}

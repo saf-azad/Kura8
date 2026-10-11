@@ -191,7 +191,9 @@ it('keeps a centred label beside a photo where it was when retyped longer then s
   const start = doc([photo, textNode('t', frame(449.6, 700, 66, 32, { fontSize: 30 }), 'Hi', { align: 'center' } as Partial<TextNode>)]);
   const long = hugText(start, updateNodes(start, ['t'], n => ({ ...n, text: 'Hi there everyone' })), 't', charMeasure);
   const back = hugText(long, updateNodes(long, ['t'], n => ({ ...n, text: 'Hi' })), 't', charMeasure).nodes[1].frames.main.rect;
-  expect(back.x + back.w / 2).toBeCloseTo(449.6 + 33, 5);
+  // Grown, it keeps clear of the photo beside it (D-086); shortened, it keeps its centre.
+  const grown = long.nodes[1].frames.main.rect;
+  expect(grown.x).toBeGreaterThanOrEqual(333.3); expect(back.x + back.w / 2).toBeCloseTo(grown.x + grown.w / 2, 5);
 });
 it('turns autofit off keeping every other size at the size autofit gave it (D-085)', () => {
   const head = { ...textNode('h', frame(45, 45, 910, 300, { fontSize: 200 }), 'Sydney Uni Film Society Screening Night'), fit: true } as TextNode;
@@ -215,4 +217,27 @@ it('places a typed label where a pasted one goes, and keeps a narrow block only 
   const badge = doc([rectNode('b', frame(800, 700, 150, 120)), textNode('l', frame(810, 720, 80, 32, { fontSize: 30 }), 'Hi')]);
   const r = hugText(badge, updateNodes(badge, ['l'], n => ({ ...n, text: words })), 'l', charMeasure).nodes[1].frames.main.rect;
   expect(r.w).toBeGreaterThan(150);
+});
+it('measures one character as wide as its glyph, not zero (D-086)', () => {
+  // charMeasure: 0.6 em per character, so "3" at 30 is 18 wide.
+  expect(oneLineWidth('3', 30, 400, charMeasure)).toBeCloseTo(18, 0);
+  expect(oneLineWidth(' 中 ', 30, 400, charMeasure)).toBeCloseTo(18, 0);
+});
+it('never pushes text past the canvas bottom (D-086)', () => {
+  const d = doc([textNode('a', frame(100, 800, 200, 23, { fontSize: 20 }), 'Hi'), textNode('b', frame(100, 833, 200, 23, { fontSize: 20 }), 'Below')]);
+  const grown = updateNodes(d, ['a'], n => ({ ...n, text: 'one two three four five six seven eight nine ten eleven twelve '.repeat(4) }));
+  const b = flowText(d, grown, 'a', fakeMeasure).nodes[1].frames.main.rect;
+  expect(b.y + 23).toBeCloseTo(1000, 6);
+});
+it('keeps a growing label clear of a photo and a block beside it on its line (D-086)', () => {
+  const photo = { id: 'p', kind: 'image', asset: 'a', frames: { main: frame(700, 0, 300, 1000) } } as DocNode;
+  const start = doc([photo, textNode('t', frame(100, 400, 74, 32, { fontSize: 30 }), 'Open')]);
+  const r = hugText(start, updateNodes(start, ['t'], n => ({ ...n, text: 'Open Day this Saturday from 10am in the Quad' })), 't', charMeasure).nodes[1].frames.main.rect;
+  expect(r.x + r.w).toBeLessThanOrEqual(700 - 22.5 + 1e-6); expect(r.x).toBe(100);
+});
+it('lets a label leave a small block when its copy would run off the canvas bottom there (D-086)', () => {
+  const block = doc([rectNode('b', frame(666, 666, 334, 334)), textNode('l', frame(800, 760, 80, 32, { fontSize: 30 }), 'Hi')]);
+  const words = 'Free entry for students with a valid UNSW ID card at the door';
+  const r = hugText(block, updateNodes(block, ['l'], n => ({ ...n, text: words })), 'l', charMeasure).nodes[1].frames.main.rect;
+  expect(r.w).toBeGreaterThan(334);
 });

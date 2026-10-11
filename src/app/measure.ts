@@ -29,8 +29,15 @@ export const measure: Measure = (text, size, weight, width, font) => {
     for (const word of paragraph.split(' ')) {
       const next = line ? `${line} ${word}` : word;
       if (fits(next)) { line = next; continue; }
-      if (line) { out.push(line); line = ''; }
-      for (const char of word) { if (line && !fits(line + char)) { out.push(line); line = ''; } line += char; }
+      // A hyphenated word breaks after a hyphen before it breaks inside a part ("late-" / "afternoon", D-086).
+      const parts = word.split(/(?<=-)(?=.)/);
+      parts.forEach((part, i) => {
+        const joined = i === 0 ? (line ? `${line} ${part}` : part) : line + part;
+        if (fits(joined)) { line = joined; return; }
+        if (line) { out.push(line); line = ''; }
+        if (fits(part)) { line = part; return; }
+        for (const char of part) { if (line && !fits(line + char)) { out.push(line); line = ''; } line += char; }
+      });
     }
     out.push(line);
   }

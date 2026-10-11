@@ -43,17 +43,18 @@ const occupancy = (cell: Rect, taken: Rect[]): number => taken.reduce((s, t) => 
 }, 0) / (cell.w * cell.h);
 /**
  * Boxes for several new pictures (D-058): a drop point's own cell first, then the emptiest cells nearest the point
- * (ties to the nearer one), so a batch spreads over free cells instead of piling up. Past the last cell the order
- * repeats, cascading 20 units each round. Without cells every picture gets the middle half of the canvas, cascaded.
+ * (ties to the nearer one), so a batch spreads over free cells instead of piling up. A batch larger than the cells
+ * splits each cell into tiles, so no two new pictures overlap (D-086). Without cells the middle half of the canvas is
+ * the one cell.
  */
 export function spreadCells(p: Point, cells: Rect[], taken: Rect[], count: number, canvas: Size, dropped: boolean): Rect[] {
   const d = (c: Rect) => Math.hypot(center(c).x - p.x, center(c).y - p.y);
   const first = dropped && cells.length ? nearestCell(p, cells, canvas) : null;
   const order = [...(first ? [first] : []), ...cells.filter(c => !first || c.x !== first.x || c.y !== first.y || c.w !== first.w || c.h !== first.h)
     .map(c => ({ c, o: occupancy(c, taken), d: d(c) })).sort((a, b) => a.o - b.o || a.d - b.d).map(x => x.c)];
-  const pool = order.length ? order : [nearestCell(p, [], canvas)];
-  // Cascaded rounds stay inside the canvas.
-  return Array.from({ length: count }, (_, i) => { const c = pool[i % pool.length], k = Math.floor(i / pool.length) * 20; return { ...c, x: Math.min(c.x + k, Math.max(c.x, canvas.w - c.w)), y: Math.min(c.y + k, Math.max(c.y, canvas.h - c.h)) }; });
+  const base = order.length ? order : [nearestCell(p, [], canvas)], per = Math.ceil(count / base.length);
+  const pool = per > 1 ? base.flatMap(c => tiles(c, per, Math.min(c.w, c.h) * .04)) : base;
+  return pool.slice(0, count);
 }
 /** Area two rectangles share. */
 const shared = (a: Rect, b: Rect): number => Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)) * Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));

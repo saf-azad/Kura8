@@ -49,3 +49,9 @@ it('finds the largest size that fits a room without breaking a word (D-083)', ()
   expect(roomSize({ ...o, size: 40 })).toBe(40);
   expect(roomSize({ ...o, height: 0 })).toBe(0);
 });
+it('does not count a break after a hyphen as a broken word (D-086)', async () => {
+  const { splitsWord } = await import('../src/core/fit');
+  expect(splitsWord('late-afternoon light', ['late-', 'afternoon light'])).toBe(false);
+  expect(splitsWord('late-afternoon light', ['late-aftern', 'oon light'])).toBe(true);
+  expect(splitsWord('a - b', ['a -', 'b'])).toBe(false);
+});
