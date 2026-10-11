@@ -2,6 +2,8 @@ import { exportSize, ratioById, ratioNumbers, withinPixelLimit, type ExportScale
 import type { Editor } from '../../editor';
 import { h, iconButton, ICON, toast } from '../../ui';
 import { download, fileName, preview, render, summary, type ExportChoice, type Format } from '../../export';
+import { zip } from '../../../core/zip';
+import { nameStem } from '../../../core/export';
 // The export sheet (M14): PNG, JPG, SVG or PDF; 1×–3× or 300 dpi with print sizes defaulting to 300 dpi (5x);
 // sizes over the canvas pixel limit are disabled; notes say what is left out (5y); PNG offers No ground (5z), also
 // over a painted ground (D-050).
@@ -12,11 +14,16 @@ export function exportSheet(ed: Editor): HTMLElement {
   const sizeText = h('div', { className: 'muted', style: 'font-size:13px' }), notes = h('div', { className: 'notes' });
   const noGround = h('button', { type: 'button', className: 'switch', role: 'switch', 'aria-checked': 'false', 'aria-label': 'No ground' });
   const groundRow = h('div', { className: 'row', style: 'justify-content:start' }, noGround, h('span', {}, 'No ground'), h('span', { className: 'muted', style: 'font-size:12px' }, 'transparent background'));
+  // All sizes (D-067): every linked size in one .zip, each at the chosen format and scale where it applies.
+  const allSizes = h('button', { type: 'button', className: 'switch', role: 'switch', 'aria-checked': 'false', 'aria-label': 'All sizes' });
+  const allRow = h('div', { className: 'row', style: 'justify-content:start' }, allSizes, h('span', {}, 'All sizes'), h('span', { className: 'muted', style: 'font-size:12px' }, 'one .zip'));
+  let all = false;
+  allSizes.addEventListener('click', () => { all = !all; ed.invalidate(); });
   const label = h('span', {}, 'Download'), button = h('button', { type: 'button', className: 'download' }, h('i'), label);
   const close = iconButton('Close (Esc)', ICON.close, () => ed.openPanel(null), 'close');
   const title = h('span', {}, 'Export');
   const sheet = h('div', { className: 'sheet', hidden: true, role: 'dialog', 'aria-label': 'Export' }, h('div', { className: 'grabber' }),
-    h('div', { className: 'body' }, box, h('div', { className: 'controls' }, h('header', {}, title, close), formatSeg, scaleSeg, sizeText, groundRow, notes, button)));
+    h('div', { className: 'body' }, box, h('div', { className: 'controls' }, h('header', {}, title, close), formatSeg, scaleSeg, sizeText, groundRow, allRow, notes, button)));
   let format: Format = 'png', scale: ExportScale | null = null, transparent = false, working = false, wasOpen = false;
   // No ground is offered for every PNG, painted ground or not (D-050).
   const choice = (): ExportChoice => ({ format, scale: scale!, ground: !(format === 'png' && transparent) });
@@ -27,8 +34,16 @@ export function exportSheet(ed: Editor): HTMLElement {
     if (working || !scale || ed.store.ui.panel !== 'export') return;
     working = true; button.classList.add('working'); label.textContent = 'Exporting';
     try {
-      const c = choice(), blob = await render(ed.doc, ed.sizeId, c);
-      download(blob, fileName(ed.doc, ed.sizeId, c)); label.textContent = 'Saved'; toast('Saved');
+      const c = choice(), doc = ed.doc;
+      if (all && doc.sizes.length > 1) {
+        const files: { name: string; data: Uint8Array }[] = [];
+        for (const s of doc.sizes) {
+          const own = 'dpi' in c.scale && !ratioById(s.ratio).mm || !withinPixelLimit(exportSize(s.ratio, c.scale)) ? { ...c, scale: { scale: 1 } as ExportScale } : c;
+          files.push({ name: fileName(doc, s.id, own), data: new Uint8Array(await (await render(doc, s.id, own)).arrayBuffer()) });
+        }
+        download(new Blob([zip(files).buffer as ArrayBuffer], { type: 'application/zip' }), `${nameStem(doc, ed.sizeId)}-all-sizes.zip`);
+      } else download(await render(doc, ed.sizeId, c), fileName(doc, ed.sizeId, c));
+      label.textContent = 'Saved'; toast('Saved');
       setTimeout(() => { if (!working) label.textContent = 'Download'; }, 2400);
     } catch (e) { console.warn(e); label.textContent = 'Download'; toast('Export failed', 2000); }
     finally { working = false; button.classList.remove('working'); }
@@ -40,10 +55,11 @@ export function exportSheet(ed: Editor): HTMLElement {
     if (!open) { wasOpen = false; return; }
     const ratio = ed.spec().ratio, r = ratioById(ratio);
     if (!wasOpen) { wasOpen = true; scale = r.mm ? { dpi: 300 } : { scale: 1 }; setTimeout(() => button.focus({ preventScroll: true }), 0); }
-    const options: [ExportScale, string][] = [...(r.mm ? [[{ dpi: 300 }, '300 dpi'] as [ExportScale, string]] : []), [{ scale: 1 }, '1×'], [{ scale: 2 }, '2×'], [{ scale: 3 }, '3×']];
+    // Print sizes skip 2×, which is all but the same as 300 dpi.
+    const options: [ExportScale, string][] = [...(r.mm ? [[{ dpi: 300 }, '300 dpi'] as [ExportScale, string]] : []), [{ scale: 1 }, '1×'], ...(r.mm ? [] : [[{ scale: 2 }, '2×'] as [ExportScale, string]]), [{ scale: 3 }, '3×']];
     if (!scale || !withinPixelLimit(exportSize(ratio, scale))) scale = options.find(([o]) => withinPixelLimit(exportSize(ratio, o)))![0];
     const vector = format === 'svg', s = summary(ed.doc, ed.sizeId), unfilled = ed.doc.ground === null;
-    const key = JSON.stringify([format, scale, transparent, ratio, s, unfilled, ed.doc.sizes.length]);
+    const key = JSON.stringify([format, scale, transparent, all, ratio, s, unfilled, ed.doc.sizes.length]);
     title.textContent = ed.doc.sizes.length > 1 ? `Export ${r.label} ${ratioNumbers(ratio)}` : 'Export';
     const clear = format === 'png' && transparent;
     box.classList.toggle('checker', clear);
@@ -61,6 +77,7 @@ export function exportSheet(ed: Editor): HTMLElement {
     const px = exportSize(ratio, scale);
     sizeText.textContent = vector ? `${exportSize(ratio, { scale: 1 }).w} × ${exportSize(ratio, { scale: 1 }).h}, vector` : format === 'pdf' && r.mm ? `${r.name} page · ${'dpi' in scale ? '300 dpi · ' : ''}${px.w} × ${px.h} px` : `${px.w} × ${px.h} px`;
     groundRow.classList.toggle('hidden', format !== 'png');
+    allRow.classList.toggle('hidden', ed.doc.sizes.length < 2); allSizes.setAttribute('aria-checked', String(all));
     noGround.setAttribute('aria-checked', String(transparent));
     const lines: string[] = [];
     if (s.hidden) lines.push(`${s.hidden} hidden object${s.hidden > 1 ? 's' : ''} not included`);

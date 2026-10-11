@@ -15,7 +15,7 @@ import type { SketchTools } from '../sketch';
 // `last` is the document this drag last wrote; anything else committed meanwhile (Delete, undo, a finished background
 // removal) ends the drag rather than being overwritten from `before`.
 type Drag =
-  | { kind: 'move'; ids: string[]; start: Point; before: KuraDoc; last?: KuraDoc; frames: Record<string, Frame>; box: Rect; rot: number; moved: boolean; held?: { x?: string; y?: string }; release?: string }
+  | { kind: 'move'; ids: string[]; start: Point; before: KuraDoc; last?: KuraDoc; frames: Record<string, Frame>; box: Rect; rot: number; moved: boolean; held?: { x?: string; y?: string }; release?: string; cycle?: string }
   | { kind: 'resize'; id: string; handle: Handle; before: KuraDoc; last?: KuraDoc; frame: Frame; box: Rect; size: number; moved: boolean }
   | { kind: 'rotate'; id: string; c: Point; a0: number; r0: number; before: KuraDoc; last?: KuraDoc; held: number | null; moved: boolean }
   | { kind: 'marquee'; start: Point; base: string[]; skipLocked?: boolean }
@@ -88,7 +88,9 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
     const frames = Object.fromEntries(movers.map(n => [n.id, ed.frame(n)]));
     const single = movers.length === 1 ? movers[0] : null;
     const box = single ? ed.box(single) : unionRect(movers.map(n => rotatedBounds(ed.box(n), ed.frame(n).rot)));
-    drag = { kind: 'move', ids: movers.map(n => n.id), start: p, before: ed.doc, frames, box, rot: single ? ed.frame(single).rot : 0, moved: false, release };
+    // Alt drags without snapping (5j); an Alt-click without a drag selects the block underneath instead (D-065).
+    const cycle = e.altKey && !e.shiftKey ? ed.hitBelow(p)?.id : undefined;
+    drag = { kind: 'move', ids: movers.map(n => n.id), start: p, before: ed.doc, frames, box, rot: single ? ed.frame(single).rot : 0, moved: false, release, cycle };
     el.setPointerCapture(e.pointerId); e.preventDefault();
   });
   el.addEventListener('pointermove', e => {
@@ -166,6 +168,7 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
     if (d.kind === 'marquee' || d.kind === 'pan') { ed.invalidate(); return; }
     if (d.last && ed.doc !== d.last) { ed.invalidate(); return; }
     if (d.moved && ed.doc !== d.before) ed.store.commit(ed.doc, { before: d.before });
+    else if (d.kind === 'move' && d.cycle) ed.select([d.cycle]);
     else if (d.kind === 'move' && d.release) ed.select(ed.store.ui.sel.filter(x => x !== d.release));
     else if (d.kind === 'move' && !e.shiftKey && ed.store.ui.sel.length > 1) { const hit = ed.hitTest(ed.toUnits(e)); if (hit) ed.select([hit.id]); }
     ed.invalidate();

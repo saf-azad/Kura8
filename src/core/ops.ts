@@ -29,6 +29,11 @@ export function nudge(doc: KuraDoc, sizeId: string, ids: string[], dx: number, d
 export function setFill(doc: KuraDoc, ids: string[], fill: ColourRef): KuraDoc {
   return updateNodes(doc, ids, n => n.kind === 'image' ? n : { ...n, fill });
 }
+/** Names a node in Layers (D-066); blank clears it. Works on locked nodes too, like lock itself. */
+export function setName(doc: KuraDoc, id: string, name: string): KuraDoc {
+  const clean = name.replace(/\s+/g, ' ').trim().slice(0, 80);
+  return { ...doc, nodes: doc.nodes.map(n => { if (n.id !== id) return n; const next = { ...n }; if (clean) next.name = clean; else delete next.name; return next; }) };
+}
 /** Opacity for any unlocked node (D-052); 1 or more clears it. */
 export function setOpacity(doc: KuraDoc, ids: string[], opacity: number): KuraDoc {
   const value = Math.max(0, Math.min(1, opacity));

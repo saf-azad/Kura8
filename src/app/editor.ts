@@ -3,10 +3,10 @@ import { center, containsRotated, intersects, norm, rotatedBounds, type Point, t
 import type { Anchor } from '../core/guides/types';
 import { guideById } from '../core/guides';
 import { canvasSize, ratioById, ratioNumbers } from '../core/ratios';
-import { resolve } from '../core/palette';
+import { contrast, resolve } from '../core/palette';
 import { defaultShapeSize, shapeLibrary, ICON_SHAPE } from '../core/shapes';
 import { LINE_HEIGHT, textBox, typeScale, crossing, type TypeScale } from '../core/fit';
-import { addNodes, addUnderText, duplicateNodes, nodeById, nudge, pasteNodes, removeNodes, reorder, setFill, setFrames, setGround, setHidden, setLocked, updateNodes, type Order } from '../core/ops';
+import { addNodes, addUnderText, setName, duplicateNodes, nodeById, nudge, pasteNodes, removeNodes, reorder, setFill, setFrames, setGround, setHidden, setLocked, updateNodes, type Order } from '../core/ops';
 import { reRatioKept, flagsFor, type RatioOrigin } from '../core/reratio';
 import { flowText } from '../core/flow';
 import { align, distribute, type AlignMode } from '../core/arrange';
@@ -114,6 +114,11 @@ export class Editor {
   /** Unit-space point under a pointer event. */
   toUnits(e: { clientX: number; clientY: number }): Point { const r = this.overlay.getBoundingClientRect(); return { x: (e.clientX - r.left - MARGIN) / this.scale, y: (e.clientY - r.top - MARGIN) / this.scale }; }
   hitTest(p: Point): DocNode | undefined { return [...this.visible()].reverse().find(n => containsRotated(this.box(n), this.frame(n).rot, p)); }
+  /** Alt+click (D-065): the block under the selected one at this point, cycling back to the top. */
+  hitBelow(p: Point): DocNode | undefined {
+    const all = [...this.visible()].reverse().filter(n => containsRotated(this.box(n), this.frame(n).rot, p)), at = all.findIndex(n => this.store.ui.sel.includes(n.id));
+    return at < 0 ? all[0] : all[(at + 1) % all.length];
+  }
   boxes(): Box[] {
     const sel = this.selected().filter(n => !this.frame(n).hidden && n.id !== this.store.ui.editing), single = sel.length === 1 && !this.store.ui.armed && !this.store.ui.tool;
     return sel.map(n => {
@@ -264,9 +269,17 @@ export class Editor {
     this.add([node]); this.editText(node.id);
   }
   addShape(key: string): void {
-    const def = shapeLibrary[key], s = defaultShapeSize(def.ar, this.canvas()), swatch = this.store.ui.swatch;
-    const fill: ColourRef = 'role' in swatch && swatch.role === 'ground' ? { role: 'accent' } : swatch;
-    this.add([{ id: newId(), kind: 'shape', shape: key, fill, frames: this.framesFor(this.centred(s.w, s.h)) }], def.name);
+    const def = shapeLibrary[key], s = defaultShapeSize(def.ar, this.canvas()), swatch = this.store.ui.swatch, rect = this.centred(s.w, s.h);
+    let fill: ColourRef = 'role' in swatch && swatch.role === 'ground' ? { role: 'accent' } : swatch;
+    // A shape the same colour as what it lands on would vanish: it takes ink, or accent on ink.
+    const under = this.colourUnder(center(rect));
+    if (contrast(this.colour(fill), under) < 1.5) fill = contrast(this.colour({ role: 'ink' }), under) >= 1.5 ? { role: 'ink' } : { role: 'accent' };
+    this.add([{ id: newId(), kind: 'shape', shape: key, fill, frames: this.framesFor(rect) }], def.name);
+  }
+  /** The colour at a point: the topmost solid shape there, else the ground (pictures count as unknown and give the ground). */
+  colourUnder(p: Point): string {
+    for (const n of [...this.visible()].reverse()) if (n.kind === 'shape' && !n.icon && (n.opacity ?? 1) >= 1 && containsRotated(this.box(n), this.frame(n).rot, p)) return this.colour(n.fill);
+    return this.colour(this.doc.ground ?? { role: 'ground' });
   }
   addIcon(name: string, d: string, flattened: boolean): void {
     const c = this.canvas(), side = Math.min(c.w, c.h) * .32;
@@ -321,7 +334,7 @@ export class Editor {
   remove(): void {
     const ids = this.selected().filter(n => !n.locked).map(n => n.id);
     if (!ids.length) return;
-    this.commit(removeNodes(this.doc, ids), 'Deleted'); this.select([]);
+    this.commit(removeNodes(this.doc, ids), this.doc.sizes.length > 1 ? 'Deleted from every size · Hide in Layers keeps it in the others' : 'Deleted'); this.select([]);
   }
   duplicate(): void {
     const r = duplicateNodes(this.doc, this.store.ui.sel, newId);
@@ -356,6 +369,7 @@ export class Editor {
     const s = this.selected(); if (!s.length) return;
     const lock = !s.every(n => n.locked); this.commit(setLocked(this.doc, s.map(n => n.id), lock), lock ? 'Locked' : 'Unlocked');
   }
+  rename(id: string, name: string): void { const next = setName(this.doc, id, name); if (JSON.stringify(next) !== JSON.stringify(this.doc)) this.commit(next, 'Renamed'); }
   setLock(id: string, lock: boolean): void { this.commit(setLocked(this.doc, [id], lock), lock ? 'Locked' : 'Unlocked'); }
   setHidden(id: string, hidden: boolean): void { this.commit(setHidden(this.doc, this.sizeId, [id], hidden), hidden ? 'Hidden' : 'Shown'); if (hidden) this.select(this.store.ui.sel.filter(x => x !== id)); }
   reorder(mode: Order, ids = this.store.ui.sel): void {
@@ -564,6 +578,7 @@ export class Editor {
 }
 export const title = (name: string): string => name.replace(/-/g, ' ').replace(/^./, c => c.toUpperCase());
 export function layerName(n: DocNode): string {
+  if (n.name) return n.name;
   if (n.kind === 'shape') return n.icon ? title(n.icon.name) : shapeLibrary[n.shape]?.name ?? 'Shape';
   if (n.kind === 'text') return n.text.split('\n')[0] || 'Text';
   if (n.kind === 'image') return n.asset ? (n.cutout ? 'Cut-out' : 'Image') : 'Image frame';

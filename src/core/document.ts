@@ -13,7 +13,7 @@ export type Palette = { hue: number | null; dark: boolean; custom: string[]; acc
 export type Frame = { rect: Rect; rot: number; fontSize?: number; hidden?: boolean };
 export type Slot = 'image' | 'accent' | 'headline' | 'body';
 /** `opacity` 0–1, absent means opaque (D-052); content, so shared by every size. */
-type Base = { id: string; locked?: boolean; slot?: Slot; opacity?: number; frames: Record<string, Frame> };
+type Base = { id: string; locked?: boolean; slot?: Slot; opacity?: number; /** A name the person gave it in Layers (D-066), at most 80 characters. */ name?: string; frames: Record<string, Frame> };
 export type Align = 'start' | 'center' | 'end';
 export type FontId = 'grotesk' | 'poppins' | 'playfair' | 'lora' | 'bebas' | 'caveat' | 'mono';
 export type TextNode = Base & { kind: 'text'; text: string; weight: 400 | 700; align: Align; fill: ColourRef; fit?: boolean; font?: FontId };
@@ -63,6 +63,7 @@ const point = (x: unknown): x is [number, number] => Array.isArray(x) && x.lengt
 function node(x: unknown, sizeIds: string[]): x is DocNode {
   if (!object(x) || typeof x.id !== 'string' || !x.id || !optionalBool(x.locked)) return false;
   if (x.opacity !== undefined && !(finite(x.opacity) && x.opacity >= 0 && x.opacity <= 1)) return false;
+  if (x.name !== undefined && !(typeof x.name === 'string' && x.name.trim() !== '' && x.name.length <= 80)) return false;
   if (x.slot !== undefined && !oneOf(['image', 'accent', 'headline', 'body'], x.slot)) return false;
   if (!object(x.frames) || Object.keys(x.frames).length !== sizeIds.length || !sizeIds.every(id => frame((x.frames as Record<string, unknown>)[id]))) return false;
   switch (x.kind) {

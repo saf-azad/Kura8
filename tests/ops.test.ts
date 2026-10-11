@@ -1,5 +1,5 @@
 import { it, expect } from 'vitest';
-import { nodeById, addNodes, addUnderText, removeNodes, updateNodes, setFrames, nudge, setFill, setGround, setLocked, setHidden, reorder, cloneNodes, duplicateNodes, pasteNodes } from '../src/core/ops';
+import { nodeById, addNodes, addUnderText, setName, removeNodes, updateNodes, setFrames, nudge, setFill, setGround, setLocked, setHidden, reorder, cloneNodes, duplicateNodes, pasteNodes } from '../src/core/ops';
 import { validateDocument } from '../src/core/document';
 import { doc, frame, rectNode, textNode, ids } from './helpers';
 const base = () => doc([rectNode('a', frame(0, 0, 10, 10)), rectNode('b', frame(10, 10, 10, 10), { locked: true }), textNode('c', frame(0, 0, 50, 20)), { id: 'i', kind: 'image', asset: null, frames: { main: frame(0, 0, 5, 5) } }]);
@@ -49,4 +49,11 @@ it('adds pictures under the lowest text block (D-058)', () => {
   const d = base(), pic = { id: 'p', kind: 'image', asset: null, frames: { main: frame(0, 0, 5, 5) } } as const;
   expect(order(addUnderText(d, [pic]))).toBe('abpci');
   expect(order(addUnderText(doc([rectNode('a', frame(0, 0, 1, 1))]), [pic]))).toBe('ap');
+});
+it('names layers, trimming and clearing blanks (D-066)', () => {
+  const d = setName(base(), 'b', '  Hero   photo  ');
+  expect(d.nodes[1].name).toBe('Hero photo'); expect(validateDocument(d)).toBe(true);
+  expect(setName(d, 'b', '   ').nodes[1]).not.toHaveProperty('name');
+  expect(setName(d, 'a', 'x'.repeat(100)).nodes[0].name).toHaveLength(80);
+  expect(validateDocument({ ...d, nodes: [{ ...d.nodes[0], name: '' }] })).toBe(false);
 });
