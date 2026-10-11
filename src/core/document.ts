@@ -14,7 +14,8 @@ export type Frame = { rect: Rect; rot: number; fontSize?: number; hidden?: boole
 export type Slot = 'image' | 'accent' | 'headline' | 'body';
 type Base = { id: string; locked?: boolean; slot?: Slot; frames: Record<string, Frame> };
 export type Align = 'start' | 'center' | 'end';
-export type TextNode = Base & { kind: 'text'; text: string; weight: 400 | 700; align: Align; fill: ColourRef; fit?: boolean };
+export type FontId = 'grotesk' | 'poppins' | 'playfair' | 'lora' | 'bebas' | 'caveat' | 'mono';
+export type TextNode = Base & { kind: 'text'; text: string; weight: 400 | 700; align: Align; fill: ColourRef; fit?: boolean; font?: FontId };
 export type Icon = { set: string; name: string; d: string; licence: string };
 export type ShapeNode = Base & { kind: 'shape'; shape: string; fill: ColourRef; icon?: Icon };
 export type ImageNode = Base & { kind: 'image'; asset: string | null; cutout?: boolean; focus?: Point };
@@ -28,6 +29,7 @@ export type KuraDoc = { version: 2; id: string; createdAt: string; palette: Pale
 export const ratioIds: RatioId[] = ['square', 'portrait', 'landscape', 'story', 'a4', 'banner'];
 export const compIds: CompId[] = ['cover', 'split', 'stack', 'poster', 'frame', 'band'];
 export const guideIds: GuideId[] = ['thirds', 'golden', 'divisions'];
+export const fontIds: FontId[] = ['grotesk', 'poppins', 'playfair', 'lora', 'bebas', 'caveat', 'mono'];
 export const neutralPalette = (): Palette => ({ hue: null, dark: false, custom: [] });
 export function createDocument(id: string, createdAt: string, size: SizeSpec, palette: Palette = neutralPalette()): KuraDoc {
   return { version: 2, id, createdAt, palette, ground: null, sizes: [size], nodes: [] };
@@ -62,7 +64,7 @@ function node(x: unknown, sizeIds: string[]): x is DocNode {
   if (x.slot !== undefined && !oneOf(['image', 'accent', 'headline', 'body'], x.slot)) return false;
   if (!object(x.frames) || Object.keys(x.frames).length !== sizeIds.length || !sizeIds.every(id => frame((x.frames as Record<string, unknown>)[id]))) return false;
   switch (x.kind) {
-    case 'text': return typeof x.text === 'string' && oneOf([400, 700], x.weight) && oneOf(['start', 'center', 'end'], x.align) && validColour(x.fill) && optionalBool(x.fit);
+    case 'text': return typeof x.text === 'string' && oneOf([400, 700], x.weight) && oneOf(['start', 'center', 'end'], x.align) && validColour(x.fill) && optionalBool(x.fit) && (x.font === undefined || oneOf(fontIds, x.font));
     case 'shape': {
       if (typeof x.shape !== 'string' || !validColour(x.fill)) return false;
       if (x.shape === ICON_SHAPE) return object(x.icon) && ['set', 'name', 'd', 'licence'].every(k => typeof (x.icon as Record<string, unknown>)[k] === 'string' && (x.icon as Record<string, string>)[k] !== '');

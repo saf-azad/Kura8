@@ -5,6 +5,7 @@ import { resolve } from './palette';
 import { shapeLibrary, shapeOutline, ICON_SHAPE } from './shapes';
 import { LINE_HEIGHT, textBox, typeScale } from './fit';
 import { direction, fontStack, physicalAlign } from './script';
+import { drawnWeight } from './fonts';
 import { CENTRE } from './images';
 // The draw list both the canvas renderer and SVG export consume: colours resolved, text wrapped, alignment made
 // physical, paths in each node's local box. Every op draws in a box of rect.w × rect.h rotated `rot` degrees about the rect centre.
@@ -28,7 +29,7 @@ export function buildScene(doc: KuraDoc, sizeId: string, measure: Measure): Scen
       ops.push({ kind: 'shape', id: n.id, rect, rot, fill: resolve(n.fill, p), ...outline });
     } else if (n.kind === 'text') {
       const box = textBox(n, f, measure, scale), dir = direction(n.text);
-      ops.push({ kind: 'text', id: n.id, rect: box.rect, rot, fill: resolve(n.fill, p), size: box.size, weight: n.weight, align: physicalAlign(n.align, dir), dir, font: fontStack(n.text), lines: box.lines, lineHeight: box.size * LINE_HEIGHT });
+      ops.push({ kind: 'text', id: n.id, rect: box.rect, rot, fill: resolve(n.fill, p), size: box.size, weight: drawnWeight(n.font, n.weight), align: physicalAlign(n.align, dir), dir, font: fontStack(n.text, n.font), lines: box.lines, lineHeight: box.size * LINE_HEIGHT });
     } else if (n.kind === 'image') {
       if (!n.asset) empty++;
       ops.push({ kind: 'image', id: n.id, rect, rot, asset: n.asset, cutout: !!n.cutout, focus: n.focus ?? CENTRE });

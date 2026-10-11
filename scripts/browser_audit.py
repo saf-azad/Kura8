@@ -488,14 +488,15 @@ def s_5n(app):
     check(info['natural'] == {'w': 6000, 'h': 4000}, f'natural {info["natural"]}'); check(info['work'] == {'w': 2160, 'h': 1440}, f'working {info["work"]}')
 
 
-@step('5p dropping on an image block fills it; elsewhere adds a new image at the nearest cell')
+@step('5p dropping on an image block fills it; elsewhere adds a new image, uncropped, in the nearest cell')
 def s_5p(app):
     app.start(SQUARE); d = app.doc(); frame = find(d, slot='image')[0]; small = image_file(OUT / 'small.png', 800, 600, (30, 90, 200))
     drop_file(app, small, 400, 300); d2 = app.doc()
     check(find(d2, id=frame['id'])[0]['asset'], 'frame not filled'); check(len(d2['nodes']) == len(d['nodes']), 'drop on frame added a node')
     drop_file(app, small, 950, 950); d3 = app.doc(); new = [n for n in d3['nodes'] if n['id'] not in {m['id'] for m in d2['nodes']}]
     check(len(new) == 1 and new[0]['kind'] == 'image', 'no new image'); r = app.frame(new[0])
-    check(abs(r['x'] - 2000 / 3) < .01 and abs(r['y'] - 2000 / 3) < .01 and abs(r['w'] - 1000 / 3) < .01, f'not the nearest cell: {r}')
+    # D-047: the picture keeps its 4:3 proportions, contained and centred in the bottom-right cell.
+    check(abs(r['x'] - 2000 / 3) < .01 and abs(r['w'] - 1000 / 3) < .01 and abs(r['h'] - 250) < .01 and abs(r['y'] - (2000 / 3 + (1000 / 3 - 250) / 2)) < .01, f'not contained in the nearest cell: {r}')
 
 
 @step('5o remove background adds a Before/After toggle and never replaces the original')
@@ -509,7 +510,7 @@ def s_5o(app):
     p.locator('.toolbar button[aria-label="Remove background"]').click()
     p.wait_for_function('() => { const d = JSON.parse(localStorage.getItem("kura8:doc")); return d.nodes.some(n => n.kind === "image" && n.cutout); }', timeout=180000)
     n = find(app.doc(), id=frame['id'])[0]; check(n['cutout'] is True, 'cutout not shown')
-    toggle = p.locator('.before-after'); check(toggle.is_visible(), 'no Before/After toggle')
+    toggle = p.locator('.image-bar .cut'); check(toggle.is_visible(), 'no Before/After toggle')
     toggle.locator('button', has_text='Before').click(); check(find(app.doc(), id=frame['id'])[0]['cutout'] is False, 'Before did not show the original')
     toggle.locator('button', has_text='After').click(); check(find(app.doc(), id=frame['id'])[0]['cutout'] is True, 'After')
     rec = p.evaluate('''key => new Promise(res => { const r = indexedDB.open("kura8"); r.onsuccess = () => { const g = r.result.transaction("assets").objectStore("assets").get(key); g.onsuccess = () => res({ original: g.result.original.size, cutout: g.result.cutout && g.result.cutout.size }); }; })''', n['asset'])

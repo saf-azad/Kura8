@@ -95,6 +95,11 @@ button.wordmark{transition:color var(--fast)}button.wordmark:hover{color:var(--s
 .icon-note{font-size:12px;opacity:.6}
 /* colour panel */
 .colour-panel{width:300px;gap:15px}
+.fonts-panel{width:260px;gap:8px}.fonts-panel .icon-note{white-space:normal}
+.font-choice{display:flex;align-items:center;gap:12px;height:40px;padding:0 10px;border-radius:var(--r-sm);font-size:17px;text-align:left}
+.font-choice:hover{background:var(--slate-a15)}.font-choice[aria-pressed=true]{background:var(--ink);color:var(--white)}
+.font-choice .sample{width:30px;font-size:20px}
+.toolbar .face{font-size:15px;min-width:34px}
 .roles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
 .roles button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 0;border-radius:var(--r-sm);transition:background var(--fast);font-size:11px}
 .roles button:hover{background:var(--slate-a15)}.roles button[aria-pressed=true]{background:var(--ink);color:var(--white)}

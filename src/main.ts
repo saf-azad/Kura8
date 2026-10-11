@@ -1,5 +1,17 @@
 import '@fontsource/space-grotesk/400.css';
 import '@fontsource/space-grotesk/700.css';
+// Typefaces for document text (D-049), OFL-1.1, served from this origin and loaded when first used.
+import '@fontsource/poppins/400.css';
+import '@fontsource/poppins/700.css';
+import '@fontsource/playfair-display/400.css';
+import '@fontsource/playfair-display/700.css';
+import '@fontsource/lora/400.css';
+import '@fontsource/lora/700.css';
+import '@fontsource/bebas-neue/400.css';
+import '@fontsource/caveat/400.css';
+import '@fontsource/caveat/700.css';
+import '@fontsource/space-mono/400.css';
+import '@fontsource/space-mono/700.css';
 import './style.css';
 import { createDocument, type KuraDoc } from './core/document';
 import { canvasSize } from './core/ratios';
@@ -7,7 +19,7 @@ import { layout, starterNodes, STARTER } from './core/compositions';
 import { relayout } from './core/relayout';
 import { Store, loadDocument, newDocumentId, newId, type DialSettings } from './app/store';
 import { Editor } from './app/editor';
-import { measure, clearMeasureCache } from './app/measure';
+import { measure, clearMeasureCache, onFontLoad } from './app/measure';
 import * as assets from './app/assets';
 import { installInteraction } from './app/canvas/interaction';
 import { installSketch } from './app/sketch';
@@ -15,6 +27,7 @@ import { installShortcuts } from './app/tools/shortcuts';
 import { toolbar, corner } from './app/tools/toolbar';
 import { shapesPanel } from './app/tools/panels/shapes';
 import { colourPanel } from './app/tools/panels/colour';
+import { fontsPanel } from './app/tools/panels/fonts';
 import { layersPanel } from './app/tools/panels/layers';
 import { gridPanel } from './app/tools/panels/grid';
 import { ratioPanel } from './app/tools/panels/ratio';
@@ -72,7 +85,7 @@ function ensureEditor(): Editor {
   const ed = editor = new Editor(editorRoot, store);
   installInteraction(ed, installSketch(ed));
   installShortcuts(ed);
-  const panels = { shapes: shapesPanel(ed), colour: colourPanel(ed), layers: layersPanel(ed), grid: gridPanel(ed), ratio: ratioPanel(ed) };
+  const panels = { shapes: shapesPanel(ed), colour: colourPanel(ed), fonts: fontsPanel(ed), layers: layersPanel(ed), grid: gridPanel(ed), ratio: ratioPanel(ed) };
   const word = h('button', { type: 'button', className: 'wordmark', title: 'Back to the dial' }, 'Kura8');
   word.addEventListener('click', () => toDial());
   const hint = h('button', { type: 'button', className: 'shortcut-hint', title: 'Keyboard shortcuts' }, h('span', { className: 'muted' }, 'Shortcuts'), h('span', { className: 'key' }, '?'));
@@ -82,7 +95,7 @@ function ensureEditor(): Editor {
   document.addEventListener('pointerdown', e => {
     const t = e.target as Element, panel = store.ui.panel;
     if (!panel || store.ui.screen !== 'editor' || t.closest('.panel, .modal, .sheet, .toolbar, .corner, .corner-stack, .help, .shortcut-hint')) return;
-    if (t === ed.overlay && (panel === 'colour' || panel === 'shapes' || panel === 'layers')) return;
+    if (t === ed.overlay && (panel === 'colour' || panel === 'shapes' || panel === 'layers' || panel === 'fonts')) return;
     ed.openPanel(null);
   });
   let tool = store.ui.tool;
@@ -151,3 +164,4 @@ const restored = restoreAssets();
 if (loaded?.inline.length) void restored.finally(() => { route(); editor?.invalidate(); }); else route();
 if (store.doc && store.ui.screen === 'editor' && !loaded?.inline.length) ensureEditor().lift();
 document.fonts?.ready.then(() => { clearMeasureCache(); editor?.invalidate(); dial?.paint(); });
+onFontLoad(() => { editor?.invalidate(); editor?.positionTextarea(); });

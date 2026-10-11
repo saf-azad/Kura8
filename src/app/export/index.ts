@@ -4,7 +4,10 @@ import { buildScene, type SceneOp } from '../../core/scene';
 import { exportSize, ratioById, type ExportScale } from '../../core/ratios';
 import { svg, pdf, pageSize, licences } from '../../core/export';
 import { scriptOf } from '../../core/script';
-import { measure } from '../measure';
+import { measure, loadFont } from '../measure';
+import { FONT_FILES } from './fonts';
+import { fontById, drawnWeight } from '../../core/fonts';
+import type { FontId } from '../../core/document';
 import { Canvas2DRenderer } from '../canvas/renderer';
 import * as assets from '../assets';
 import grotesk400 from '@fontsource/space-grotesk/files/space-grotesk-latin-400-normal.woff2?url';
@@ -46,20 +49,28 @@ async function raster(doc: KuraDoc, sizeId: string, pixels: Size, transparent: b
   return canvas;
 }
 const toBlob = (canvas: HTMLCanvasElement, type: string, quality?: number) => new Promise<Blob>((resolve, reject) => canvas.toBlob(b => b ? resolve(b) : reject(new Error('Export failed')), type, quality));
-async function fontCss(): Promise<string> {
-  const face = async (url: string, weight: number, range: string) => `@font-face{font-family:"Space Grotesk";font-weight:${weight};src:url(${await assets.blobToDataUrl(await (await fetch(url)).blob())}) format("woff2");unicode-range:${range}}`;
+/** Faces and drawn weights of the visible text in a size (D-049). */
+function usedFaces(doc: KuraDoc, sizeId: string): { font: FontId; weight: 400 | 700 }[] {
+  const out = new Map<string, { font: FontId; weight: 400 | 700 }>();
+  for (const n of doc.nodes) if (n.kind === 'text' && n.font && n.font !== 'grotesk' && !n.frames[sizeId]?.hidden) { const weight = drawnWeight(n.font, n.weight); out.set(`${n.font}|${weight}`, { font: n.font, weight }); }
+  return [...out.values()];
+}
+async function fontCss(faces: { font: FontId; weight: 400 | 700 }[]): Promise<string> {
+  const face = async (url: string, weight: number, range: string, family = 'Space Grotesk') => `@font-face{font-family:"${family}";font-weight:${weight};src:url(${await assets.blobToDataUrl(await (await fetch(url)).blob())}) format("woff2");unicode-range:${range}}`;
   const latin = 'U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD', ext = 'U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF';
-  return (await Promise.all([face(grotesk400, 400, latin), face(grotesk700, 700, latin), face(groteskExt400, 400, ext), face(groteskExt700, 700, ext)])).join('');
+  const more = FONT_FILES.filter(f => faces.some(u => u.font === f.font && u.weight === f.weight)).map(f => face(f.url, f.weight, f.subset === 'latin' ? latin : ext, fontById(f.font).family));
+  return (await Promise.all([face(grotesk400, 400, latin), face(grotesk700, 700, latin), face(groteskExt400, 400, ext), face(groteskExt700, 700, ext), ...more])).join('');
 }
 export async function render(doc: KuraDoc, sizeId: string, c: ExportChoice): Promise<Blob> {
-  const ratio = doc.sizes.find(s => s.id === sizeId)!.ratio, pixels = exportSize(ratio, c.scale);
+  const ratio = doc.sizes.find(s => s.id === sizeId)!.ratio, pixels = exportSize(ratio, c.scale), faces = usedFaces(doc, sizeId);
+  await Promise.all(faces.map(f => loadFont(f.font, f.weight)));
   if (c.format === 'svg') {
     const scene = buildScene(doc, sizeId, measure), hrefs = new Map<string, { href: string; natural: Size }>();
     for (const o of scene.ops) if (o.kind === 'image' && o.asset) {
       const r = await assets.getRecord(o.asset).catch(() => undefined), blob = r && (o.cutout ? r.cutout ?? r.working : r.original);
       if (r && blob) hrefs.set(`${o.asset}#${o.cutout}`, { href: await assets.blobToDataUrl(blob), natural: o.cutout ? r.work : r.natural });
     }
-    const text = svg(scene, { pixels: exportSize(ratio, { scale: 1 }), ground: c.ground, fontCss: await fontCss(), licences: licences(doc, sizeId), image: o => hrefs.get(`${o.asset}#${o.cutout}`) });
+    const text = svg(scene, { pixels: exportSize(ratio, { scale: 1 }), ground: c.ground, fontCss: await fontCss(faces), licences: licences(doc, sizeId), image: o => hrefs.get(`${o.asset}#${o.cutout}`) });
     return new Blob([text], { type: 'image/svg+xml' });
   }
   const canvas = await raster(doc, sizeId, pixels, c.format === 'png' && !c.ground);

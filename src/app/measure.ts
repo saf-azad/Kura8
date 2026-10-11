@@ -1,14 +1,28 @@
 import type { Measure } from '../core/geometry';
+import type { FontId } from '../core/document';
 import { fontStack } from '../core/script';
-// The app's text measurer: canvas metrics with the script's font stack, greedy word wrap, and character breaks for
-// words (or unspaced scripts) wider than the line. Cached; cleared when web fonts arrive.
+import { fontById } from '../core/fonts';
+// The app's text measurer: canvas metrics with the face's font stack, greedy word wrap, and character breaks for
+// words (or unspaced scripts) wider than the line. Cached; cleared when web fonts arrive. A face is loaded the
+// first time text is measured in it (D-049), and `onFontLoad` hears when it lands so the canvas can redraw.
 const ctx = document.createElement('canvas').getContext('2d')!;
 const cache = new Map<string, string[]>();
-export const fontFor = (text: string, size: number, weight: 400 | 700) => `${weight} ${size}px ${fontStack(text)}`;
-export const measure: Measure = (text, size, weight, width) => {
-  const key = `${weight}|${size.toFixed(3)}|${Math.round(width * 10)}|${text}`, hit = cache.get(key);
+const requested = new Map<string, Promise<void>>(), listeners = new Set<() => void>();
+export const onFontLoad = (fn: () => void): void => { listeners.add(fn); };
+/** Loads a face and weight from the app's own origin; resolves once it can be drawn. */
+export function loadFont(font: FontId | undefined, weight: 400 | 700): Promise<void> {
+  const def = fontById(font), key = `${def.id}|${weight}`;
+  if (!document.fonts?.load) return Promise.resolve();
+  let p = requested.get(key);
+  if (!p) { p = document.fonts.load(`${weight} 16px "${def.family}"`).then(() => { cache.clear(); listeners.forEach(fn => fn()); }, () => {}); requested.set(key, p); }
+  return p;
+}
+export const fontFor = (text: string, size: number, weight: 400 | 700, font?: FontId) => `${weight} ${size}px ${fontStack(text, font)}`;
+export const measure: Measure = (text, size, weight, width, font) => {
+  const key = `${font ?? ''}|${weight}|${size.toFixed(3)}|${Math.round(width * 10)}|${text}`, hit = cache.get(key);
   if (hit) return hit;
-  ctx.font = fontFor(text, size, weight);
+  if (font && font !== 'grotesk') void loadFont(font, weight);
+  ctx.font = fontFor(text, size, weight, font);
   const fits = (s: string) => ctx.measureText(s).width <= width, out: string[] = [];
   for (const paragraph of text.split('\n')) {
     let line = '';

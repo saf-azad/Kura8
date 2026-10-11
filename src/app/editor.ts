@@ -1,4 +1,4 @@
-import type { ColourRef, DocNode, Frame, ImageNode, KuraDoc, Palette, RatioId, SizeSpec, TextNode } from '../core/document';
+import type { ColourRef, DocNode, FontId, Frame, ImageNode, KuraDoc, Palette, RatioId, SizeSpec, TextNode } from '../core/document';
 import { center, containsRotated, intersects, rotatedBounds, type Point, type Rect, type Size } from '../core/geometry';
 import type { Anchor } from '../core/guides/types';
 import { guideById } from '../core/guides';
@@ -9,13 +9,14 @@ import { LINE_HEIGHT, textBox, typeScale, crossing, type TypeScale } from '../co
 import { addNodes, duplicateNodes, nodeById, nudge, pasteNodes, removeNodes, reorder, setFill, setGround, setHidden, setLocked, updateNodes, type Order } from '../core/ops';
 import { reRatio, flagsFor } from '../core/reratio';
 import { flowText } from '../core/flow';
+import { drawnWeight } from '../core/fonts';
 import { addSize, removeSize } from '../core/sizes';
 import { nearestCell, containIn, CENTRE, fullImageRect, panFocus } from '../core/images';
 import { direction, fontStack, physicalAlign } from '../core/script';
 import { exportSize } from '../core/ratios';
 import type { SnapHit, SnapLine } from '../core/snap';
 import { Store, newId, type PanelId, type Tool } from './store';
-import { measure } from './measure';
+import { measure, loadFont } from './measure';
 import * as assets from './assets';
 import { Canvas2DRenderer } from './canvas/renderer';
 import { drawOverlay, MARGIN, type Box, type HandleSet } from './canvas/overlay';
@@ -346,6 +347,16 @@ export class Editor {
     const f = this.frame(n), size = textBox(n, f, measure, this.typeScale()).size, next = Math.max(6, size + dir * Math.max(2, Math.round(size * .1)));
     this.editOne(x => { const t = { ...x, frames: { ...x.frames, [this.sizeId]: { ...f, fontSize: next } } } as TextNode; delete t.fit; return t; }, 'font');
   }
+  /** Sets the typeface of every selected unlocked text block; text under each one follows its new height (D-046). */
+  async setFont(font: FontId): Promise<void> {
+    const ids = this.selected().filter(n => n.kind === 'text' && !n.locked).map(n => n.id);
+    if (!ids.length) return;
+    // Measure in the real face, so the text under it moves by the right amount.
+    await Promise.all([loadFont(font, 400), loadFont(font, 700)]);
+    let doc = this.doc;
+    for (const id of ids) doc = flowText(doc, updateNodes(doc, [id], n => { const t = { ...n, font } as TextNode; if (font === 'grotesk') delete t.font; return t; }), id, measure);
+    this.store.commit(doc, {});
+  }
   toggleBold(): void { this.editOne(n => n.kind === 'text' ? { ...n, weight: n.weight === 700 ? 400 : 700 } : n); }
   cycleAlign(): void { this.editOne(n => n.kind === 'text' ? { ...n, align: n.align === 'start' ? 'center' : n.align === 'center' ? 'end' : 'start' } : n); }
   /** Autofit on keeps today's box; the size then steps down the type scale as text grows (5q). */
@@ -422,7 +433,7 @@ export class Editor {
     if (!area || node?.kind !== 'text') return;
     const f = this.frame(node), box = textBox(node, f, measure, this.typeScale()), k = this.scale, dir = direction(node.text || 'a');
     area.style.cssText = `left:${box.rect.x * k}px;top:${box.rect.y * k}px;width:${box.rect.w * k}px;height:${(box.rect.h + box.size * .4) * k}px;transform:rotate(${f.rot}deg);transform-origin:${box.rect.w * k / 2}px ${box.rect.h * k / 2}px;`
-      + `font:${node.weight} ${box.size * k}px ${fontStack(node.text)};line-height:${LINE_HEIGHT};text-align:${physicalAlign(node.align, dir)};color:${this.colour(node.fill)};caret-color:${this.colour(node.fill)}`;
+      + `font:${drawnWeight(node.font, node.weight)} ${box.size * k}px ${fontStack(node.text, node.font)};line-height:${LINE_HEIGHT};text-align:${physicalAlign(node.align, dir)};color:${this.colour(node.fill)};caret-color:${this.colour(node.fill)}`;
   }
   finishText(): void {
     const area = this.textarea;

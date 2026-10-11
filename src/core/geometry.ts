@@ -1,8 +1,10 @@
+import type { FontId } from './document';
 export type Point = { x: number; y: number };
 export type Size = { w: number; h: number };
 export type Rect = Point & Size;
 /** Injected line breaker: core never measures text itself. Returns the wrapped lines of `text` at `size` and `weight` within `width`. */
-export type Measure = (text: string, size: number, weight: 400 | 700, width: number) => string[];
+/** Line breaks for text at a size, weight and wrap width; `font` absent means Space Grotesk (D-049). */
+export type Measure = (text: string, size: number, weight: 400 | 700, width: number, font?: FontId) => string[];
 export const center = (r: Rect): Point => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 });
 export const contains = (r: Rect, p: Point): boolean => p.x >= r.x && p.y >= r.y && p.x <= r.x + r.w && p.y <= r.y + r.h;
 export const intersects = (a: Rect, b: Rect): boolean => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;

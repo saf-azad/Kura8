@@ -3,10 +3,11 @@ import type { Editor } from '../editor';
 import { ratioById, ratioNumbers } from '../../core/ratios';
 import { canvasSize } from '../../core/ratios';
 import { textBox } from '../../core/fit';
+import { fontById } from '../../core/fonts';
 import { measure } from '../measure';
 // The Paper toolbar (top centre) and the corner controls (guides, sizes and ratio, layers, grid). Controls that do
 // not apply fade to 23 %. Panels hang 12 px below the control that owns them.
-export type Panels = { shapes: HTMLElement; colour: HTMLElement; layers: HTMLElement; grid: HTMLElement; ratio: HTMLElement };
+export type Panels = { shapes: HTMLElement; colour: HTMLElement; fonts: HTMLElement; layers: HTMLElement; grid: HTMLElement; ratio: HTMLElement };
 export function toolbar(ed: Editor, panels: Panels): HTMLElement {
   const ui = () => ed.store.ui;
   const tool = (name: 'pen' | 'erase' | 'lasso') => () => ed.setTool(ui().tool === name ? (name === 'pen' ? null : 'pen') : name);
@@ -27,7 +28,9 @@ export function toolbar(ed: Editor, panels: Panels): HTMLElement {
   const align = iconButton('Align', '', () => ed.cycleAlign());
   const fit = h('button', { type: 'button', className: 'btn', title: 'Autofit', style: 'font-size:12px' }, 'Fit');
   fit.addEventListener('click', () => ed.toggleFit());
-  const textGroup = h('div', { className: 'group' }, smaller, size, larger, bold, align, fit);
+  const face = h('button', { type: 'button', className: 'btn face', title: 'Typeface', 'aria-label': 'Typeface', 'aria-expanded': 'false' }, 'Aa');
+  face.addEventListener('click', () => ed.openPanel('fonts'));
+  const textGroup = h('div', { className: 'group' }, face, smaller, size, larger, bold, align, fit);
   const cut = iconButton('Remove background', ICON.cutout, () => void ed.removeBackground());
   const dup = iconButton(`Duplicate (${MOD} D)`, ICON.duplicate, () => ed.duplicate());
   const lock = iconButton(`Lock (${MOD} ${SHIFT} L)`, ICON.lock, () => ed.toggleLock());
@@ -36,7 +39,7 @@ export function toolbar(ed: Editor, panels: Panels): HTMLElement {
   const keys = iconButton('Keyboard shortcuts (?)', ICON.keys, () => ed.openPanel('keys'));
   const exp = iconButton(`Export (${MOD} ${SHIFT} E)`, ICON.go, () => ed.openPanel('export'), 'btn solid-btn');
   exp.style.cssText = 'background:#000;color:#fff';
-  const anchor = h('div', { className: 'toolbar-anchor' }, panels.shapes, panels.colour);
+  const anchor = h('div', { className: 'toolbar-anchor' }, panels.shapes, panels.colour, panels.fonts);
   panels.shapes.style.left = '0'; panels.colour.style.left = '110px';
   const bar = h('div', { className: 'toolbar', role: 'toolbar', 'aria-label': 'Tools' }, text, shapes, image, pen, sketchGroup, h('span', { className: 'sep' }), colour, angle, textGroup, h('span', { className: 'sep' }), cut, dup, lock, del, h('span', { className: 'sep' }), undo, redo, h('span', { className: 'sep' }), keys, exp, anchor);
   const pressed = (b: HTMLElement, on: boolean, attr = 'aria-pressed') => b.setAttribute(attr, String(on));
@@ -50,7 +53,11 @@ export function toolbar(ed: Editor, panels: Panels): HTMLElement {
     chip.style.background = value; hex.textContent = value.toUpperCase();
     angle.textContent = one ? `${Math.round(ed.frame(one).rot)}°` : '—'; angle.classList.toggle('faded', !one);
     textGroup.classList.toggle('faded', !isText || !!one?.locked);
-    for (const b of [smaller, larger, bold, align, fit]) b.disabled = !isText || !!one?.locked;
+    for (const b of [face, smaller, larger, bold, align, fit]) b.disabled = !isText || !!one?.locked;
+    const def = fontById(one?.kind === 'text' ? one.font : undefined);
+    face.style.fontFamily = `"${def.family}", ${def.fallback}`; face.title = isText ? `Typeface: ${def.name}` : 'Typeface'; pressed(face, u.panel === 'fonts', 'aria-expanded');
+    if (isText && def.weights.length < 2) bold.disabled = true;
+    panels.fonts.style.left = `${face.offsetLeft}px`;
     size.textContent = one?.kind === 'text' ? String(Math.round(textBox(one, ed.frame(one), measure, ed.typeScale()).size)) : '—';
     if (one?.kind === 'text') {
       pressed(bold, one.weight === 700); pressed(fit, !!one.fit);
