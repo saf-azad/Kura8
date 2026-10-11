@@ -171,11 +171,17 @@ export function hugText(before: KuraDoc, after: KuraDoc, id: string, measure: Me
     // Chinese breaks between characters and a link after its slashes, so neither counts as one long word (D-088).
     const longestAt = (size: number) => Math.max(0, ...pieces(now.text).sort((p, q) => q.length - p.length).slice(0, 3).map(word => oneLineWidth(word, size, w1, measure, now.font))) * 1.02;
     let s1 = f1.fontSize ?? scale.body;
-    // Retyped with a word its block cannot hold, a label on a block takes the size that fits it there, down to three fifths
-    // of body type; past that it leaves the block for the canvas as before (D-089).
+    const keep = Math.min(Math.max(0, canvas.h - g.y - g.h), pad);
+    // Retyped with a word its block cannot hold, or copy that wrapped there would not fit on the canvas below the block's
+    // top, a label on a block takes the size that fits it there, down to three fifths of body type; past that it leaves the
+    // block for the canvas as before (D-089).
     if (block && now.text !== was.text) {
-      const fit = block.w - 2 * inset(block), lw = longestAt(s1);
-      if (lw > fit) { const size = Math.floor(s1 * fit / lw * 2) / 2; if (size >= scale.body * .6) s1 = size; }
+      const lo = block.x + inset(block), hi = block.x + block.w - inset(block), gx0 = g.x + g.w / 2;
+      const fit = Math.max(1, side === 'left' ? hi - Math.max(lo, g.x) : side === 'right' ? Math.min(hi, g.x + g.w) - lo : 2 * Math.min(gx0 - lo, hi - gx0));
+      let size = s1; const lw = longestAt(size);
+      if (lw > fit) size = Math.floor(size * fit / lw * 2) / 2;
+      size = roomSize({ text: now.text, size, width: fit, height: canvas.h - keep - block.y, weight: w1, measure, font: now.font });
+      if (size < s1 && size >= scale.body * .6) s1 = size;
     }
     const natural0 = oneLineWidth(was.text, b0.size, w0, measure, was.font), natural1 = Math.max(...now.text.split('\n').map(p => p.trim() ? oneLineWidth(p, s1, w1, measure, now.font) : 0)) * 1.02;
     const hugging = free && oneLine && f0.rect.w <= natural0 * 1.15 + 1, lines = measure(now.text, s1, w1, r.w, now.font);
@@ -185,7 +191,7 @@ export function hugText(before: KuraDoc, after: KuraDoc, id: string, measure: Me
     const longest = free ? longestAt(s1) : 0;
     // At the canvas bottom it grows upwards, keeping the margin it had there (D-088), but never above its block's top or the
     // nearest block or text right above it (D-089).
-    const floorY = canvas.h, keep = Math.min(Math.max(0, floorY - g.y - g.h), pad);
+    const floorY = canvas.h;
     let top = block ? block.y : Math.min(g.y, pad);
     if (free && !f0.rot) for (const o of before.nodes) {
       const of = o.frames[spec.id];

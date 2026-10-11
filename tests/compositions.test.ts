@@ -145,3 +145,9 @@ it('re-picks an automatic label on a pill or an ink block for that block’s col
   expect(on(shape('pill', 'pill', { role: 'ink' }, { opacity: .5 })).fill).toEqual({ role: 'ink' });
   expect(on(shape('pill', 'icon', { role: 'ink' })).fill).toEqual({ role: 'ink' });
 });
+it('treats text over an empty picture frame as text on the ground, since the export leaves the frame out (D-089)', () => {
+  const p: Palette = { hue: 210, dark: false, custom: [] }, frameNode = { id: 'f', kind: 'image', asset: null, frames: { main: { rect: { x: 0, y: 0, w: 1000, h: 1000 }, rot: 0 } } } as DocNode;
+  const label = { id: 'l', kind: 'text', text: 'Register now', weight: 400, align: 'start', fill: { role: 'ground' }, frames: { main: { rect: { x: 450, y: 440, w: 271, h: 48 }, rot: 0 } } } as DocNode;
+  const d: KuraDoc = { version: 2, id: 'd', createdAt: '', palette: p, ground: null, sizes: [{ id: 'main', ratio: 'square', guide: null, comp: null }], nodes: [frameNode, label] };
+  expect(contrast(resolve((keepReadable(d).nodes[1] as TextNode).fill, p), resolve({ role: 'ground' }, p))).toBeGreaterThanOrEqual(4.5);
+});

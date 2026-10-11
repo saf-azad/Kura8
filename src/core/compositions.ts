@@ -79,7 +79,8 @@ export function keepReadable(doc: KuraDoc): KuraDoc {
       const back = t.rot ? undefined : [...below].reverse().find(b => { const f = b.frames[id]; return b.kind === 'shape' && b.shape !== ICON_SHAPE && (b.opacity ?? 1) >= 1 && f && !f.hidden && !f.rot && inside(f.rect, t.rect); });
       if (back?.kind === 'shape') { onBand = resolve(back.fill, doc.palette); break; }
     }
-    const bare = !onBand && sizes.length > 0 && sizes.every(({ id }) => below.every(b => { const f = b.frames[id]; return !f || f.hidden || b.kind === 'ink' || b.kind === 'text' || !meets(f.rect, n.frames[id].rect); }));
+    // An empty picture frame is a placeholder the export leaves out: text over it sits on the ground (D-089).
+    const bare = !onBand && sizes.length > 0 && sizes.every(({ id }) => below.every(b => { const f = b.frames[id]; return !f || f.hidden || b.kind === 'ink' || b.kind === 'text' || b.kind === 'image' && !b.asset || !meets(f.rect, n.frames[id].rect); }));
     const bg = onBand ?? (bare ? ground : null);
     return bg && contrast(resolve(n.fill, doc.palette), bg) < 4.5 ? { ...n, fill: readableOn(bg, doc.palette) } : n;
   });

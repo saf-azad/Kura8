@@ -714,12 +714,20 @@ export class Editor {
     // Blocks that share a size keep sharing it: the one with least room sets it for all (four names, D-087).
     const now = (d: KuraDoc, id: string) => { const n = nodeById(d, id) as TextNode; return textBox(n, n.frames[this.sizeId], measure, this.typeScale()).size; };
     const sizes = ids.map(id => now(doc, id)), same = sizes.every(x => Math.abs(x - sizes[0]) < .5);
-    const shared = same && ids.length > 1 ? Math.min(...ids.map((id, i) => this.sizeCap(doc, id, want(sizes[i]), sizes[i]).size)) : null;
-    for (const id of ids) {
-      const current = now(doc, id), w = want(current), r = this.sizeCap(doc, id, shared ?? w, current);
-      if (r.size < w - 1e-6 && !note) note = shared !== null && shared < w - 1e-6 ? 'Largest size that fits them all' : r.note;
-      first ??= r.size;
-      doc = flowText(doc, hugText(doc, this.withSize(unfit(doc, id, measure, this.sizeId), id, r.size), id, measure), id, measure);
+    let shared = same && ids.length > 1 ? Math.min(...ids.map((id, i) => this.sizeCap(doc, id, want(sizes[i]), sizes[i]).size)) : null;
+    const start = doc;
+    for (let pass = 0; pass < 2; pass++) {
+      doc = start; first = null; note = '';
+      const got: number[] = [];
+      for (const id of ids) {
+        const current = now(doc, id), w = want(current), r = this.sizeCap(doc, id, shared ?? w, current);
+        if (r.size < w - 1e-6 && !note) note = shared !== null && shared < w - 1e-6 ? 'Largest size that fits them all' : r.note;
+        first ??= r.size; got.push(r.size);
+        doc = flowText(doc, hugText(doc, this.withSize(unfit(doc, id, measure, this.sizeId), id, r.size), id, measure), id, measure);
+      }
+      // One pushed down by the others' growth may stop lower; they all take its size then (D-089).
+      if (shared === null || got.every(x => Math.abs(x - got[0]) < .5)) break;
+      shared = Math.min(...got);
     }
     return { doc, first: first!, note };
   }
@@ -850,7 +858,11 @@ export class Editor {
     this.store.setUI({ size: id, flags, sel: [] });
   }
   setGuides(on: boolean): void { this.store.setUI({ guides: on }); toast(on ? 'Guides on' : 'Guides off'); }
-  openPanel(panel: PanelId | null): void { this.store.setUI({ panel: this.store.ui.panel === panel ? null : panel }); }
+  openPanel(panel: PanelId | null): void {
+    // Opening Export keeps the Text tool's new label, as if typed, so closing the sheet does not take it away (D-089).
+    if (panel === 'export' && this.fresh) this.touched = true;
+    this.store.setUI({ panel: this.store.ui.panel === panel ? null : panel });
+  }
   setTool(tool: Tool | null): void { this.finishText(); this.finishReposition(); this.live = emptyLive(); this.store.setUI({ tool, panel: null, armed: null, sel: tool ? [] : this.store.ui.sel }); }
   // background removal (5o)
   async removeBackground(): Promise<void> {

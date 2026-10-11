@@ -213,10 +213,15 @@ it('places a typed label where a pasted one goes, and keeps a narrow block only 
   for (let k = 1; k <= words.length; k++) typed = hugText(start, updateNodes(typed, ['t'], n => ({ ...n, text: words.slice(0, k) })), 't', charMeasure);
   const pasted = hugText(start, updateNodes(start, ['t'], n => ({ ...n, text: words })), 't', charMeasure);
   expect(typed.nodes[0].frames.main.rect).toEqual(pasted.nodes[0].frames.main.rect);
-  // A badge 150 wide cannot hold "students" at 30 (8 × 18 = 144 plus its inset), so the label takes the canvas bounds.
+  // A badge 150 wide cannot hold "students" at 30 (8 × 18 = 144 plus its inset): the label shrinks to stay on it, words
+  // whole, down to three fifths of body type (D-089, superseding D-085's move to the canvas).
   const badge = doc([rectNode('b', frame(800, 700, 150, 120)), textNode('l', frame(810, 720, 80, 32, { fontSize: 30 }), 'Hi')]);
-  const r = hugText(badge, updateNodes(badge, ['l'], n => ({ ...n, text: words })), 'l', charMeasure).nodes[1].frames.main.rect;
-  expect(r.w).toBeGreaterThan(150);
+  const t = hugText(badge, updateNodes(badge, ['l'], n => ({ ...n, text: words })), 'l', charMeasure).nodes[1] as TextNode, r = t.frames.main.rect;
+  expect(r.x + r.w).toBeLessThanOrEqual(950); expect(t.frames.main.fontSize).toBeLessThan(30); expect(t.frames.main.fontSize).toBeGreaterThanOrEqual(28 * .6);
+  expect(splitsWord(words, textBox(t, t.frames.main, charMeasure, typeScale('thirds', { w: 1000, h: 1000 })).lines)).toBe(false);
+  // Too long even at three fifths of body, it takes the canvas bounds as before.
+  const tiny = doc([rectNode('b', frame(800, 700, 60, 60)), textNode('l', frame(805, 705, 40, 32, { fontSize: 30 }), 'Hi')]);
+  expect(hugText(tiny, updateNodes(tiny, ['l'], n => ({ ...n, text: words })), 'l', charMeasure).nodes[1].frames.main.rect.w).toBeGreaterThan(60);
 });
 it('measures one character as wide as its glyph, not zero (D-086)', () => {
   // charMeasure: 0.6 em per character, so "3" at 30 is 18 wide.
