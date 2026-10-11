@@ -3,7 +3,8 @@ import type { Size } from './geometry';
 /** `name` is the canvas shape, `label` the destination the dial names under the number (5a), `mm` the print size. */
 export type Ratio = { id: RatioId; name: string; label: string; w: number; h: number; exportWidth: number; mm?: Size };
 // Social formats added by D-069: 3:4 (Instagram's grid, 1080 × 1440), 2:3 (Pinterest pin, 1000 × 1500),
-// 1.91:1 (link posts and Facebook event covers, 1200 × 628) and 4:1 (LinkedIn banner, 1584 × 396).
+// 1.91:1 (link posts and Facebook event covers, 1200 × 628) and 4:1 (LinkedIn banner, 1584 × 396). The 4:1 is shown as
+// Header so it is not confused with the Cover layout (D-077); its id stays `cover`.
 export const ratios: Ratio[] = [
   { id: 'square', name: 'Square', label: 'Post', w: 1, h: 1, exportWidth: 1080 },
   { id: 'portrait', name: 'Portrait', label: 'Portrait', w: 4, h: 5, exportWidth: 1080 },
@@ -14,7 +15,7 @@ export const ratios: Ratio[] = [
   { id: 'landscape', name: 'Landscape', label: 'Slide', w: 16, h: 9, exportWidth: 1920 },
   { id: 'link', name: 'Link', label: 'Link', w: 1.91, h: 1, exportWidth: 1200 },
   { id: 'banner', name: 'Banner', label: 'Banner', w: 3, h: 1, exportWidth: 1500 },
-  { id: 'cover', name: 'Cover', label: 'Cover', w: 4, h: 1, exportWidth: 1584 },
+  { id: 'cover', name: 'Header', label: 'Header', w: 4, h: 1, exportWidth: 1584 },
 ];
 export const ratioById = (id: RatioId): Ratio => ratios.find(r => r.id === id)!;
 export const canvasSize = (id: RatioId): Size => { const r = ratioById(id); return { w: 1000, h: 1000 * r.h / r.w }; };
@@ -34,3 +35,13 @@ export function exportSize(id: RatioId, option: ExportScale): Size {
   return { w, h: Math.round(w * r.h / r.w) };
 }
 export const withinPixelLimit = (s: Size): boolean => s.w * s.h <= MAX_PIXELS;
+/**
+ * The scale one size of an All sizes export takes for the chosen one (D-077): 300 dpi on a print ratio, 2× elsewhere;
+ * a scale past the pixel limit steps down to the largest that fits (a print ratio's 3× to 300 dpi) instead of 1×.
+ */
+export function zipScale(id: RatioId, chosen: ExportScale): ExportScale {
+  const print = !!ratioById(id).mm, k = 'dpi' in chosen ? 2 : chosen.scale;
+  const steps: ExportScale[] = print ? (k >= 3 ? [{ scale: 3 }, { dpi: 300 }, { scale: 1 }] : k === 2 ? [{ dpi: 300 }, { scale: 1 }] : [{ scale: 1 }])
+    : ([3, 2, 1] as const).filter(s => s <= k).map(scale => ({ scale }));
+  return steps.find(s => withinPixelLimit(exportSize(id, s))) ?? { scale: 1 };
+}

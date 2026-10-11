@@ -78,7 +78,9 @@ export const pageSize = (pixels: Size, mm?: Size): Size => mm ? { w: mm.w / 25.4
 export function nameStem(doc: KuraDoc, sizeId?: string): string {
   const texts = doc.nodes.filter(n => n.kind === 'text' && !(sizeId && n.frames[sizeId]?.hidden) && n.text.trim());
   const pick = texts.find(n => n.slot === 'headline') ?? texts[0], text = pick?.kind === 'text' ? pick.text : '';
-  const words = text.normalize('NFD').replace(/(\p{Script=Latin})\p{M}+/gu, '$1').normalize('NFC').toLowerCase().split(/[^\p{L}\p{M}\p{N}]+/u).filter(Boolean);
+  // Latin letters without a decomposition (Vietnamese đ, Polish ł, Danish ø, German ß) are spelt out too (D-077).
+  const plain: Record<string, string> = { đ: 'd', ð: 'd', ł: 'l', ø: 'o', ß: 'ss', æ: 'ae', œ: 'oe', ı: 'i', þ: 'th' };
+  const words = text.normalize('NFD').replace(/(\p{Script=Latin})\p{M}+/gu, '$1').normalize('NFC').toLowerCase().replace(/[đðłøßæœıþ]/g, c => plain[c]).split(/[^\p{L}\p{M}\p{N}]+/u).filter(Boolean);
   let stem = '';
   for (const w of words) { const next = stem ? `${stem}-${w}` : w; if (next.length > 40) break; stem = next; }
   return stem || (words[0] ?? '').slice(0, 40) || 'kura8';

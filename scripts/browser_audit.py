@@ -169,7 +169,7 @@ def s_load(app):
 @step('5a ratio ring names destinations and hovering previews the hub')
 def s_5a(app):
     app.fresh(); p = app.page
-    for label in ['Post 1:1', 'Portrait 4:5', 'Grid 3:4', 'Story 9:16', 'Pin 2:3', 'Print A4', 'Slide 16:9', 'Link 1.91:1', 'Banner 3:1', 'Cover 4:1']:
+    for label in ['Post 1:1', 'Portrait 4:5', 'Grid 3:4', 'Story 9:16', 'Pin 2:3', 'Print A4', 'Slide 16:9', 'Link 1.91:1', 'Banner 3:1', 'Header 4:1']:
         check(p.locator(f'[data-ring="ratio"][data-tip="{label}"]').count() == 1, f'missing {label}')
     before = p.locator('.hub canvas').bounding_box()
     g = p.locator('[data-ring="ratio"][data-tip="Banner 3:1"] > g').bounding_box(); p.mouse.move(g['x'] + g['width'] / 2, g['y'] + g['height'] / 2); p.wait_for_timeout(700)

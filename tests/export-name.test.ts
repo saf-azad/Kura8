@@ -11,6 +11,7 @@ it('names exports after the headline, else the first visible text, else kura8', 
   expect(nameStem(doc([textNode('k', frame(0, 0, 10, 10), '추석 축제 2026')]), 'main')).toBe('추석-축제-2026');
   expect(nameStem(doc([textNode('h', frame(0, 0, 10, 10), 'दिवाली मेला')]), 'main')).toBe('दिवाली-मेला');
   expect(nameStem(doc([textNode('v', frame(0, 0, 10, 10), 'Tết Trung Thu')]), 'main')).toBe('tet-trung-thu');
+  expect(nameStem(doc([textNode('v', frame(0, 0, 10, 10), 'Tết Nguyên Đán · Łódź Straße')]), 'main')).toBe('tet-nguyen-dan-lodz-strasse');
   expect(nameStem(doc([textNode('x', frame(0, 0, 10, 10, { hidden: true }), 'Hidden here')]))).toBe('hidden-here');
   expect(nameStem(doc([textNode('e', frame(0, 0, 10, 10), '!!!')]), 'main')).toBe('kura8');
   expect(nameStem(doc([textNode('l', frame(0, 0, 10, 10), 'The quick brown fox jumps over the lazy dog again and again')]), 'main')).toBe('the-quick-brown-fox-jumps-over-the-lazy');
