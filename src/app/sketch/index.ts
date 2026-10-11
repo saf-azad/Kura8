@@ -2,6 +2,7 @@ import type { DocNode, InkForm, InkNode, KuraDoc } from '../../core/document';
 import type { Point } from '../../core/geometry';
 import { absolutePaths, classify, inkFrame, inPoly, isScribble, resample, smooth, touches, bbox, type P, type Recognised } from '../../core/ink';
 import { addNodes, removeNodes, updateNodes } from '../../core/ops';
+import { layerName } from '../editor';
 import { LINE_HEIGHT } from '../../core/fit';
 import { newId } from '../store';
 import { emptyLive, type Editor } from '../editor';
@@ -122,7 +123,7 @@ export function installSketch(ed: Editor): SketchTools {
         const share = (n: DocNode) => { const r = ed.box(n); return P.filter(q => q[0] >= r.x && q[0] <= r.x + r.w && q[1] >= r.y && q[1] <= r.y + r.h).length / P.length; };
         let kill = ed.visible().filter(n => { const r = ed.box(n); return !n.locked && share(n) > .25 && r.w * r.h < area * 4; });
         if (!kill.length) { const top = [...ed.visible()].reverse().find(n => !n.locked && share(n) > .5); if (top) kill = [top]; }
-        if (kill.length) { show(undefined); ed.commit(removeNodes(ed.doc, kill.map(n => n.id)), 'Scribbled out'); ed.select([]); return; }
+        if (kill.length) { show(undefined); ed.commit(removeNodes(ed.doc, kill.map(n => n.id)), `Scribbled out ${kill.length > 1 ? `${kill.length} objects` : layerName(kill[0])} · Undo brings it back`); ed.select([]); return; }
       }
       show(undefined);
       ed.commit(addNodes(ed.doc, [inkNode([smooth(d.pts)], ed.inkWidth())]));

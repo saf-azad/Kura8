@@ -15,11 +15,11 @@ BASE = next((a for a in sys.argv[1:] if a.startswith('http')), 'http://127.0.0.1
 ORIGIN = BASE.split('/', 3)[0] + '//' + BASE.split('/', 3)[2]
 OUT = Path(__file__).resolve().parent.parent / 'private' / 'browser-audit'
 OUT.mkdir(parents=True, exist_ok=True)
-RATIOS = ['square', 'portrait', 'landscape', 'story', 'a4', 'banner']
+RATIOS = ['square', 'portrait', 'tall', 'story', 'pin', 'a4', 'landscape', 'link', 'banner', 'cover']
 COMPS = ['cover', 'split', 'stack', 'poster', 'frame', 'band']
 GUIDES = ['thirds', 'golden', 'divisions']
-HEIGHT = {'square': 1000, 'portrait': 1250, 'landscape': 562.5, 'story': 1000 * 16 / 9, 'a4': 1000 * 2 ** .5, 'banner': 1000 / 3}
-EXPORT = {'square': (1080, 1080), 'portrait': (1080, 1350), 'landscape': (1920, 1080), 'story': (1080, 1920), 'a4': (1240, 1754), 'banner': (1500, 500)}
+HEIGHT = {'square': 1000, 'portrait': 1250, 'tall': 1000 * 4 / 3, 'story': 1000 * 16 / 9, 'pin': 1500, 'a4': 1000 * 2 ** .5, 'landscape': 562.5, 'link': 1000 / 1.91, 'banner': 1000 / 3, 'cover': 250}
+EXPORT = {'square': (1080, 1080), 'portrait': (1080, 1350), 'tall': (1080, 1440), 'story': (1080, 1920), 'pin': (1000, 1500), 'a4': (1240, 1754), 'landscape': (1920, 1080), 'link': (1200, 628), 'banner': (1500, 500), 'cover': (1584, 396)}
 results, errors, offorigin = [], [], []
 
 
@@ -169,7 +169,7 @@ def s_load(app):
 @step('5a ratio ring names destinations and hovering previews the hub')
 def s_5a(app):
     app.fresh(); p = app.page
-    for label in ['Post 1:1', 'Portrait 4:5', 'Slide 16:9', 'Story 9:16', 'Print A4', 'Banner 3:1']:
+    for label in ['Post 1:1', 'Portrait 4:5', 'Grid 3:4', 'Story 9:16', 'Pin 2:3', 'Print A4', 'Slide 16:9', 'Link 1.91:1', 'Banner 3:1', 'Cover 4:1']:
         check(p.locator(f'[data-ring="ratio"][data-tip="{label}"]').count() == 1, f'missing {label}')
     before = p.locator('.hub canvas').bounding_box()
     g = p.locator('[data-ring="ratio"][data-tip="Banner 3:1"] > g').bounding_box(); p.mouse.move(g['x'] + g['width'] / 2, g['y'] + g['height'] / 2); p.wait_for_timeout(700)
@@ -182,7 +182,7 @@ def s_5a(app):
 def s_dial_keys(app):
     app.fresh(); p = app.page
     p.keyboard.press('ArrowRight'); p.wait_for_timeout(100)
-    check('Slide 16:9' in p.locator('.card').nth(0).inner_text(), 'ratio did not turn to landscape')
+    check('Grid 3:4' in p.locator('.card').nth(0).inner_text(), 'ratio did not turn to 3:4')
     p.keyboard.press('ArrowDown'); p.keyboard.press('ArrowRight'); p.wait_for_timeout(100)
     check('Split' in p.locator('.card').nth(1).inner_text(), 'layout did not turn')
     p.keyboard.press('ArrowDown'); p.keyboard.press('ArrowLeft'); p.wait_for_timeout(100)
@@ -192,7 +192,7 @@ def s_dial_keys(app):
     p.locator('.ground-toggle button[aria-label="Dark ground"]').click(); p.evaluate('document.activeElement.blur()')
     p.keyboard.press('Enter'); p.wait_for_timeout(500)
     d = app.doc()
-    check(d['sizes'][0] == {'id': 'main', 'ratio': 'landscape', 'guide': 'thirds', 'comp': 'split'}, f'wrong size {d["sizes"]}')
+    check(d['sizes'][0] == {'id': 'main', 'ratio': 'tall', 'guide': 'thirds', 'comp': 'split'}, f'wrong size {d["sizes"]}')
     check(d['palette']['hue'] == 240 and d['palette']['dark'] is True, f'wrong palette {d["palette"]}')
 
 
@@ -212,7 +212,7 @@ def s_dial_drag(app):
     check('Quarters' in p.locator('.card').nth(2).inner_text() or 'Thirds' in p.locator('.card').nth(2).inner_text(), 'scroll did not turn')
 
 
-@step('dial to editor for all 6 ratios × 6 layouts × 3 guides, every block inside the canvas')
+@step('dial to editor for all 10 ratios × 6 layouts × 3 guides, every block inside the canvas')
 def s_matrix(app):
     p = app.page; bad = []
     for ratio in RATIOS:
@@ -270,11 +270,15 @@ def find(d, **kw):
     return [n for n in d['nodes'] if all(n.get(k) == v for k, v in kw.items())]
 
 
-@step('tools: T text, R rectangle, O ellipse, I image, S shapes, C colour, G guides, ? shortcuts')
+@step('tools: T text, R rectangle, O ellipse, I picks pictures, S shapes, C colour, G guides, ? shortcuts')
 def s_tool_keys(app):
     app.start(SQUARE); p = app.page; n0 = len(app.doc()['nodes'])
     p.keyboard.press('t'); p.wait_for_timeout(200); p.keyboard.type('Added'); p.keyboard.press('Control+Enter')
-    p.keyboard.press('Escape'); p.keyboard.press('r'); p.keyboard.press('Escape'); p.keyboard.press('o'); p.keyboard.press('Escape'); p.keyboard.press('i'); p.keyboard.press('Escape')
+    p.keyboard.press('Escape'); p.keyboard.press('r'); p.keyboard.press('Escape'); p.keyboard.press('o'); p.keyboard.press('Escape')
+    # D-061: I opens the file picker; an empty frame comes from the Shapes panel.
+    with p.expect_file_chooser(timeout=3000) as fc: p.keyboard.press('i')
+    fc.value.set_files([]); p.keyboard.press('Escape')
+    p.keyboard.press('s'); p.wait_for_timeout(250); p.locator('.shapes-panel button', has_text='+ Image frame').click(); p.keyboard.press('Escape')
     d = app.doc()
     check(len(d['nodes']) == n0 + 4, f'expected 4 new nodes, got {len(d["nodes"]) - n0}')
     check(find(d, text='Added'), 'typed text missing'); check(find(d, shape='rect') and find(d, shape='circle'), 'shapes missing')
@@ -423,6 +427,8 @@ def s_5f(app):
 @step('5g a pasted hex becomes a custom hue for this file')
 def s_5g(app):
     app.start(SQUARE); p = app.page; acc = find(app.doc(), slot='accent')[0]; app.select(acc); p.keyboard.press('c')
+    # Panels open on the next animation frame; typing before then lands in an inert field.
+    p.locator('.colour-panel:not([hidden])').wait_for()
     hexf = p.locator('.colour-panel input.field'); hexf.fill('#9CABC2'); p.wait_for_timeout(100)
     p.locator('.colour-panel button', has_text='+ Add as hue').click(); d = app.doc()
     check(d['palette']['custom'] == ['#9cabc2'], f'custom {d["palette"]["custom"]}')
@@ -433,6 +439,7 @@ def s_5g(app):
 @step('5h text below 4.5:1 shows the ratio and offers the nearest passing shade')
 def s_5h(app):
     app.start(SQUARE); p = app.page; head = find(app.doc(), slot='headline')[0]; app.select(head); p.keyboard.press('c')
+    p.locator('.colour-panel:not([hidden])').wait_for()
     p.locator('.colour-panel .roles button', has_text='Ground').click(); p.wait_for_timeout(150)
     box = p.locator('.colour-panel .contrast'); check(box.is_visible() and 'fails' in box.inner_text(), 'no contrast warning')
     box.locator('button', has_text='use').click(); f = find(app.doc(), slot='headline')[0]['fill']
@@ -458,9 +465,9 @@ def s_5q(app):
     app.start(SQUARE); p = app.page; head = find(app.doc(), slot='headline')[0]; app.select(head)
     p.locator('.toolbar button[data-tip="Autofit"], .toolbar button[title="Autofit"]').click()
     check(find(app.doc(), slot='headline')[0].get('fit') is True, 'fit not on')
-    size0 = int(p.locator('.toolbar .readout[data-tip="Font size"], .toolbar .readout[title="Font size"]').inner_text())
+    size0 = int(p.locator('.toolbar input[aria-label="Font size"]').input_value())
     p.evaluate('document.activeElement.blur()'); p.keyboard.press('Enter'); p.keyboard.press('Control+a'); p.keyboard.type('Annual neighbourhood street festival and night market'); p.keyboard.press('Control+Enter'); p.wait_for_timeout(200)
-    size1 = int(p.locator('.toolbar .readout[data-tip="Font size"], .toolbar .readout[title="Font size"]').inner_text())
+    size1 = int(p.locator('.toolbar input[aria-label="Font size"]').input_value())
     check(size1 < size0, f'autofit did not step down: {size0} → {size1}')
     p.keyboard.press('Escape'); app.select(find(app.doc(), slot='headline')[0]); p.locator('.toolbar button[aria-label="Larger"]').click()
     check(find(app.doc(), slot='headline')[0].get('fit') is None, 'manual size change kept autofit on')
@@ -488,14 +495,15 @@ def s_5n(app):
     check(info['natural'] == {'w': 6000, 'h': 4000}, f'natural {info["natural"]}'); check(info['work'] == {'w': 2160, 'h': 1440}, f'working {info["work"]}')
 
 
-@step('5p dropping on an image block fills it; elsewhere adds a new image at the nearest cell')
+@step('5p dropping on an image block fills it; elsewhere adds a new image, uncropped, in the nearest cell')
 def s_5p(app):
     app.start(SQUARE); d = app.doc(); frame = find(d, slot='image')[0]; small = image_file(OUT / 'small.png', 800, 600, (30, 90, 200))
     drop_file(app, small, 400, 300); d2 = app.doc()
     check(find(d2, id=frame['id'])[0]['asset'], 'frame not filled'); check(len(d2['nodes']) == len(d['nodes']), 'drop on frame added a node')
     drop_file(app, small, 950, 950); d3 = app.doc(); new = [n for n in d3['nodes'] if n['id'] not in {m['id'] for m in d2['nodes']}]
     check(len(new) == 1 and new[0]['kind'] == 'image', 'no new image'); r = app.frame(new[0])
-    check(abs(r['x'] - 2000 / 3) < .01 and abs(r['y'] - 2000 / 3) < .01 and abs(r['w'] - 1000 / 3) < .01, f'not the nearest cell: {r}')
+    # D-047: the picture keeps its 4:3 proportions, contained and centred in the bottom-right cell.
+    check(abs(r['x'] - 2000 / 3) < .01 and abs(r['w'] - 1000 / 3) < .01 and abs(r['h'] - 250) < .01 and abs(r['y'] - (2000 / 3 + (1000 / 3 - 250) / 2)) < .01, f'not contained in the nearest cell: {r}')
 
 
 @step('5o remove background adds a Before/After toggle and never replaces the original')
@@ -509,7 +517,7 @@ def s_5o(app):
     p.locator('.toolbar button[aria-label="Remove background"]').click()
     p.wait_for_function('() => { const d = JSON.parse(localStorage.getItem("kura8:doc")); return d.nodes.some(n => n.kind === "image" && n.cutout); }', timeout=180000)
     n = find(app.doc(), id=frame['id'])[0]; check(n['cutout'] is True, 'cutout not shown')
-    toggle = p.locator('.before-after'); check(toggle.is_visible(), 'no Before/After toggle')
+    toggle = p.locator('.image-bar .cut'); check(toggle.is_visible(), 'no Before/After toggle')
     toggle.locator('button', has_text='Before').click(); check(find(app.doc(), id=frame['id'])[0]['cutout'] is False, 'Before did not show the original')
     toggle.locator('button', has_text='After').click(); check(find(app.doc(), id=frame['id'])[0]['cutout'] is True, 'After')
     rec = p.evaluate('''key => new Promise(res => { const r = indexedDB.open("kura8"); r.onsuccess = () => { const g = r.result.transaction("assets").objectStore("assets").get(key); g.onsuccess = () => res({ original: g.result.original.size, cutout: g.result.cutout && g.result.cutout.size }); }; })''', n['asset'])
@@ -626,7 +634,7 @@ def s_5y(app):
     app.close_panels()
 
 
-@step('5z PNG offers No ground while the ground is unfilled, with real transparency')
+@step('5z PNG offers No ground, also over a painted ground (D-050), with real transparency')
 def s_5z(app):
     app.start(SQUARE); p = app.page; p.keyboard.press('Control+Shift+E'); p.wait_for_timeout(300)
     p.locator('.sheet .seg[aria-label="Format"] button', has_text='PNG').click()
@@ -636,8 +644,8 @@ def s_5z(app):
     p.locator('.sheet .seg[aria-label="Format"] button', has_text='JPG').click(); p.wait_for_timeout(200); check(not p.locator('.sheet button[aria-label="No ground"]').is_visible(), 'No ground offered for JPG')
     app.close_panels(); p.keyboard.press('c'); p.locator('.colour-panel .shades button').nth(2).click(); app.click_unit(990, 990); p.keyboard.press('Escape'); p.keyboard.press('Escape')
     p.keyboard.press('Control+Shift+E'); p.wait_for_timeout(300); p.locator('.sheet .seg[aria-label="Format"] button', has_text='PNG').click(); p.wait_for_timeout(200)
-    check(not p.locator('.sheet button[aria-label="No ground"]').is_visible(), 'No ground offered after filling the ground')
-    app.close_panels()
+    check(p.locator('.sheet button[aria-label="No ground"]').is_visible(), 'No ground not offered after filling the ground')
+    app.close_panels(); img = Image.open(app.export('png', '1×', no_ground=True)); check(img.getpixel((1075, 1075))[3] == 0, 'painted ground not left out')
 
 
 @step('sketch: pen hold-to-clean makes a rectangle, plain strokes stay ink, scribble deletes, eraser, lasso')
@@ -712,7 +720,7 @@ def s_text_controls(app):
     app.start(SQUARE); p = app.page; head = find(app.doc(), slot='headline')[0]; app.select(head)
     p.keyboard.press('Control+b'); check(find(app.doc(), slot='headline')[0]['weight'] == 400, 'bold off')
     p.keyboard.press('Control+b'); check(find(app.doc(), slot='headline')[0]['weight'] == 700, 'bold on')
-    align = p.locator('.toolbar button[aria-label="Align"]')
+    align = p.locator('.toolbar button[aria-label="Text align"]')
     seen = []
     for _ in range(3): align.click(); seen.append(find(app.doc(), slot='headline')[0]['align'])
     check(seen == ['center', 'end', 'start'], f'align cycle {seen}')

@@ -1,4 +1,5 @@
-import type { Align } from './document';
+import type { Align, FontId } from './document';
+import { fontById } from './fonts';
 // Scripts and direction (5r): the first strong character decides direction, align start/end follows it, and each
 // script gets a fallback font stack behind Space Grotesk (which covers Latin and Vietnamese only). Stacks name
 // system fonts; nothing is fetched.
@@ -32,4 +33,9 @@ export const FONT_STACKS: Record<Script, string> = {
   devanagari: `${GROTESK}, "Kohinoor Devanagari", "Nirmala UI", "Noto Sans Devanagari", sans-serif`,
   thai: `${GROTESK}, Thonburi, "Leelawadee UI", "Noto Sans Thai", sans-serif`,
 };
-export const fontStack = (text: string): string => FONT_STACKS[scriptOf(text)];
+/** The font stack for text in a typeface (D-049): the chosen face first, then the script's fallbacks. */
+export function fontStack(text: string, font?: FontId): string {
+  const script = scriptOf(text), def = fontById(font);
+  if (def.id === 'grotesk') return FONT_STACKS[script];
+  return `"${def.family}", ${script === 'latin' ? def.fallback : FONT_STACKS[script].slice(GROTESK.length + 2)}`;
+}

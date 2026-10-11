@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { reRatio, reRatioFrames, anchorLines, flagsFor, boxOf } from '../src/core/reratio';
+import { reRatio, reRatioFrames, reRatioKept, anchorLines, flagsFor, boxOf } from '../src/core/reratio';
 import { relayout } from '../src/core/relayout';
-import { addSize, removeSize } from '../src/core/sizes';
+import { addSize, removeSize, closestSize } from '../src/core/sizes';
 import { layout, starterNodes } from '../src/core/compositions';
 import { canvasSize } from '../src/core/ratios';
 import { validateDocument, type KuraDoc } from '../src/core/document';
@@ -62,6 +62,13 @@ describe('relayout (5f)', () => {
     expect(moves).toHaveLength(5); expect(moves[0].from).toBe(d.nodes[0].frames.main);
     expect(validateDocument(out)).toBe(true);
   });
+  it('turns autofit on for a headline moved into a poster room (D-055)', () => {
+    const { doc: out } = relayout(start(), 'main', { ratio: 'a4', guide: 'golden', comp: 'poster' }, fakeMeasure);
+    expect(out.nodes.find(n => n.slot === 'headline')).toMatchObject({ fit: true });
+    expect(out.nodes.find(n => n.slot === 'body')).not.toHaveProperty('fit');
+    const again = relayout(out, 'main', { ratio: 'a4', guide: 'golden', comp: 'stack' }, fakeMeasure).doc;
+    expect(again.nodes.find(n => n.slot === 'headline')).toMatchObject({ fit: true });
+  });
   it('re-ratios untagged nodes, leaves a slot without a node empty, and lets only the first claimant take a slot', () => {
     const d = start(); d.nodes.splice(0, 1);
     d.nodes.push({ ...d.nodes[0], id: 'dup' } as KuraDoc['nodes'][number]);
@@ -82,5 +89,38 @@ describe('linked sizes (5w)', () => {
     const one = removeSize(two, 's2'); expect(one.sizes).toHaveLength(1); expect(Object.keys(one.nodes[0].frames)).toEqual(['main']);
     expect(removeSize(one, 'main')).toBe(one); expect(removeSize(two, 'nope')).toBe(two);
     expect(addSize(two, 'banner', 's3', fakeMeasure, 's2').doc.sizes[2].ratio).toBe('banner');
+  });
+});
+describe('change ratio without drift (D-054)', () => {
+  const start = () => doc([rectNode('a', frame(1000 / 3, 1000 / 3, 1000 / 3, 1000 / 3)), rectNode('b', frame(100, 100, 50, 50)), textNode('t', frame(50, 600, 500, 46, { fontSize: 40 }), 'Hello there')]);
+  it('returns untouched nodes exactly after a round trip through several ratios', () => {
+    const d = start(); let r = reRatioKept(d, 'main', { ratio: 'story' }, fakeMeasure);
+    r = reRatioKept(r.doc, 'main', { ratio: 'banner' }, fakeMeasure, r.origin);
+    const banner = reRatio(reRatio(d, 'main', { ratio: 'story' }, fakeMeasure).doc, 'main', { ratio: 'banner' }, fakeMeasure).doc;
+    expect(r.doc.nodes[1].frames.main.rect.w).toBeGreaterThan(banner.nodes[1].frames.main.rect.w - 1e-9);
+    r = reRatioKept(r.doc, 'main', { ratio: 'square' }, fakeMeasure, r.origin);
+    expect(r.doc.nodes.map(n => n.frames.main)).toEqual(d.nodes.map(n => n.frames.main));
+    expect(r.doc.sizes[0].ratio).toBe('square'); expect(r.flags).toEqual([]);
+  });
+  it('maps an edited or new node from where it is now and keeps it there on the way back', () => {
+    const d = start(); let r = reRatioKept(d, 'main', { ratio: 'story' }, fakeMeasure);
+    const moved = { ...r.doc, nodes: [...r.doc.nodes.map(n => n.id === 'b' ? { ...n, frames: { main: frame(10, 10, 80, 80) } } : n), rectNode('new', frame(0, 0, 40, 40))] };
+    r = reRatioKept(moved, 'main', { ratio: 'square' }, fakeMeasure, r.origin);
+    expect(r.doc.nodes[0].frames.main).toEqual(d.nodes[0].frames.main);
+    expect(r.doc.nodes[1].frames.main).toEqual(reRatio(moved, 'main', { ratio: 'square' }, fakeMeasure).doc.nodes[1].frames.main);
+    expect(r.origin.new.ratio).toBe('story');
+    expect(reRatioKept(r.doc, 'main', { ratio: 'story' }, fakeMeasure, r.origin).doc.nodes[1].frames.main).toEqual(frame(10, 10, 80, 80));
+  });
+  it('honours a guide change', () => {
+    const r = reRatioKept(start(), 'main', { ratio: 'square', guide: 'golden' }, fakeMeasure);
+    expect(r.doc.sizes[0].guide).toBe('golden'); expect(r.origin.a.guide).toBe('thirds');
+  });
+});
+describe('linked sizes seed from the closest proportions (D-069)', () => {
+  it('picks the existing size nearest in aspect', () => {
+    const d: KuraDoc = doc([rectNode('a', frame(0, 0, 100, 100))], size({ ratio: 'link' }));
+    const two = addSize(d, 'pin', 'tall', fakeMeasure).doc;
+    expect(closestSize(two, 'tall')).toBe('tall'); expect(closestSize(two, 'cover')).toBe('main');
+    expect(addSize(two, 'cover', 'c', fakeMeasure).doc.nodes[0].frames.c).toEqual(addSize(two, 'cover', 'c', fakeMeasure, 'main').doc.nodes[0].frames.c);
   });
 });

@@ -5,6 +5,11 @@ const has = (ids: string[]) => { const set = new Set(ids); return (n: DocNode) =
 const unlocked = (ids: string[]) => { const pick = has(ids); return (n: DocNode) => pick(n) && !n.locked; };
 export const nodeById = (doc: KuraDoc, id: string): DocNode | undefined => doc.nodes.find(n => n.id === id);
 export const addNodes = (doc: KuraDoc, nodes: DocNode[]): KuraDoc => ({ ...doc, nodes: [...doc.nodes, ...nodes] });
+/** New pictures go just under the lowest text block, so they never cover copy (D-058); with no text, on top. */
+export function addUnderText(doc: KuraDoc, nodes: DocNode[]): KuraDoc {
+  const at = doc.nodes.findIndex(n => n.kind === 'text');
+  return at < 0 ? addNodes(doc, nodes) : { ...doc, nodes: [...doc.nodes.slice(0, at), ...nodes, ...doc.nodes.slice(at)] };
+}
 export function removeNodes(doc: KuraDoc, ids: string[]): KuraDoc {
   const gone = unlocked(ids);
   return { ...doc, nodes: doc.nodes.filter(n => !gone(n)) };
@@ -23,6 +28,16 @@ export function nudge(doc: KuraDoc, sizeId: string, ids: string[], dx: number, d
 /** Fill for shapes, text and ink; images have no fill. */
 export function setFill(doc: KuraDoc, ids: string[], fill: ColourRef): KuraDoc {
   return updateNodes(doc, ids, n => n.kind === 'image' ? n : { ...n, fill });
+}
+/** Names a node in Layers (D-066); blank clears it. Works on locked nodes too, like lock itself. */
+export function setName(doc: KuraDoc, id: string, name: string): KuraDoc {
+  const clean = name.replace(/\s+/g, ' ').trim().slice(0, 80);
+  return { ...doc, nodes: doc.nodes.map(n => { if (n.id !== id) return n; const next = { ...n }; if (clean) next.name = clean; else delete next.name; return next; }) };
+}
+/** Opacity for any unlocked node (D-052); 1 or more clears it. */
+export function setOpacity(doc: KuraDoc, ids: string[], opacity: number): KuraDoc {
+  const value = Math.max(0, Math.min(1, opacity));
+  return updateNodes(doc, ids, n => { const next = { ...n }; if (value >= 1) delete next.opacity; else next.opacity = value; return next; });
 }
 export const setGround = (doc: KuraDoc, ground: ColourRef | null): KuraDoc => ({ ...doc, ground });
 /** Lock toggles always apply, so a locked node can be unlocked. */

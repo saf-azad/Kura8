@@ -7,7 +7,7 @@ export function gridPanel(ed: Editor): HTMLElement {
   const presets = [10, 20, 40, 80].map(n => { const b = h('button', { type: 'button', 'aria-pressed': 'false' }, String(n)); b.addEventListener('click', () => ed.store.setUI({ grid: { on: true, size: n } })); return b; });
   toggle.addEventListener('click', () => ed.store.setUI({ grid: { ...ed.store.ui.grid, on: !ed.store.ui.grid.on } }));
   range.addEventListener('input', () => ed.store.setUI({ grid: { on: true, size: Number(range.value) } }));
-  range.addEventListener('keydown', e => e.stopPropagation());
+  range.addEventListener('keydown', e => { if (e.key.startsWith('Arrow')) e.stopPropagation(); });
   const panel = h('div', { className: 'panel grid-panel', hidden: true, role: 'dialog', 'aria-label': 'Snap grid' },
     h('div', { className: 'row' }, h('span', {}, 'Snap to grid'), toggle), h('div', { className: 'row', style: 'font-size:12px' }, h('span', { className: 'muted' }, 'Grid size'), value), range, h('div', { className: 'presets' }, ...presets));
   ed.chrome.push({ update() {

@@ -1,10 +1,11 @@
 import { modn, norm } from './geometry';
+import { ratioIds } from './document';
 // Dial geometry: four concentric rings in a 640-unit SVG, each turned in detents. Rotation is the ring's angle in
 // degrees; the selected segment sits under the pointer at the top.
 export type RingKey = 'ratio' | 'comp' | 'guide' | 'hue';
 export type Ring = { key: RingKey; n: number; ro: number; ri: number; name: string };
 export const RINGS: Ring[] = [
-  { key: 'ratio', n: 6, ro: 318, ri: 270, name: 'Ratio' }, { key: 'comp', n: 6, ro: 266, ri: 190, name: 'Layout' },
+  { key: 'ratio', n: ratioIds.length, ro: 318, ri: 270, name: 'Ratio' }, { key: 'comp', n: 6, ro: 266, ri: 190, name: 'Layout' },
   { key: 'guide', n: 3, ro: 186, ri: 144, name: 'Guide' }, { key: 'hue', n: 13, ro: 140, ri: 110, name: 'Colour' },
 ];
 const n2 = (v: number) => +v.toFixed(3);

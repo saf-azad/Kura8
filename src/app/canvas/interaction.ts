@@ -1,5 +1,6 @@
 import type { DocNode, Frame, KuraDoc, TextNode } from '../../core/document';
-import { center, rotatedBounds, unionRect, norm, type Point, type Rect } from '../../core/geometry';
+import { center, containsRotated, rotatedBounds, unionRect, norm, type Point, type Rect } from '../../core/geometry';
+import { CENTRE } from '../../core/images';
 import { resizeLocal } from './resize';
 import { snap, snapAngle, snapLines, type Handle, type SnapLine } from '../../core/snap';
 import { setFrames } from '../../core/ops';
@@ -14,10 +15,11 @@ import type { SketchTools } from '../sketch';
 // `last` is the document this drag last wrote; anything else committed meanwhile (Delete, undo, a finished background
 // removal) ends the drag rather than being overwritten from `before`.
 type Drag =
-  | { kind: 'move'; ids: string[]; start: Point; before: KuraDoc; last?: KuraDoc; frames: Record<string, Frame>; box: Rect; rot: number; moved: boolean; held?: { x?: string; y?: string } }
+  | { kind: 'move'; ids: string[]; start: Point; before: KuraDoc; last?: KuraDoc; frames: Record<string, Frame>; box: Rect; rot: number; moved: boolean; held?: { x?: string; y?: string }; release?: string; cycle?: string }
   | { kind: 'resize'; id: string; handle: Handle; before: KuraDoc; last?: KuraDoc; frame: Frame; box: Rect; size: number; moved: boolean }
   | { kind: 'rotate'; id: string; c: Point; a0: number; r0: number; before: KuraDoc; last?: KuraDoc; held: number | null; moved: boolean }
-  | { kind: 'marquee'; start: Point; base: string[] };
+  | { kind: 'marquee'; start: Point; base: string[]; skipLocked?: boolean }
+  | { kind: 'pan'; id: string; start: Point; focus: Point; moved: boolean };
 const MIN = 20;
 const CURSORS: Record<string, string> = { n: 'ns-resize', s: 'ns-resize', e: 'ew-resize', w: 'ew-resize', nw: 'nwse-resize', se: 'nwse-resize', ne: 'nesw-resize', sw: 'nesw-resize', rotate: 'grab' };
 export function installInteraction(ed: Editor, sketch: SketchTools): void {
@@ -38,12 +40,21 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
     return null;
   };
   el.addEventListener('pointerdown', e => {
-    if (e.button !== 0 || drag) return;
+    if (e.button !== 0 || drag || performance.now() < ed.ignorePointerUntil) return;
     const p = ed.toUnits(e), ui = ed.store.ui;
     el.focus({ preventScroll: true });
     if (ed.textarea) ed.finishText();
     if (ui.tool && sketch.down(e, p)) { el.setPointerCapture(e.pointerId); return; }
     if (ui.armed) { ed.paintAt(ed.hitTest(p)); return; }
+    if (ui.reposition) {
+      // Reposition (D-048): a press on the picture or its faint surround drags the picture; anywhere else finishes.
+      const n = ed.doc.nodes.find(x => x.id === ui.reposition);
+      if (n?.kind === 'image' && (containsRotated(ed.box(n), ed.frame(n).rot, p) || repositionHit(n.id, p))) {
+        drag = { kind: 'pan', id: n.id, start: p, focus: n.focus ?? CENTRE, moved: false };
+        el.setPointerCapture(e.pointerId); e.preventDefault(); return;
+      }
+      ed.finishReposition();
+    }
     const knob = handleAt(p);
     if (knob) {
       const node = ed.doc.nodes.find(n => n.id === knob.id)!, f = ed.frame(node);
@@ -52,25 +63,34 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
       el.setPointerCapture(e.pointerId); e.preventDefault(); return;
     }
     const hit = ed.hitTest(p);
-    const keepPanel = ui.panel === 'shapes' || ui.panel === 'layers' || ui.panel === 'colour' ? ui.panel : null;
+    const keepPanel = ui.panel === 'shapes' || ui.panel === 'layers' || ui.panel === 'colour' || ui.panel === 'fonts' || ui.panel === 'arrange' ? ui.panel : null;
     if (!hit) {
       const base = e.shiftKey ? ui.sel : [];
       ed.store.setUI({ sel: base, panel: keepPanel });
       drag = { kind: 'marquee', start: p, base }; el.setPointerCapture(e.pointerId); return;
     }
+    // A press on a locked block selects it; dragging from it draws a marquee over what sits on it (a locked background photo).
+    if (hit.locked && !e.shiftKey) {
+      ed.store.setUI({ sel: [hit.id], panel: keepPanel });
+      drag = { kind: 'marquee', start: p, base: [], skipLocked: true }; el.setPointerCapture(e.pointerId); return;
+    }
     let sel = ui.sel;
-    if (e.shiftKey) sel = sel.includes(hit.id) ? sel.filter(x => x !== hit.id) : [...sel, hit.id];
+    // Shift on an already selected block constrains a drag; only a Shift-click without a drag deselects it.
+    const release = e.shiftKey && sel.includes(hit.id) ? hit.id : undefined;
+    if (e.shiftKey && !release) sel = [...sel, hit.id];
     else if (!sel.includes(hit.id)) sel = [hit.id];
     ed.store.setUI({ sel, panel: keepPanel });
     void ed.checkCutout(hit);
     if (hit.kind === 'image' && hit.asset) ed.preloadRemoval();
     if (!sel.includes(hit.id)) return;
     const movers = ed.doc.nodes.filter(n => sel.includes(n.id) && !n.locked && !ed.frame(n).hidden);
-    if (!movers.length) return;
+    if (!movers.length) { if (release) ed.select(sel.filter(x => x !== release)); return; }
     const frames = Object.fromEntries(movers.map(n => [n.id, ed.frame(n)]));
     const single = movers.length === 1 ? movers[0] : null;
     const box = single ? ed.box(single) : unionRect(movers.map(n => rotatedBounds(ed.box(n), ed.frame(n).rot)));
-    drag = { kind: 'move', ids: movers.map(n => n.id), start: p, before: ed.doc, frames, box, rot: single ? ed.frame(single).rot : 0, moved: false };
+    // Alt drags without snapping (5j); an Alt-click without a drag selects the block underneath instead (D-065).
+    const cycle = e.altKey && !e.shiftKey ? ed.hitBelow(p)?.id : undefined;
+    drag = { kind: 'move', ids: movers.map(n => n.id), start: p, before: ed.doc, frames, box, rot: single ? ed.frame(single).rot : 0, moved: false, release, cycle };
     el.setPointerCapture(e.pointerId); e.preventDefault();
   });
   el.addEventListener('pointermove', e => {
@@ -78,11 +98,12 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
     if (ui.tool && !drag) { sketch.move(e, p); return; }
     if (!drag) { hover(p); return; }
     const snapping = !e.altKey;
+    if (drag.kind === 'pan') { drag.moved = true; ed.panPicture(drag.id, drag.focus, { x: p.x - drag.start.x, y: p.y - drag.start.y }); return; }
     if (drag.kind !== 'marquee' && drag.last && ed.doc !== drag.last) { drag = null; ed.live = emptyLive(); ed.invalidate(); return; }
     if (drag.kind === 'marquee') {
       const m = { x: Math.min(p.x, drag.start.x), y: Math.min(p.y, drag.start.y), w: Math.abs(p.x - drag.start.x), h: Math.abs(p.y - drag.start.y) };
       if (m.w * ed.scale < 2 && m.h * ed.scale < 2) return;
-      ed.live = { ...emptyLive(), marquee: m }; ed.store.setUI({ sel: [...new Set([...drag.base, ...ed.within(m)])] }); return;
+      ed.live = { ...emptyLive(), marquee: m }; ed.store.setUI({ sel: [...new Set([...drag.base, ...ed.within(m, drag.skipLocked)])] }); return;
     }
     if (drag.kind === 'move') {
       let dx = p.x - drag.start.x, dy = p.y - drag.start.y;
@@ -106,7 +127,7 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
     if (drag.kind === 'resize') {
       drag.moved = true;
       const id = drag.id, node = drag.before.nodes.find(n => n.id === id)!, f = drag.frame, corner = drag.handle.length === 2;
-      const lockAspect = node.kind === 'image' || node.kind === 'text' && corner || e.shiftKey && corner;
+      const lockAspect = node.kind === 'image' || (node.kind === 'text' || node.kind === 'shape' && !!node.icon) && corner || e.shiftKey && corner;
       const min = { w: Math.min(MIN, drag.box.w), h: Math.min(MIN, drag.box.h) };
       const raw = resizeLocal(drag.box, f.rot, drag.handle, p, { lockAspect, min });
       let rect = raw.rect;
@@ -144,9 +165,11 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
     if (sketch.active()) { sketch.up(e, ed.toUnits(e)); return; }
     const d = drag; drag = null; ed.live = emptyLive();
     if (!d) return;
-    if (d.kind === 'marquee') { ed.invalidate(); return; }
+    if (d.kind === 'marquee' || d.kind === 'pan') { ed.invalidate(); return; }
     if (d.last && ed.doc !== d.last) { ed.invalidate(); return; }
     if (d.moved && ed.doc !== d.before) ed.store.commit(ed.doc, { before: d.before });
+    else if (d.kind === 'move' && d.cycle) ed.select([d.cycle]);
+    else if (d.kind === 'move' && d.release) ed.select(ed.store.ui.sel.filter(x => x !== d.release));
     else if (d.kind === 'move' && !e.shiftKey && ed.store.ui.sel.length > 1) { const hit = ed.hitTest(ed.toUnits(e)); if (hit) ed.select([hit.id]); }
     ed.invalidate();
   };
@@ -154,13 +177,23 @@ export function installInteraction(ed: Editor, sketch: SketchTools): void {
   el.addEventListener('pointercancel', finish);
   el.addEventListener('pointerleave', () => { if (ed.store.ui.tool) sketch.leave(); });
   el.addEventListener('dblclick', e => {
+    if (performance.now() < ed.ignorePointerUntil) return;
     if (ed.store.ui.tool || ed.store.ui.armed) return;
     const n: DocNode | undefined = ed.hitTest(ed.toUnits(e));
+    if (ed.store.ui.reposition) { ed.finishReposition(); return; }
     if (n?.kind === 'text' && !n.locked) ed.editText(n.id);
-    else if (n?.kind === 'image' && !n.locked) ed.pickImage(n.id);
+    else if (n?.kind === 'image' && !n.locked) { if (n.asset) ed.startReposition(n.id); else ed.pickImage(n.id); }
   });
+  /** Inside the faint whole picture drawn around a frame being repositioned. */
+  function repositionHit(id: string, p: Point): boolean {
+    const n = ed.doc.nodes.find(x => x.id === id); if (n?.kind !== 'image') return false;
+    const natural = ed.natural(n), f = ed.frame(n); if (!natural) return false;
+    const k = Math.max(f.rect.w / natural.w, f.rect.h / natural.h), w = natural.w * k, h = natural.h * k, c = center(f.rect);
+    return containsRotated({ x: c.x - w, y: c.y - h, w: 2 * w, h: 2 * h }, f.rot, p);
+  }
   function hover(p: Point): void {
     const ui = ed.store.ui;
+    if (ui.reposition) { el.style.cursor = repositionHit(ui.reposition, p) ? 'grab' : 'default'; return; }
     if (ui.armed) { el.style.cursor = paintCursor(ed.colour(ui.armed)); return; }
     const knob = handleAt(p);
     if (knob) { el.style.cursor = CURSORS[knob.handle]; return; }

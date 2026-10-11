@@ -13,6 +13,7 @@ export type OverlayState = {
   boxes: Box[]; marquee: Rect | null; flags: { rect: Rect; rot: number }[]; crossings: { x: number; w: number; y: number }[];
   sketch: { live?: Point[]; stroke: number; ink: string; lasso?: Point[]; eraser?: Point | null };
   scan: { rect: Rect; rot: number; t: number } | null;
+  /** Repositioning a picture: the whole picture (frame-local) drawn faintly around its frame. */ reposition?: { rect: Rect; rot: number; full: Rect; bitmap: ImageBitmap | null | undefined } | null;
 };
 export const HANDLE_PX = 12, ROTATE_PX = 44;
 /** The overlay reaches this far past the canvas on every side, so handles and knobs at the edges stay visible and grabbable. */
@@ -23,7 +24,9 @@ export function handlePoints(box: Box, scale: number): { handle: Handle | 'rotat
   if (box.locked || box.handles === 'none') return [];
   const { rect: r, rot } = box, c = center(r), at = (u: number, v: number) => rotatePoint({ x: r.x + u * r.w, y: r.y + v * r.h }, c, rot);
   const pos: Record<Handle, Point> = { nw: at(0, 0), ne: at(1, 0), se: at(1, 1), sw: at(0, 1), n: at(.5, 0), e: at(1, .5), s: at(.5, 1), w: at(0, .5), move: c };
-  const knob = rotatePoint({ x: c.x, y: r.y - ROTATE_PX / scale }, c, rot);
+  // Near the top of the canvas the knob would sit under the toolbar: it hangs below the box instead.
+  let knob = rotatePoint({ x: c.x, y: r.y - ROTATE_PX / scale }, c, rot);
+  if (knob.y * scale < -20) knob = rotatePoint({ x: c.x, y: r.y + r.h + ROTATE_PX / scale }, c, rot);
   return [...LETTERS[box.handles].map(handle => ({ handle, at: pos[handle] })), { handle: 'rotate' as const, at: knob }];
 }
 export function drawOverlay(canvas: HTMLCanvasElement, s: OverlayState): void {
@@ -71,6 +74,15 @@ export function drawOverlay(canvas: HTMLCanvasElement, s: OverlayState): void {
   }
   for (const c of s.crossings) { ctx.setLineDash([3 * px, 3 * px]); ctx.beginPath(); ctx.moveTo(c.x - 10 * px, c.y); ctx.lineTo(c.x + c.w + 10 * px, c.y); ctx.stroke(); ctx.setLineDash([]); ctx.beginPath(); ctx.moveTo(c.x - 10 * px, c.y - 6 * px); ctx.lineTo(c.x - 10 * px, c.y + 6 * px); ctx.stroke(); }
   if (s.scan) { const { rect: r } = s.scan, c = center(r); ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(s.scan.rot * Math.PI / 180); ctx.fillStyle = '#000'; ctx.fillRect(-r.w / 2, -r.h / 2 + r.h * s.scan.t - px, r.w, 2 * px); ctx.restore(); }
+  if (s.reposition) {
+    const { rect: r, rot, full, bitmap } = s.reposition, c = center(r);
+    ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(rot * Math.PI / 180); ctx.translate(-r.w / 2, -r.h / 2);
+    ctx.save(); ctx.beginPath(); ctx.rect(full.x, full.y, full.w, full.h); ctx.rect(0, 0, r.w, r.h); ctx.clip('evenodd');
+    if (bitmap) { ctx.globalAlpha = .4; ctx.drawImage(bitmap, full.x, full.y, full.w, full.h); ctx.globalAlpha = 1; }
+    ctx.restore();
+    ctx.strokeStyle = '#000'; ctx.lineWidth = px; ctx.setLineDash([4 * px, 3 * px]); ctx.strokeRect(full.x, full.y, full.w, full.h); ctx.setLineDash([]);
+    ctx.lineWidth = 2 * px; ctx.strokeRect(0, 0, r.w, r.h); ctx.restore();
+  }
   for (const b of s.boxes) {
     const p = corners(b.rect, b.rot);
     ctx.strokeStyle = '#000'; ctx.lineWidth = 2 * px; ctx.setLineDash(b.locked ? [5 * px, 4 * px] : []);
@@ -81,7 +93,8 @@ export function drawOverlay(canvas: HTMLCanvasElement, s: OverlayState): void {
     }
     const points = handlePoints(b, s.scale);
     if (!points.length) continue;
-    const knob = points[points.length - 1].at, top = rotatePoint({ x: center(b.rect).x, y: b.rect.y }, center(b.rect), b.rot);
+    const knob = points[points.length - 1].at, c = center(b.rect), ends = [rotatePoint({ x: c.x, y: b.rect.y }, c, b.rot), rotatePoint({ x: c.x, y: b.rect.y + b.rect.h }, c, b.rot)];
+    const top = Math.hypot(ends[0].x - knob.x, ends[0].y - knob.y) <= Math.hypot(ends[1].x - knob.x, ends[1].y - knob.y) ? ends[0] : ends[1];
     ctx.strokeStyle = '#000'; ctx.beginPath(); ctx.moveTo(top.x, top.y); ctx.lineTo(knob.x, knob.y); ctx.stroke();
     ctx.fillStyle = '#ECF0F3'; ctx.beginPath(); ctx.arc(knob.x, knob.y, 8 * px, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
     for (const { handle, at } of points) {

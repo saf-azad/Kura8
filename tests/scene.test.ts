@@ -60,3 +60,11 @@ it('writes a valid one-page PDF around a JPEG with a correct xref', () => {
   expect(pageSize({ w: 1080, h: 1350 })).toEqual({ w: 810, h: 1012.5 });
   expect(new TextDecoder('latin1').decode(pdf(jpeg, { w: 1, h: 1 }, { w: 1, h: 1 }))).toContain('/Title (Kura8)');
 });
+it('gives each paragraph its own direction in a mixed block (D-064)', () => {
+  const d = doc([textNode('t', frame(0, 0, 900, 40, { fontSize: 20 }), 'Iftar night\nإفطار جماعي\n2026', { align: 'start' } as never)]);
+  const op = buildScene(d, 'main', fakeMeasure).ops[0];
+  expect(op.kind === 'text' && op.bidi).toEqual([{ dir: 'ltr', align: 'left' }, { dir: 'rtl', align: 'right' }, { dir: 'ltr', align: 'left' }]);
+  const out = svg(buildScene(d, 'main', fakeMeasure), { pixels: { w: 1080, h: 1080 }, ground: true, licences: [], image: () => undefined });
+  expect(out).toContain('x="900" y="34.5" direction="rtl" text-anchor="start"');
+  expect(buildScene(doc([textNode('u', frame(0, 0, 900, 40), 'One\nTwo')]), 'main', fakeMeasure).ops[0]).not.toHaveProperty('bidi');
+});

@@ -14,7 +14,13 @@
     "test": "vitest run --coverage"
   },
   "devDependencies": {
+    "@fontsource/bebas-neue": "^5.3.0",
+    "@fontsource/caveat": "^5.3.0",
+    "@fontsource/lora": "^5.3.0",
+    "@fontsource/playfair-display": "^5.3.0",
+    "@fontsource/poppins": "^5.3.0",
     "@fontsource/space-grotesk": "^5.3.0",
+    "@fontsource/space-mono": "^5.3.0",
     "@phosphor-icons/core": "^2.1.1",
     "@vitest/coverage-v8": "^3.2.4",
     "onnx-proto": "^8.0.1",

@@ -61,3 +61,28 @@ export function reRatio(doc: KuraDoc, sizeId: string, to: { ratio: RatioId; guid
     flags,
   };
 }
+/** Where each node's geometry in a size came from before the latest ratio changes, and the frame the last change gave it (D-054). */
+export type RatioOrigin = Record<string, { ratio: RatioId; guide: GuideId | null; frame: Frame; last: Frame }>;
+/**
+ * Change ratio without drift (D-054): a node left untouched since the last change is mapped from its frame at its
+ * origin ratio, so Post → Story → Banner → Post returns it exactly instead of shrinking at every step. A node edited
+ * since (or new) is mapped from where it is now, which becomes its origin. Returns the origin for the next change.
+ */
+export function reRatioKept(doc: KuraDoc, sizeId: string, to: { ratio: RatioId; guide?: GuideId | null }, measure: Measure, origin: RatioOrigin = {}): { doc: KuraDoc; flags: Flag[]; origin: RatioOrigin } {
+  const from = doc.sizes.find(s => s.id === sizeId)!, guide = to.guide === undefined ? from.guide : to.guide;
+  const start = (n: DocNode) => { const o = origin[n.id], f = n.frames[sizeId]; return o && JSON.stringify(o.last) === JSON.stringify(f) ? o : { ratio: from.ratio, guide: from.guide, frame: f, last: f }; };
+  const starts = new Map(doc.nodes.map(n => [n.id, start(n)])), mapped = new Map<string, Record<string, Frame>>();
+  const frameFor = (n: DocNode): Frame => {
+    const o = starts.get(n.id)!;
+    if (o.ratio === to.ratio && o.guide === guide) return o.frame;
+    const key = `${o.ratio}|${o.guide}`;
+    if (!mapped.has(key)) {
+      const base: KuraDoc = { ...doc, nodes: doc.nodes.map(m => { const p = starts.get(m.id)!; return p.ratio === o.ratio && p.guide === o.guide ? { ...m, frames: { ...m.frames, [sizeId]: p.frame } } : m; }) };
+      mapped.set(key, reRatioFrames(base, { ...from, ratio: o.ratio, guide: o.guide }, { ratio: to.ratio, guide }, measure).frames);
+    }
+    return mapped.get(key)![n.id];
+  };
+  const frames = Object.fromEntries(doc.nodes.map(n => [n.id, frameFor(n)])), c1 = canvasSize(to.ratio);
+  const out: KuraDoc = { ...doc, sizes: doc.sizes.map(s => s.id === sizeId ? { ...s, ratio: to.ratio, guide } : s), nodes: doc.nodes.map(n => ({ ...n, frames: { ...n.frames, [sizeId]: frames[n.id] } })) };
+  return { doc: out, flags: out.nodes.flatMap(n => flagsFor(n, frames[n.id], measure, c1, guide)), origin: Object.fromEntries(doc.nodes.map(n => { const o = starts.get(n.id)!; return [n.id, { ratio: o.ratio, guide: o.guide, frame: o.frame, last: frames[n.id] }]; })) };
+}

@@ -37,6 +37,7 @@ button.wordmark{transition:color var(--fast)}button.wordmark:hover{color:var(--s
 .sep{width:2px;height:24px;background:var(--ink-a15);margin:0 5px;flex:none}
 .field{height:36px;width:100%;border:var(--stroke) solid var(--ink);border-radius:var(--r-sm);padding:0 12px;font-size:13px;background:transparent;outline:none;user-select:text}
 .field.search{border-radius:var(--r-pill);padding:0 15px}
+input.readout{width:58px;text-align:center;font:inherit;font-size:13px;background:transparent;color:inherit}input.readout:disabled{opacity:.23}
 .readout{height:30px;min-width:46px;padding:0 8px;border:var(--stroke) solid var(--ink);border-radius:var(--r-sm);display:grid;place-items:center;font-size:13px;flex:none}
 .seg{display:inline-flex;gap:5px;padding:4px;border:var(--stroke) solid var(--ink);border-radius:var(--r-pill);width:max-content}
 .seg button{height:32px;padding:0 16px;border-radius:var(--r-pill);font-size:13px;transition:background var(--fast)}
@@ -66,14 +67,18 @@ button.wordmark{transition:color var(--fast)}button.wordmark:hover{color:var(--s
 .sizes .pill{gap:8px;padding:0 14px}
 .ratio-glyph{border:var(--stroke) solid currentColor;flex:none;transition:width var(--sheet),height var(--sheet)}
 /* canvas */
-.stage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:100px 60px 50px}
+/* Side and bottom room keeps the corner controls, help and info off the canvas at every ratio. */
+.stage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:100px 100px 80px}
 .canvas-stack{position:relative;flex:none;outline:var(--stroke) solid var(--ink);transition:transform 520ms var(--ease)}
 .canvas-stack canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .canvas-stack canvas.overlay{touch-action:none;outline:none;inset:-64px;width:calc(100% + 128px);height:calc(100% + 128px);z-index:2}
 .text-editor{position:absolute;z-index:4;background:transparent;border:0;outline:0;padding:0;margin:0;resize:none;overflow:hidden;white-space:pre-wrap;user-select:text;transform-origin:50% 50%}
-.before-after{position:absolute;z-index:5;transform:translate(-50%,8px);background:var(--paper)}
-.before-after button{height:28px;padding:0 12px}
+.image-bar{position:absolute;z-index:5;transform:translate(-50%,8px);background:var(--paper)}
+.image-bar button{height:28px;padding:0 12px}
+.image-bar.inside{transform:translate(-50%,calc(-100% - 10px))}
+.image-bar .cut{display:inline-flex;gap:5px;padding-left:5px;border-left:var(--stroke) solid var(--slate)}
 .info{position:absolute;left:90px;bottom:44px;font-size:12px;display:flex;gap:10px;pointer-events:none;transition:opacity var(--fast)}
+.info span:first-child{max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .shortcut-hint{position:absolute;right:40px;bottom:36px;display:flex;align-items:center;gap:8px;font-size:12px}
 .toast{position:fixed;left:50%;bottom:36px;transform:translateX(-50%);height:36px;padding:0 18px;border-radius:var(--r-pill);background:var(--ink);color:var(--white);display:flex;align-items:center;font-size:13px;pointer-events:none;opacity:0;transition:opacity var(--fast);z-index:30;white-space:nowrap}
 .toast.on{opacity:1}
@@ -94,6 +99,12 @@ button.wordmark{transition:color var(--fast)}button.wordmark:hover{color:var(--s
 .icon-note{font-size:12px;opacity:.6}
 /* colour panel */
 .colour-panel{width:300px;gap:15px}
+.arrange-panel{width:206px;gap:8px}.arrange-grid{display:grid;grid-template-columns:repeat(3,40px);gap:6px 23px}.arrange-grid .btn:hover{background:var(--slate-a15)}
+.fonts-panel{width:260px;gap:8px}.fonts-panel .icon-note{white-space:normal}
+.font-choice{display:flex;align-items:center;gap:12px;height:40px;padding:0 10px;border-radius:var(--r-sm);font-size:17px;text-align:left}
+.font-choice:hover{background:var(--slate-a15)}.font-choice[aria-pressed=true]{background:var(--ink);color:var(--white)}
+.font-choice .sample{width:30px;font-size:20px}
+.toolbar .face{font-size:15px;min-width:34px}
 .roles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
 .roles button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 0;border-radius:var(--r-sm);transition:background var(--fast);font-size:11px}
 .roles button:hover{background:var(--slate-a15)}.roles button[aria-pressed=true]{background:var(--ink);color:var(--white)}
@@ -121,6 +132,7 @@ button.wordmark{transition:color var(--fast)}button.wordmark:hover{color:var(--s
 .layer:hover{background:var(--slate-a15)}.layer.on{background:var(--ink);color:var(--white)}
 .layer .chip{width:16px;height:16px;border-radius:4px;border-color:currentColor}
 .layer .name{flex:1;min-width:0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.layer .rename{flex:1;min-width:0;height:30px;font-size:13px;padding:0 8px}
 .layer button{width:26px;height:26px;border-radius:var(--r-pill);display:grid;place-items:center}
 .layer button:hover{background:var(--slate-a35)}.layer button svg{width:14px;height:14px}
 .layer button.off{opacity:.3}
@@ -134,7 +146,7 @@ input[type=range]{width:100%;accent-color:#000;margin:0}
 .ratio-panel svg{display:block;overflow:visible}
 .mini-label{position:absolute;inset:10px 10px auto;height:260px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;pointer-events:none}
 /* modal and sheet */
-.modal{position:fixed;left:50%;top:50%;width:min(880px,calc(100vw - 32px));transform:translate(-50%,-50%);padding:30px 40px 40px;border:var(--stroke) solid var(--ink);border-radius:var(--r-lg);background:var(--paper);display:flex;flex-direction:column;gap:25px;z-index:20;transition:opacity var(--fast),transform var(--base) var(--ease)}
+.modal{position:fixed;left:50%;top:50%;width:min(880px,calc(100vw - 32px));max-height:calc(100vh - 32px);overflow:auto;transform:translate(-50%,-50%);padding:30px 40px 40px;border:var(--stroke) solid var(--ink);border-radius:var(--r-lg);background:var(--paper);display:flex;flex-direction:column;gap:25px;z-index:20;transition:opacity var(--fast),transform var(--base) var(--ease)}
 .modal[hidden]{display:flex!important;opacity:0;pointer-events:none;transform:translate(-50%,-50%) scale(.98)}
 .modal header,.sheet header{display:flex;align-items:center;justify-content:space-between;font-size:20px;letter-spacing:-.01em}
 .close{width:40px;height:40px;border-radius:var(--r-pill);display:grid;place-items:center}.close:hover{background:var(--slate-a15)}
@@ -182,4 +194,6 @@ input[type=range]{width:100%;accent-color:#000;margin:0}
 .dial-hints{position:absolute;right:40px;bottom:40px;display:flex;flex-direction:column;align-items:flex-end;gap:8px;font-size:12px}
 .dial-hints div{display:flex;align-items:center;gap:5px}
 @media(max-width:1100px){.readout-cards{width:200px;left:24px}.any-colour{right:24px;width:190px}}
+/* Short windows (a 1280 × 720 laptop at 125 %): the dial's readout cards drop their descriptions so they clear the wordmark and help. */
+@media(max-height:640px){.readout-cards{gap:2px}.card{padding:6px 12px;gap:2px}.card .sub{display:none}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}

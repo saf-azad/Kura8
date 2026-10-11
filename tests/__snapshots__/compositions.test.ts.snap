@@ -4,9 +4,13 @@ exports[`layouts > explains why a layout does not suit a ratio (5c) 1`] = `
 [
   "..s...",
   "......",
-  "..s...",
+  "......",
   ".n...n",
   "......",
+  "......",
+  "..s...",
+  "..s...",
+  "s.s...",
   "s.s...",
 ]
 `;
