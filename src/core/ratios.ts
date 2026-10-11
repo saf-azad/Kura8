@@ -18,6 +18,26 @@ export const ratios: Ratio[] = [
   { id: 'cover', name: 'Header', label: 'Header', w: 4, h: 1, exportWidth: 1584 },
 ];
 export const ratioById = (id: RatioId): Ratio => ratios.find(r => r.id === id)!;
+/** A platform destination for one ratio, offered by the dial's Social segment (D-092, Safwat). */
+export type Platform = 'instagram' | 'linkedin';
+export type FormatId = 'ig-post' | 'ig-square' | 'ig-story' | 'ig-grid' | 'li-post' | 'li-link' | 'li-banner';
+/** `kind` is the word the ring shows under the platform's logo; `name` is the full destination. */
+export type Format = { id: FormatId; platform: Platform; name: string; kind: string; ratio: RatioId };
+export const formats: Format[] = [
+  { id: 'ig-post', platform: 'instagram', name: 'Instagram post', kind: 'Post', ratio: 'portrait' },
+  { id: 'ig-square', platform: 'instagram', name: 'Instagram square', kind: 'Square', ratio: 'square' },
+  { id: 'ig-story', platform: 'instagram', name: 'Instagram story', kind: 'Story', ratio: 'story' },
+  { id: 'ig-grid', platform: 'instagram', name: 'Instagram grid', kind: 'Grid', ratio: 'tall' },
+  { id: 'li-post', platform: 'linkedin', name: 'LinkedIn post', kind: 'Post', ratio: 'square' },
+  { id: 'li-link', platform: 'linkedin', name: 'LinkedIn link', kind: 'Link', ratio: 'link' },
+  { id: 'li-banner', platform: 'linkedin', name: 'LinkedIn banner', kind: 'Banner', ratio: 'cover' },
+];
+export const formatById = (id: string | undefined): Format | undefined => formats.find(f => f.id === id);
+/** The format a ratio shows as: the remembered one when it has that ratio, else the first that does; null when no platform format uses it. */
+export const formatFor = (ratio: RatioId, remembered?: string): Format | null => {
+  const f = formatById(remembered);
+  return f?.ratio === ratio ? f : formats.find(x => x.ratio === ratio) ?? null;
+};
 export const canvasSize = (id: RatioId): Size => { const r = ratioById(id); return { w: 1000, h: 1000 * r.h / r.w }; };
 /** The number shown for a ratio: `4:5`, or the paper name for print sizes. */
 export const ratioNumbers = (id: RatioId): string => { const r = ratioById(id); return r.mm ? r.name : `${r.w}:${r.h}`; };

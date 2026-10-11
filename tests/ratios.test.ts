@@ -1,5 +1,11 @@
 import { it, expect } from 'vitest';
-import { ratios, ratioById, canvasSize, exportSize, ratioNumbers, MAX_PIXELS, withinPixelLimit, zipScale } from '../src/core/ratios';
+import { ratios, ratioById, canvasSize, exportSize, ratioNumbers, MAX_PIXELS, withinPixelLimit, zipScale, formats, formatById, formatFor } from '../src/core/ratios';
+it('names Instagram and LinkedIn formats for the ratios they use (D-092)', () => {
+  expect(formats.map(f => [f.id, f.platform, f.kind, f.ratio])).toEqual([['ig-post', 'instagram', 'Post', 'portrait'], ['ig-square', 'instagram', 'Square', 'square'], ['ig-story', 'instagram', 'Story', 'story'], ['ig-grid', 'instagram', 'Grid', 'tall'],
+    ['li-post', 'linkedin', 'Post', 'square'], ['li-link', 'linkedin', 'Link', 'link'], ['li-banner', 'linkedin', 'Banner', 'cover']]);
+  expect(formatById('ig-story')?.name).toBe('Instagram story'); expect(formatById('nope')).toBeUndefined();
+  expect([formatFor('square')?.id, formatFor('square', 'li-post')?.id, formatFor('square', 'ig-story')?.id, formatFor('pin')]).toEqual(['ig-square', 'li-post', 'ig-square', null]);
+});
 it('pins all ten ratios, destination labels and export widths (D-069)', () => {
   expect(ratios.map(r => [r.id, r.label, r.w, r.h, r.exportWidth])).toEqual([['square', 'Post', 1, 1, 1080], ['portrait', 'Portrait', 4, 5, 1080], ['tall', 'Grid', 3, 4, 1080], ['story', 'Story', 9, 16, 1080],
     ['pin', 'Pin', 2, 3, 1000], ['a4', 'Print', 1, Math.SQRT2, 1240], ['landscape', 'Slide', 16, 9, 1920], ['link', 'Link', 1.91, 1, 1200], ['banner', 'Banner', 3, 1, 1500], ['cover', 'Header', 4, 1, 1584]]);

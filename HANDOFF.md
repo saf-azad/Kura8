@@ -248,6 +248,20 @@ Append-only. New entries supersede named old entries; do not edit history. Forma
   - **Typing.** Trailing empty lines are dropped when an edit ends (a pasted CRLF line).
   - **T then a click.** A click just under the last line keeps the label there rather than the margin pushing it onto that line.
   - Why: loop 8 cohort Y (21 scripts).
+- **D-092** 2026-10-11 safwat — "For LinkedIn and IG put in a designated segment of the circle, like social formats; when clicked it expands out with the logos of IG or LinkedIn and says LinkedIn post, IG post, IG story."
+  - **The ratio ring has five segments:** Social, Pin 2:3, Print A4, Slide 16:9 and Banner 3:1.
+  - **Social opens.** A click on it, or Space, fans seven formats out of its segment in 280 ms, pushing the other ratios round, so the ring has eleven stops. The formats are:
+    - Instagram post 4:5, square 1:1, story 9:16 and grid 3:4;
+    - LinkedIn post 1:1, link 1.91:1 and banner 4:1.
+  - **Each format shows** its platform's logo beside the canvas shape, the ratio, and the word Post, Square, Story, Grid, Link or Banner. Read with the logo, the word gives the destination ("IG post", "LinkedIn banner"). Full names ("Instagram story 9:16") show in the readout card and the tooltip.
+  - **Closing.** Social folds away when a ratio outside it is picked, when another ring is used, when the page around the dial is pressed, or on Escape or Space. Closed, it shows both logos and the ratio of the format last picked; picking Social again gives that format.
+  - **Data and contracts.**
+    - A format names a ratio on the dial only. `DialSettings.format` remembers it; the document stores the ratio as before.
+    - The editor's size tabs, Change ratio panel and export names keep the ratio labels.
+    - Core adds `formats`, `formatById` and `formatFor` (`ratios.ts`), and `ratioStops`, `stopOf`, `settingFor`, `ratioSpans` and `arcPath` (`dial.ts`). `RINGS` gives the ratio ring 5 stops.
+  - **Logos.** Phosphor's regular Instagram and LinkedIn logos (MIT) are inlined in the dial and drawn in ink. They follow the paper rule that the only colour in the chrome is user colour, and they are used only to name the destination.
+  - **Audit.** Steps 5a and the dial-keys step now cover opening Social, picking a format, the remembered format, Space and closing on another ring.
+  - Why: explicit session request.
 
 ## Next steps
 

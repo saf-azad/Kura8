@@ -169,24 +169,39 @@ def s_load(app):
     p.screenshot(path=str(OUT / 'dial.png'))
 
 
-@step('5a ratio ring names destinations and hovering previews the hub')
+@step('5a ratio ring names destinations, Social opens into Instagram and LinkedIn formats, hovering previews the hub')
 def s_5a(app):
     app.fresh(); p = app.page
-    for label in ['Post 1:1', 'Portrait 4:5', 'Grid 3:4', 'Story 9:16', 'Pin 2:3', 'Print A4', 'Slide 16:9', 'Link 1.91:1', 'Banner 3:1', 'Header 4:1']:
+    for label in ['Social: Instagram and LinkedIn formats', 'Pin 2:3', 'Print A4', 'Slide 16:9', 'Banner 3:1']:
         check(p.locator(f'[data-ring="ratio"][data-tip="{label}"]').count() == 1, f'missing {label}')
+    check(p.locator('[data-ring="ratio"]').count() == 5, 'Social is not one segment')
     before = p.locator('.hub canvas').bounding_box()
+    g = p.locator('[data-stop="social"] > g').bounding_box(); p.mouse.click(g['x'] + g['width'] / 2, g['y'] + g['height'] / 2); p.wait_for_timeout(600)
+    for label in ['Instagram post 4:5', 'Instagram square 1:1', 'Instagram story 9:16', 'Instagram grid 3:4', 'LinkedIn post 1:1', 'LinkedIn link 1.91:1', 'LinkedIn banner 4:1', 'Pin 2:3', 'Print A4', 'Slide 16:9', 'Banner 3:1']:
+        check(p.locator(f'[data-ring="ratio"][data-tip="{label}"]').count() == 1, f'Social did not open to {label}')
+    check(p.locator('[data-stop="li-post"] > g > g > path').count() == 1, 'LinkedIn logo missing')
+    g = p.locator('[data-stop="ig-story"] > g').bounding_box(); p.mouse.click(g['x'] + g['width'] / 2, g['y'] + g['height'] / 2); p.wait_for_timeout(600)
+    check('Instagram story 9:16' in p.locator('.card').nth(0).inner_text(), 'Instagram story not picked')
+    check(json.loads(p.evaluate('localStorage.getItem("kura8:dial")'))['format'] == 'ig-story', 'format not remembered')
+    g = p.locator('[data-stop="ig-post"] > g').bounding_box(); p.mouse.click(g['x'] + g['width'] / 2, g['y'] + g['height'] / 2); p.wait_for_timeout(600)
     g = p.locator('[data-ring="ratio"][data-tip="Banner 3:1"] > g').bounding_box(); p.mouse.move(g['x'] + g['width'] / 2, g['y'] + g['height'] / 2); p.wait_for_timeout(700)
     after = p.locator('.hub canvas').bounding_box()
     check(after['width'] / after['height'] > 2.5, f'hub did not preview banner: {after}')
     check(abs(before['width'] / before['height'] - .8) < .05, 'hub was not portrait first')
 
 
-@step('dial: arrows focus and turn rings, Enter starts, readout follows')
+@step('dial: arrows focus and turn rings, Space opens Social, Enter starts, readout follows')
 def s_dial_keys(app):
     app.fresh(); p = app.page
     p.keyboard.press('ArrowRight'); p.wait_for_timeout(100)
-    check('Grid 3:4' in p.locator('.card').nth(0).inner_text(), 'ratio did not turn to 3:4')
-    p.keyboard.press('ArrowDown'); p.keyboard.press('ArrowRight'); p.wait_for_timeout(100)
+    check('Pin 2:3' in p.locator('.card').nth(0).inner_text(), 'ratio did not turn to Pin')
+    p.keyboard.press('ArrowLeft'); p.keyboard.press('Space'); p.wait_for_timeout(500)
+    check(p.locator('[data-ring="ratio"]').count() == 11, 'Space did not open Social')
+    for _ in range(3): p.keyboard.press('ArrowRight')
+    p.wait_for_timeout(100)
+    check('Instagram grid 3:4' in p.locator('.card').nth(0).inner_text(), 'ratio did not turn to Instagram grid 3:4')
+    p.keyboard.press('ArrowDown'); p.keyboard.press('ArrowRight'); p.wait_for_timeout(500)
+    check(p.locator('[data-ring="ratio"]').count() == 5, 'Social did not close on another ring')
     check('Split' in p.locator('.card').nth(1).inner_text(), 'layout did not turn')
     p.keyboard.press('ArrowDown'); p.keyboard.press('ArrowLeft'); p.wait_for_timeout(100)
     check('Thirds' in p.locator('.card').nth(2).inner_text(), 'guide did not turn')

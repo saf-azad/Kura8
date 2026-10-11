@@ -2,11 +2,13 @@ import { migrate, serialiseDocument, type ColourRef, type CompId, type InlineIma
 import type { GuideId } from '../core/guides/types';
 import { emptyHistory, record, redo, undo, type History } from '../core/history';
 import type { Flag } from '../core/reratio';
+import type { FormatId } from '../core/ratios';
 // One store holds the document and the editor's UI state. Documents are immutable, so a history step is a
 // reference. Commits record history and schedule the 500 ms autosave of the one current document.
 export type Tool = 'pen' | 'erase' | 'lasso';
 export type PanelId = 'shapes' | 'colour' | 'fonts' | 'arrange' | 'layers' | 'grid' | 'ratio' | 'keys' | 'export';
-export type DialSettings = { ratio: RatioId; comp: CompId; guide: GuideId; hue: number | null; dark: boolean; accent?: string };
+/** `format` is the Social format last picked on the dial (D-092); it names the ratio there but never reaches the document. */
+export type DialSettings = { ratio: RatioId; comp: CompId; guide: GuideId; hue: number | null; dark: boolean; accent?: string; format?: FormatId };
 export type UI = {
   screen: 'dial' | 'editor'; size: string; sel: string[]; panel: PanelId | null; tool: Tool | null;
   guides: boolean; grid: { on: boolean; size: number }; help: boolean;

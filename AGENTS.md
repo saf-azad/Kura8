@@ -29,7 +29,7 @@ Resolve scope, design and feature questions in this order:
 
 Everything working in `Kura8 Prototype.dc.html` and the refinement cards 5a–5z in `Kura8 Editor.dc.html`, except handwriting:
 
-- **Dial:** four rotating rings (ratio 10, layout 6, guide 3, colour 12 hues + neutral) turned by drag, scroll, arrows or Enter; lens focus; live hub preview; readout panel; light/dark ground; any-colour accent picker; Start/Go. Refinements 5a–5c, 5f; first-open lift 5d.
+- **Dial:** four rotating rings (ratio, layout 6, guide 3, colour 12 hues + neutral) turned by drag, scroll, arrows or Enter; the ratio ring's Social segment opens into Instagram and LinkedIn formats (D-092); lens focus; live hub preview; readout panel; light/dark ground; any-colour accent picker; Start/Go. Refinements 5a–5c, 5f; first-open lift 5d.
 - **Ratios:** square, portrait, tall 3:4, story, pin 2:3, A4, landscape, link 1.91:1, banner, cover 4:1 shown as Header (D-069, D-080), each with a destination label (5a). Ratio change and linked sizes (5v, 5w).
 - **Layouts:** cover, split, stack, poster, frame, band, as pure functions of ratio and guide.
 - **Guides:** thirds, golden, quarters (id `divisions`), with type-scale factors 1.5, φ, √2.
@@ -107,7 +107,7 @@ Core never measures text itself. Functions that need line breaks take an injecte
 
 ### Ratios
 
-`square` 1:1 (Post), `portrait` 4:5 (Portrait), `tall` 3:4 (Grid), `story` 9:16 (Story), `pin` 2:3 (Pin), `a4` 1:√2 with √2 computed (Print), `landscape` 16:9 (Slide), `link` 1.91:1 (Link), `banner` 3:1 (Banner), `cover` 4:1 (Header, D-080), in that dial-ring order (D-069). Labels are defaults pending Safwat. A new linked size is seeded from the existing size with the closest proportions (`closestSize`). `exportSize(ratio, { scale: 1|2|3 } | { dpi: 300 })`: social ratios export 1080 wide except pin 1000 (1000 × 1500), landscape 1920, link 1200 (1200 × 628), banner 1500 and cover 1584 (1584 × 396); A4 at 1× is 1240 wide (150 dpi) and at 300 dpi 2480 × 3508 from its paper size (`mm`); dpi on a ratio without a paper size throws; a scaled height is the rounded 1× height times the scale (D-082). `MAX_PIXELS = 16_777_216`; larger export options are disabled, and an All sizes zip steps such a size down to the largest that fits (`zipScale`, D-080). Export file names use the ratio's label.
+`square` 1:1 (Post), `portrait` 4:5 (Portrait), `tall` 3:4 (Grid), `story` 9:16 (Story), `pin` 2:3 (Pin), `a4` 1:√2 with √2 computed (Print), `landscape` 16:9 (Slide), `link` 1.91:1 (Link), `banner` 3:1 (Banner), `cover` 4:1 (Header, D-080), in that order (D-069). Labels are defaults pending Safwat. The dial's ratio ring shows Social, Pin, Print, Slide and Banner; Social opens into seven `formats` that each name a ratio with a platform (Instagram post 4:5, square 1:1, story 9:16, grid 3:4; LinkedIn post 1:1, link 1.91:1, banner 4:1). The format picked last is remembered in the dial settings, never in the document (D-092). A new linked size is seeded from the existing size with the closest proportions (`closestSize`). `exportSize(ratio, { scale: 1|2|3 } | { dpi: 300 })`: social ratios export 1080 wide except pin 1000 (1000 × 1500), landscape 1920, link 1200 (1200 × 628), banner 1500 and cover 1584 (1584 × 396); A4 at 1× is 1240 wide (150 dpi) and at 300 dpi 2480 × 3508 from its paper size (`mm`); dpi on a ratio without a paper size throws; a scaled height is the rounded 1× height times the scale (D-082). `MAX_PIXELS = 16_777_216`; larger export options are disabled, and an All sizes zip steps such a size down to the largest that fits (`zipScale`, D-080). Export file names use the ratio's label.
 
 ### Document v2
 
@@ -209,7 +209,7 @@ Paper visual language, values copied from `docs/design/2026-10-10-dial/_ds/…/t
 
 ## Keyboard controls
 
-Mod is Command on Mac and Ctrl elsewhere. Keep D-026 bindings: Mod+D duplicate, Mod+B bold, Mod+Shift+L lock, Mod+Shift+E export, Mod+Enter finish text. Add Mod+C/X/V clipboard, Mod+A select all, Mod+Z undo, Mod+Shift+Z and Mod+Y redo, Mod+] / Mod+[ forward/backward, Mod+Shift+] / Mod+Shift+[ front/back. Tools: T text, R rectangle, O ellipse, S shapes, I picks images (D-061), P pen, E eraser, L lasso, C colour, G guides, ? shortcuts. Arrows move 1 unit; Shift+Arrow moves one grid cell when the grid is on, otherwise 10 units (5l); keyboard moves never snap. Delete/Backspace removes unlocked selection; Enter edits text; Escape disarms paint, then closes the panel, then leaves the tool, then deselects. Hold Alt while dragging to bypass snapping (5j); Alt-click without a drag selects the block underneath (D-065); Shift constrains drag axis, corner aspect and rotation steps. Letter shortcuts read the key's Latin position when the layout types another script (D-079). Shortcuts never intercept typing controls, composition or native modifier combinations. On the dial: arrows turn/focus rings, Enter starts.
+Mod is Command on Mac and Ctrl elsewhere. Keep D-026 bindings: Mod+D duplicate, Mod+B bold, Mod+Shift+L lock, Mod+Shift+E export, Mod+Enter finish text. Add Mod+C/X/V clipboard, Mod+A select all, Mod+Z undo, Mod+Shift+Z and Mod+Y redo, Mod+] / Mod+[ forward/backward, Mod+Shift+] / Mod+Shift+[ front/back. Tools: T text, R rectangle, O ellipse, S shapes, I picks images (D-061), P pen, E eraser, L lasso, C colour, G guides, ? shortcuts. Arrows move 1 unit; Shift+Arrow moves one grid cell when the grid is on, otherwise 10 units (5l); keyboard moves never snap. Delete/Backspace removes unlocked selection; Enter edits text; Escape disarms paint, then closes the panel, then leaves the tool, then deselects. Hold Alt while dragging to bypass snapping (5j); Alt-click without a drag selects the block underneath (D-065); Shift constrains drag axis, corner aspect and rotation steps. Letter shortcuts read the key's Latin position when the layout types another script (D-079). Shortcuts never intercept typing controls, composition or native modifier combinations. On the dial: arrows turn/focus rings, Space opens or closes Social, Escape closes it, Enter starts.
 
 ## Study (frozen)
 
@@ -259,6 +259,7 @@ Core is always tested; app tests where useful, skip trivial reversible tests. AG
 - **dial** — the entry screen of four concentric rings whose hub previews the resulting canvas.
 - **ring** — one dial control: ratio, layout, guide or colour.
 - **ratio** — canvas proportion w:h; a document can hold several linked sizes of different ratios.
+- **format** — a platform destination (Instagram story, LinkedIn banner) that names one ratio on the dial.
 - **size** — one `SizeSpec` (ratio, guide, layout) plus every node's frame for it.
 - **frame** — a node's local geometry in one size: rect, rotation, font size, hidden.
 - **layout / composition** — a pure slot arrangement derived from ratio and guide; never content.
